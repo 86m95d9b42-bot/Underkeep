@@ -84,6 +84,7 @@ npm test           # rule tests
 npm run data       # rebuild and validate src/data/*.json
 npm run check      # open every screen at six device sizes and check the shell rules
 npm run shots      # screenshot every screen in both frames into dist/shots/
+npm run sweep      # build 10,000 seeds x 10 floors and check every one (~5 min)
 npm run sim        # balance simulator (Phase 7+)
 ```
 
