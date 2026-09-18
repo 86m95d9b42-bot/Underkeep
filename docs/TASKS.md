@@ -20,7 +20,7 @@ Work top to bottom. Check a box when the task is done and tested. Each phase end
 
 ## Phase 2 — Walk
 
-- [ ] Seeded RNG (sfc32) with named streams and serializable state
+- [x] Seeded RNG (sfc32) with named streams and serializable state
 - [ ] `floors.json` from `05` section 2
 - [ ] `withRng()` wrapper so the supplied generator draws from the seeded layout stream (`07` section 2)
 - [ ] `floor-builder.js`: call `DungeonGenerator.generate`, then stamp the boss arena, Safe Room, stairs, and waystone (`07` section 3, steps 1–2)

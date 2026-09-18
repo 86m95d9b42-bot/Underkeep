@@ -4,6 +4,10 @@ Rulings here override the other documents. Add new entries at the top of each li
 
 ## Decisions
 
+- **2026-09-18 — Seeded RNG details.** Two choices in `src/engine/rng.js` that affect what replays:
+  - **A cancelled advantage still draws two dice.** `06` section 6 step 5 says one advantage and one disadvantage cancel. The stream draws both dice either way and keeps the first, so a roll costs the same two draws however the caller reached the cancellation, and a replay of the same fight stays in step.
+  - **Regenerating a floor uses an attempt number, not literally `seed + 1`.** `05` section 3 says a floor failing the solvability check is regenerated with `seed + 1`. `layoutStream(masterSeed, floor, attempt)` mixes the attempt into the seed instead, which is deterministic in the same way and cannot collide with a neighbouring floor's stream.
+
 - **2026-09-18 — Phase 1 shell choices.** Six small rulings the documents did not settle, each behind a named constant:
   - **Text size setting.** `--text-scale` multiplies body and hint text only; Bungee labels and titles are sized to their boxes and do not scale. S is 1.00 and gives the documented minimums on a 390 px frame (hint 12 px, body 14 px, button 18 px); M is 1.08 (the mockups) and L is 1.20. In `src/styles/tokens.css`.
   - **The 2-row tap target rule** applies to regions placed on the screen grid. Controls inside a `.scroll` panel follow the mockups instead, which use 52 px rows; a 14-row settings list cannot hold nine labelled 2-row controls. Checked by `npm run check`.
