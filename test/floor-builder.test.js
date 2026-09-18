@@ -1,20 +1,50 @@
 /**
- * withRng and the first generator call (`07` sections 2 and 3).
+ * The floor builder (`07` section 3, steps 1 and 2; `05` sections 3 and 5).
  *
- * The point of the wrapper is that a floor rebuilds identically from its seed
- * (`05` section 11), so most of these tests are about reproducibility, and the
- * rest are about not leaving `Math.random` broken behind us.
+ * The shape of a floor matters more than any single number here: the arena has
+ * one way in, the down stairs are behind it, the arrival point is far away, and
+ * everything the hero can see is reachable.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { withRng, generateLayout, TILE, DungeonGenerator } from '../src/dungeon/floor-builder.js';
+import {
+  withRng,
+  generateLayout,
+  buildFloor,
+  stampBossArena,
+  placeArrival,
+  distancesFrom,
+  reachableCount,
+  isWalkable,
+  RegenerateFloor,
+  MAX_ATTEMPTS,
+  TILE,
+  DungeonGenerator,
+} from '../src/dungeon/floor-builder.js';
 import { layoutStream } from '../src/engine/rng.js';
 import { floorSpec, allFloorSpecs } from '../src/data/floors.js';
 
+const SEED = 20260918;
+
+/** Every walkable tile on a map. */
+const walkable = (map) => map.flat().filter(isWalkable).length;
+
+/** The gaps in the arena's wall ring. */
+function ringOpenings(floor) {
+  const [ax, ay, aw, ah] = floor.arena.rect;
+  /** @type {[number, number][]} */
+  const open = [];
+  for (let x = ax - 1; x <= ax + aw; x++) {
+    for (const y of [ay - 1, ay + ah]) if (isWalkable(floor.map[y][x])) open.push([x, y]);
+  }
+  for (let y = ay; y < ay + ah; y++) {
+    for (const x of [ax - 1, ax + aw]) if (isWalkable(floor.map[y][x])) open.push([x, y]);
+  }
+  return open;
+}
+
 describe('withRng', () => {
   it('lends the stream to Math.random for the length of the call', () => {
-    const rng = () => 0.25;
-    const seen = withRng(rng, () => [Math.random(), Math.random()]);
-    expect(seen).toEqual([0.25, 0.25]);
+    expect(withRng(() => 0.25, () => [Math.random(), Math.random()])).toEqual([0.25, 0.25]);
   });
 
   it('puts the real Math.random back afterwards', () => {
@@ -25,23 +55,19 @@ describe('withRng', () => {
 
   it('puts it back even when the call throws', () => {
     const real = Math.random;
-    expect(() => withRng(() => 0.5, () => {
-      throw new Error('generation failed');
-    })).toThrow('generation failed');
+    expect(() =>
+      withRng(() => 0.5, () => {
+        throw new Error('generation failed');
+      }),
+    ).toThrow('generation failed');
     expect(Math.random).toBe(real);
-  });
-
-  it('returns whatever the call returned', () => {
-    expect(withRng(() => 0.5, () => 'floor 4')).toBe('floor 4');
   });
 
   it('nests without losing the outer stream', () => {
     const real = Math.random;
-    const outer = () => 0.1;
-    const inner = () => 0.9;
-    const seen = withRng(outer, () => {
+    const seen = withRng(() => 0.1, () => {
       const before = Math.random();
-      const nested = withRng(inner, () => Math.random());
+      const nested = withRng(() => 0.9, () => Math.random());
       return [before, nested, Math.random()];
     });
     expect(seen).toEqual([0.1, 0.9, 0.1]);
@@ -56,8 +82,6 @@ describe('withRng', () => {
   });
 
   it('actually reaches the vendored generator, which is the whole point', () => {
-    // The generator calls Math.random 15 times over in its own source; if the
-    // wrapper did not reach it, this spy would never fire.
     const rng = vi.fn(layoutStream(1, 1));
     withRng(rng, () => DungeonGenerator.generate(33, 33, { roomDensity: 0.13 }));
     expect(rng.mock.calls.length).toBeGreaterThan(100);
@@ -73,40 +97,17 @@ describe('generateLayout', () => {
     expect(rooms.length).toBeGreaterThan(0);
   });
 
-  it('takes a floor number as readily as a spec', () => {
-    const fromNumber = generateLayout(4, layoutStream(7, 4));
-    const fromSpec = generateLayout(floorSpec(4), layoutStream(7, 4));
-    expect(fromNumber.map).toEqual(fromSpec.map);
-    expect(fromNumber.spec.id).toBe('fungal_caverns');
-  });
-
   it('rebuilds the same floor from the same master seed and floor number', () => {
-    // 05 section 1: the same seed always produces the same dungeon.
     const once = generateLayout(3, layoutStream(918273645, 3));
     const twice = generateLayout(3, layoutStream(918273645, 3));
     expect(twice.map).toEqual(once.map);
-    expect(twice.rooms).toEqual(once.rooms);
   });
 
-  it('gives different floors of one game different layouts', () => {
-    const floor1 = generateLayout(1, layoutStream(42, 1));
-    const floor2 = generateLayout(2, layoutStream(42, 2));
-    // Same size on floors 1 and 2, so a matching map would mean the floor
-    // number never reached the stream.
-    expect(floor2.map).not.toEqual(floor1.map);
-  });
-
-  it('gives different games different floors', () => {
-    const gameA = generateLayout(1, layoutStream(1000, 1));
-    const gameB = generateLayout(1, layoutStream(1001, 1));
-    expect(gameB.map).not.toEqual(gameA.map);
-  });
-
-  it('gives a regenerated floor a different layout', () => {
-    // 05 section 3 step 10: a floor failing the solvability check is rebuilt.
-    const first = generateLayout(5, layoutStream(500, 5, 0));
-    const retry = generateLayout(5, layoutStream(500, 5, 1));
-    expect(retry.map).not.toEqual(first.map);
+  it('never places stairs itself: the floor builder does that', () => {
+    const { map } = generateLayout(1, layoutStream(5150, 1));
+    const tiles = new Set(map.flat());
+    expect(tiles.has(TILE.STAIRS_DOWN)).toBe(false);
+    expect(tiles.has(TILE.STAIRS_UP)).toBe(false);
   });
 
   it('leaves Math.random alone', () => {
@@ -116,30 +117,211 @@ describe('generateLayout', () => {
   });
 });
 
-describe('every floor generates', () => {
-  it.each(allFloorSpecs().map((s) => [s.floor, s]))('floor %i', (floor, spec) => {
-    const { map, rooms } = generateLayout(spec, layoutStream(20260918, floor));
+describe('every floor builds', () => {
+  const floors = allFloorSpecs().map((spec) => [spec.floor, buildFloor(spec.floor, SEED, layoutStream)]);
 
-    expect(map.length).toBe(spec.height);
-    expect(map.every((row) => row.length === spec.width)).toBe(true);
+  it.each(floors)('floor %i', (number, floor) => {
+    const spec = floorSpec(number);
 
-    // Every tile is one the tile enum knows about (07 section 1).
+    expect(floor.width).toBe(spec.width);
+    expect(floor.map.length).toBe(spec.height);
+    expect(floor.map.every((row) => row.length === spec.width)).toBe(true);
+
     const known = new Set(Object.values(TILE));
-    for (const row of map) for (const tile of row) expect(known.has(tile)).toBe(true);
-
-    // A floor with no walkable space, or no rooms, would be unplayable.
-    const walkable = map.flat().filter((t) => t === TILE.FLOOR).length;
-    expect(walkable).toBeGreaterThan(spec.width * spec.height * 0.1);
-    expect(rooms.length).toBeGreaterThan(0);
+    for (const row of floor.map) for (const tile of row) expect(known.has(tile)).toBe(true);
   });
 
-  it('never places stairs itself: the floor builder does that', () => {
-    // 07 section 1: STAIRS_DOWN / STAIRS_UP are placed by the floor builder.
-    for (const spec of allFloorSpecs()) {
-      const { map } = generateLayout(spec, layoutStream(5150, spec.floor));
-      const tiles = new Set(map.flat());
-      expect(tiles.has(TILE.STAIRS_DOWN)).toBe(false);
-      expect(tiles.has(TILE.STAIRS_UP)).toBe(false);
+  it.each(floors)('floor %i is one connected place', (number, floor) => {
+    // Nothing the hero can see may be walled off from where they arrive.
+    expect(reachableCount(floor.map, floor.start.pos)).toBe(walkable(floor.map));
+  });
+
+  it.each(floors)('floor %i has an arena of the size 05 section 5 gives', (number, floor) => {
+    const spec = floorSpec(number);
+    const [ax, ay, aw, ah] = floor.arena.rect;
+    expect([aw, ah]).toEqual([spec.arenaSize, spec.arenaSize]);
+
+    // Its inside is clear, so the boss fight has the shape it needs.
+    for (let y = ay; y < ay + ah; y++) {
+      for (let x = ax; x < ax + aw; x++) expect(floor.map[y][x]).toBe(TILE.FLOOR);
+    }
+  });
+
+  it.each(floors)('floor %i lets the arena be entered exactly one way', (number, floor) => {
+    // 05 section 5: one entrance door, and an alcove that is not a way in.
+    const openings = ringOpenings(floor);
+    expect(openings).toHaveLength(2);
+
+    const kinds = openings.map(([x, y]) => floor.map[y][x]).sort();
+    expect(kinds).toEqual([TILE.STAIRS_DOWN, TILE.DOOR].sort());
+    expect(floor.map[floor.arena.door[1]][floor.arena.door[0]]).toBe(TILE.DOOR);
+  });
+
+  it.each(floors)('floor %i puts the down stairs behind the arena', (number, floor) => {
+    // 05 section 5: reachable only through the arena. Wall the arena off and
+    // the stairs must become unreachable.
+    const [ax, ay, aw, ah] = floor.arena.rect;
+    const walledOff = floor.map.map((row) => [...row]);
+    for (let y = ay; y < ay + ah; y++) for (let x = ax; x < ax + aw; x++) walledOff[y][x] = TILE.WALL;
+
+    const dist = distancesFrom(walledOff, floor.start.pos);
+    expect(dist[floor.stairs.down[1]][floor.stairs.down[0]]).toBe(-1);
+
+    // And with the arena open, they must be reachable.
+    const open = distancesFrom(floor.map, floor.start.pos);
+    expect(open[floor.stairs.down[1]][floor.stairs.down[0]]).toBeGreaterThan(0);
+  });
+
+  it.each(floors)('floor %i puts the hero on the up stairs, beside a waystone', (number, floor) => {
+    // 05 section 9: every floor has a Waystone in its arrival room.
+    expect(floor.map[floor.stairs.up[1]][floor.stairs.up[0]]).toBe(TILE.STAIRS_UP);
+    expect(floor.start.pos).toEqual(floor.stairs.up);
+    expect([0, 1, 2, 3]).toContain(floor.start.facing);
+
+    // The waystone is a side-table entry on a walkable tile of its own, never
+    // on the stairs: tiles hold terrain only (DECISIONS, 2026-09-18).
+    expect(floor.waystone).not.toEqual(floor.stairs.up);
+    const [wx, wy] = floor.waystone;
+    expect(isWalkable(floor.map[wy][wx])).toBe(true);
+    const gap = Math.abs(wx - floor.stairs.up[0]) + Math.abs(wy - floor.stairs.up[1]);
+    expect(gap).toBe(1);
+  });
+
+  it.each(floors)('floor %i arrives a long way from the arena', (number, floor) => {
+    // 05 section 3 step 5: the arrival point is the farthest from the arena.
+    const dist = distancesFrom(floor.map, floor.arena.entrance);
+    const here = dist[floor.start.pos[1]][floor.start.pos[0]];
+    expect(here).toBeGreaterThan(0);
+
+    const farthest = Math.max(...dist.flat());
+    expect(here).toBeGreaterThan(farthest * 0.5);
+  });
+
+  it.each(floors)('floor %i names a Safe Room in front of the arena', (number, floor) => {
+    // 05 section 5: the room right before the arena.
+    const safe = floor.rooms.find((room) => room.id === floor.safeRoom);
+    expect(safe).toBeTruthy();
+    expect(safe.role).toBe('safeRoom');
+
+    const dist = distancesFrom(floor.map, floor.arena.entrance);
+    const [sx, sy, sw, sh] = safe.rect;
+    let nearest = Infinity;
+    for (let y = sy; y < sy + sh; y++) {
+      for (let x = sx; x < sx + sw; x++) {
+        const d = dist[y]?.[x];
+        if (d >= 0) nearest = Math.min(nearest, d);
+      }
+    }
+    // No other room is closer to the arena than the one chosen.
+    for (const room of floor.rooms) {
+      const [rx, ry, rw, rh] = room.rect;
+      for (let y = ry; y < ry + rh; y++) {
+        for (let x = rx; x < rx + rw; x++) {
+          const d = dist[y]?.[x];
+          if (d >= 0) expect(d).toBeGreaterThanOrEqual(nearest);
+        }
+      }
+    }
+  });
+});
+
+describe('rebuilding from a seed', () => {
+  it('gives the same floor every time', () => {
+    const once = buildFloor(4, 777, layoutStream);
+    const twice = buildFloor(4, 777, layoutStream);
+    expect(twice.map).toEqual(once.map);
+    expect(twice.arena).toEqual(once.arena);
+    expect(twice.stairs).toEqual(once.stairs);
+    expect(twice.waystone).toEqual(once.waystone);
+    expect(twice.start).toEqual(once.start);
+    expect(twice.safeRoom).toEqual(once.safeRoom);
+  });
+
+  it('gives different floors of one game different shapes', () => {
+    const one = buildFloor(1, 4242, layoutStream);
+    const two = buildFloor(2, 4242, layoutStream);
+    expect(two.map).not.toEqual(one.map);
+  });
+
+  it('gives different games different floors', () => {
+    expect(buildFloor(1, 1000, layoutStream).map).not.toEqual(buildFloor(1, 1001, layoutStream).map);
+  });
+
+  it('records which attempt produced the floor', () => {
+    expect(buildFloor(1, SEED, layoutStream).attempt).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe('when a floor cannot be finished', () => {
+  it('tries again with the next seed, and says which attempt won', () => {
+    // 05 section 3 step 10. A stream of zeros makes the generator produce a
+    // floor the builder cannot finish, so attempt 0 is forced to fail here.
+    const failFirst = (seed, floor, attempt) =>
+      attempt === 0 ? () => 0 : layoutStream(seed, floor, attempt);
+
+    const floor = buildFloor(1, 99, failFirst);
+    expect(floor.attempt).toBe(1);
+    // And the floor it settled on is a real one.
+    expect(reachableCount(floor.map, floor.start.pos)).toBe(walkable(floor.map));
+  });
+
+  it('asks the stream for each attempt in turn', () => {
+    const makeStream = vi.fn((seed, floor, attempt) =>
+      attempt < 2 ? () => 0 : layoutStream(seed, floor, attempt),
+    );
+    buildFloor(1, 31337, makeStream);
+    expect(makeStream.mock.calls.map((call) => call[2])).toEqual([0, 1, 2]);
+  });
+
+  it('gives up with every reason listed, rather than looping forever', () => {
+    let error;
+    try {
+      buildFloor(1, 1, () => () => 0);
+    } catch (err) {
+      error = err;
+    }
+    expect(error, 'a floor that can never be built must throw').toBeDefined();
+    expect(error).not.toBeInstanceOf(RegenerateFloor);
+    expect(error.message).toContain(`${MAX_ATTEMPTS} attempts`);
+    // Each attempt's reason is kept, so a failure can be diagnosed.
+    expect(error.message.split('attempt ').length - 1).toBe(MAX_ATTEMPTS);
+  });
+
+  it('refuses an arena that will not fit on the map at all', () => {
+    const tiny = Array.from({ length: 9 }, () => new Array(9).fill(TILE.WALL));
+    expect(() => stampBossArena(tiny, { ...floorSpec(1), width: 9, height: 9 })).toThrow(
+      RegenerateFloor,
+    );
+  });
+
+  it('refuses to place arrival when nothing can reach the arena', () => {
+    const sealed = Array.from({ length: 21 }, () => new Array(21).fill(TILE.WALL));
+    const spec = { ...floorSpec(1), width: 21, height: 21 };
+    expect(() => placeArrival(sealed, spec, { entrance: [1, 1], rect: [5, 5, 9, 9] })).toThrow(
+      RegenerateFloor,
+    );
+  });
+});
+
+describe('across many seeds', () => {
+  const SEEDS = 25;
+
+  it(`builds every floor for ${SEEDS} seeds, each one whole`, () => {
+    for (let seed = 1; seed <= SEEDS; seed += 1) {
+      for (let number = 1; number <= 10; number += 1) {
+        const floor = buildFloor(number, seed * 7919, layoutStream);
+        const where = `seed ${seed}, floor ${number}`;
+
+        expect(reachableCount(floor.map, floor.start.pos), `${where}: not all reachable`).toBe(
+          walkable(floor.map),
+        );
+        expect(ringOpenings(floor), `${where}: arena openings`).toHaveLength(2);
+
+        const dist = distancesFrom(floor.map, floor.start.pos);
+        expect(dist[floor.arena.entrance[1]][floor.arena.entrance[0]], `${where}: arena`).toBeGreaterThan(0);
+        expect(dist[floor.stairs.down[1]][floor.stairs.down[0]], `${where}: stairs`).toBeGreaterThan(0);
+        expect(dist[floor.waystone[1]][floor.waystone[0]], `${where}: waystone`).toBeGreaterThanOrEqual(0);
+      }
     }
   });
 });

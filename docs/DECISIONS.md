@@ -4,6 +4,16 @@ Rulings here override the other documents. Add new entries at the top of each li
 
 ## Decisions
 
+- **2026-09-18 — Stamping the boss arena over a finished floor.** `07` section 3 step 1 says to carve the arena "into the largest clear region". No generated floor has one: the maze fills the grid, and the emptiest 11 × 11 block still holds about 50 walkable tiles. So the arena is stamped over the map at the site that destroys fewest walkable tiles (ties break outward from the middle, deterministically), and the floor is then repaired by digging the shortest run of wall back to anything the stamp cut off.
+
+  Two rules of `05` section 5 needed protecting explicitly, and both were wrong in the first working version:
+  - **The alcove is sealed on its outward side.** Otherwise the down stairs sit in a through-passage and can be reached without entering the arena.
+  - **The arena's wall ring is off limits to the repair pass**, which would otherwise dig a second way in and break the one-entrance rule.
+
+  A floor that cannot be finished throws `RegenerateFloor` and is rebuilt with the next attempt number, up to 8, as `05` section 3 step 10 allows.
+
+  **Arrival is the farthest dead end by walking distance.** `07` step 2 names `pickDeadEndNear` / `findNearestFloor`, and `05` section 3 step 5 wants the point farthest from the arena. Both are honoured: `findDeadEnds` supplies the candidates, and walking distance picks between them, falling back to `findNearestFloor` from the opposite corner when no dead end is usable.
+
 - **2026-09-18 — The vendored generator's module wrapper had to change.** `07` allows a vendored module to change if it genuinely must, with the reason recorded. This is that case: `src/dungeon/dungeon-generator.js` could not be loaded **at all**.
 
   Its UMD wrapper picks between `module.exports` and a global. `package.json` sets `"type": "module"`, so the file is an ES module everywhere it is used — Node, esbuild and Vite alike — and **both** branches fail there: top-level `this` is `undefined`, `self` does not exist in Node, and under Vite `module` is a read-only namespace object whose `default` cannot be assigned. Every load threw before the factory ran.
@@ -51,6 +61,7 @@ Rulings here override the other documents. Add new entries at the top of each li
 
 ## Open questions
 
+- **Floors 1–3 cannot reach the critical-path pacing target.** `05` section 2 asks for 150–300 steps from arrival to the boss, and defines the critical path as the *shortest* walking route (section 3 step 5). On a 33 × 33 grid that is not reachable: measured over 40 seeds, floor 1 runs 58–190 steps (median 112) and floor 3 runs 64–156 (median 110), with only 1–5 seeds in 40 landing in range. This is the grid, not the placement — the arrival point chosen averages 116 steps against a theoretical ceiling of 121, within 4% of the farthest tile that exists. Floors 4–7 land in range about 60% of the time; floors 8–10 about 85%. Options: accept that early floors are shorter (a quick floor 1 reads as intentional), enlarge floors 1–3, or read the target as including exploration rather than the beeline. This blocks the Phase 2 sweep test, which asks every floor to hit the pacing targets. (Default: accept shorter early floors and relax the target for 33 × 33 grids.)
 - **Tap targets inside scrolling lists.** The build outline's own Settings mockup uses 52 px segmented controls, which is under the 2-row minimum (about 80 px). Phase 1 reads the minimum as applying to grid-placed regions only. Confirm, or raise the in-list controls and accept more scrolling.
 - **Letterbox.** Space left over in either frame is plain black bars. Keep that, or fill the bars with a subtle dungeon pattern? (Default: plain black.)
 - **Tablet in portrait.** Currently the phone layout scaled up, capped at 72 px units. Worth a wider two-pane portrait layout later, or leave it? (Default: leave it.)
