@@ -4,6 +4,13 @@ Rulings here override the other documents. Add new entries at the top of each li
 
 ## Decisions
 
+- **2026-09-18 — The solvability check, and repairing rather than rebuilding.** `05` section 4 is implemented as written: a pessimistic flood fill with keys, then a second one run backwards for the "get back from anywhere" rule. Three readings, and one change of approach:
+  - **A teleporter pad is impassable to the checker.** `05` says the minimum hero "can't rely on teleporters". Stepping on a pad moves the hero somewhere fixed, so a pad in a one-tile corridor genuinely severs it. Rather than loosen the checker, pads are now kept off the critical path and off any tile whose loss would cut the floor in two.
+  - **Deep water is passable.** `05` lets the minimum hero cross "short deep water"; the hazard is a save against damage, not a wall, so the checker treats every pool as crossable.
+  - **A one-directional door that strands the hero is opened up, not regenerated.** Barred and one-way doors go on loops so there is always a way round, but the way round can be shut afterwards by a second one on the same loop, by a secret door, or by a teleporter pad landing in it. `repairOneWayDoors` runs on the *finished* floor, using the checker's own passability, and demotes the door nearest the trouble to a plain archway.
+
+  The order matters, and getting it wrong is what made this worth writing down. Repairing before the hazards were placed left 3.5% of first attempts unsolvable, because the repair could not see a pad that had not been placed yet. Running it last, with the same rules the checker uses, brought first-attempt failures from **17% to 1.3%**; what remains is rebuilt with the next attempt, as `05` section 3 step 10 allows.
+
 - **2026-09-18 — Side tables, and a count the documents never give.** Traps, chests, hazards, lairs and curiosities are now side tables keyed "x,y", finishing the list in `07` section 1. Three things needed deciding:
   - **How many hazards a floor gets.** `05` section 3 step 8 and `03` section 8 give every hazard's placement rules and effects but never a count. `hazardCount` in `floors.json` is 1 + ⌊F ÷ 2⌋, spread across the kinds the floor allows, which runs from one hazard on floor 2 to six on floor 10.
   - **The 10% darkness cap is on the floor, not on one patch.** `05` says a Dark Zone may cover "up to 10% of floor tiles". Read per patch it produced a single 125-tile blackout on floor 9. It is now a running total, with each patch 6 to 20 tiles; measured over 200 floors the worst floor is 5.4% dark.

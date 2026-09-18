@@ -14,6 +14,7 @@ import DungeonGenerator from './dungeon-generator.js';
 import { floorSpec } from '../data/floors.js';
 import { assignDoorTypes, placeKeys, placeSecretDoors } from './doors.js';
 import { furnishFloor } from './furnish.js';
+import { checkSolvable, repairOneWayDoors } from './solvability.js';
 
 export { DungeonGenerator };
 export const TILE = DungeonGenerator.TILE;
@@ -418,9 +419,15 @@ export function placeArrival(map, spec, arena) {
     y >= arena.rect[1] - 1 &&
     y <= arena.rect[1] + arena.rect[3];
 
+  // The waystone goes on a tile beside the stairs, so a dead end with nothing
+  // but a door next to it is no good as an arrival point.
+  const hasRoomForAWaystone = ([x, y]) =>
+    DIRS.some(([dx, dy]) => map[y + dy]?.[x + dx] === TILE.FLOOR);
+
   const deadEnds = DungeonGenerator.findDeadEnds(map, w, h)
     .map(({ x, y }) => /** @type {[number, number]} */ ([x, y]))
-    .filter((pos) => !inArena(pos) && fromArena[pos[1]][pos[0]] > 0);
+    .filter((pos) => !inArena(pos) && fromArena[pos[1]][pos[0]] > 0)
+    .filter(hasRoomForAWaystone);
 
   /** @type {[number, number] | null} */
   let upStairs = null;
@@ -590,14 +597,14 @@ export function buildFloor(floor, masterSeed, makeStream) {
         spec,
       };
       const { doors } = assignDoorTypes(sofar, rng);
-      const keys = placeKeys(sofar, doors, rng);
       const { secrets } = placeSecretDoors(sofar, doors, rng);
+      const keys = placeKeys(sofar, doors, rng);
 
       // The remaining side tables (07 section 1). They need the doors and the
       // room roles above, so they come last.
       const furnished = furnishFloor({ ...sofar, doors, secrets, waystone }, rng);
 
-      return {
+      const built = {
         floor,
         masterSeed,
         attempt,
@@ -626,6 +633,20 @@ export function buildFloor(floor, masterSeed, makeStream) {
         returnMark: null,
         spec,
       };
+
+      // A one-directional door can be left stranding the hero once everything
+      // else is placed: a second one on the same loop, a secret door, or a
+      // teleporter pad landing in the corridor that was the way round. The
+      // door responsible is opened up rather than the floor thrown away, and
+      // this runs on the finished floor so it sees what the checker sees.
+      repairOneWayDoors(built);
+
+      // Step 10: the floor only exists if a hero with no skills and no items
+      // can finish it (05 section 4). A failure is rebuilt with the next seed.
+      const verdict = checkSolvable(built);
+      if (!verdict.ok) throw new RegenerateFloor(verdict.problems.join('; '));
+
+      return built;
     } catch (err) {
       if (!(err instanceof RegenerateFloor)) throw err;
       problems.push(`attempt ${attempt}: ${err.message}`);

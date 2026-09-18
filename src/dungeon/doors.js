@@ -173,8 +173,19 @@ export function assignDoorTypes(floor, rng) {
   const range = (kind) => spec.specialDoors[kind].count;
 
   // Barred and one-way: only on a loop, so the hero can always get round.
-  if (allows('barred')) place('barred', range('barred'), (d) => d.onLoop && !d.onCriticalPath);
-  if (allows('oneWay')) place('oneWay', range('oneWay'), (d) => d.onLoop && !d.onCriticalPath);
+  // Both are one-directional, so which way they face has to be recorded, or
+  // the solvability checker cannot tell a shortcut from a trap.
+  const oneDirection = (kind, placed) => {
+    for (const door of placed) {
+      // A barred door opens only from its far side; a one-way door is entered
+      // only from the side it faces. Either way one side is named, and the
+      // choice is drawn from the layout stream so it rebuilds with the floor.
+      const side = rng.pick(door.sides);
+      doors[door.key] = { ...doors[door.key], pos: door.pos, passFrom: side };
+    }
+  };
+  if (allows('barred')) oneDirection('barred', place('barred', range('barred'), (d) => d.onLoop && !d.onCriticalPath));
+  if (allows('oneWay')) oneDirection('oneWay', place('oneWay', range('oneWay'), (d) => d.onLoop && !d.onCriticalPath));
 
   // Sealed: only in front of a treasure room or the secret stash, never on the
   // route. Its tier is Arcane by definition.
@@ -356,3 +367,4 @@ export function placeSecretDoors(floor, doors, rng) {
 }
 
 export { locks as lockData };
+

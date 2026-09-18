@@ -262,6 +262,18 @@ export function placeHazards(floor, rng, traps) {
 
   const free = (pos) => !taken.has(key(...pos)) && !off.has(key(...pos));
 
+  /** True when sealing this tile would cut the floor in two. */
+  const severs = ([x, y]) => {
+    const sides = DIRS.map(([dx, dy]) => [x + dx, y + dy]).filter(([nx, ny]) =>
+      isWalkable(floor.map[ny]?.[nx]),
+    );
+    if (sides.length < 2) return false;
+    const sealed = floor.map.map((row) => [...row]);
+    sealed[y][x] = TILE.WALL;
+    const reach = distancesFrom(sealed, sides[0]);
+    return sides.slice(1).some(([nx, ny]) => reach[ny][nx] < 0);
+  };
+
   /** Distance to the nearest stairs or door, for the spinner's spacing rule. */
   const landmarks = [floor.stairs.up, floor.stairs.down, ...Object.values(floor.doors).map((d) => d.pos).filter(Boolean)];
   const farFromLandmarks = ([x, y], least) =>
@@ -343,9 +355,14 @@ export function placeHazards(floor, rng, traps) {
       return true;
     },
 
-    // Its fixed destination must be a tile the hero can reach.
+    // Its fixed destination must be a tile the hero can reach. The pad itself
+    // may not sit on the route or anywhere else that is the only way through:
+    // stepping on one teleports the hero away, so a pad in a single corridor
+    // is a wall to anyone trying to walk past it (05 section 4).
     teleporter_pad: () => {
-      const spots = open.filter((pos) => free(pos));
+      const spots = open.filter(
+        (pos) => free(pos) && !onPath.has(key(...pos)) && !severs(pos),
+      );
       if (spots.length < 2) return false;
       const pad = rng.pick(spots);
       const reach = distancesFrom(floor.map, floor.start.pos);

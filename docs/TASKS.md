@@ -27,7 +27,7 @@ Work top to bottom. Check a box when the task is done and tested. Each phase end
 - [x] Distances and room roles: critical path, depth score, lairs, treasure rooms, curiosity rooms, secret stash (`07` steps 3–4)
 - [x] Door types and lock tiers; keep or clear the generator's ILLUSION tiles as secret doors (`07` steps 5–6)
 - [x] Side tables per floor: `doors`, `traps`, `chests`, `hazards`, `keys`, `lairs` (`07` section 1)
-- [ ] Solvability checker (`05` section 4) and regenerate-on-fail with `seed + 1`
+- [x] Solvability checker (`05` section 4) and regenerate-on-fail with `seed + 1`
 - [ ] Generator sweep test: 10,000 seeds × 10 floors all pass and hit the pacing targets
 - [ ] `view.js`: wire the supplied raycaster — FOV and aspect per frame, fog distance from the light source, door offsets, capped canvas resolution (`07` section 4)
 - [ ] Grid movement with a 140 ms tween between tiles (display only; state changes in one step)
