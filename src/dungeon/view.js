@@ -278,3 +278,129 @@ export function createView({ canvas, frame, light = 'torch' }) {
     },
   };
 }
+
+/* -------------------------------------------------------------------------- */
+/* The step animator                                                          */
+/* -------------------------------------------------------------------------- */
+
+/** requestAnimationFrame where there is one, and a timer where there isn't. */
+function defaultClock() {
+  const raf = globalThis.requestAnimationFrame;
+  if (typeof raf === 'function') {
+    return {
+      now: () => globalThis.performance?.now?.() ?? Date.now(),
+      schedule: (cb) => raf(cb),
+      cancel: (handle) => globalThis.cancelAnimationFrame?.(handle),
+    };
+  }
+  return {
+    now: () => Date.now(),
+    schedule: (cb) => setTimeout(() => cb(Date.now()), 16),
+    cancel: (handle) => clearTimeout(handle),
+  };
+}
+
+/**
+ * Draws the 140 ms tween between two poses (`07` section 4).
+ *
+ * The animation is display only. The move was resolved and committed before
+ * this was called, so the tween always ends exactly on the pose it was given:
+ * pressing the pad again mid-step starts a fresh tween from whatever is on
+ * screen rather than queueing, which keeps the view honest about where the
+ * hero actually is.
+ *
+ * The clock is injected so the whole thing can be tested without a browser.
+ *
+ * @param {object} options
+ * @param {(pose: { x: number, y: number, angle: number }) => void} options.draw
+ * @param {{ x: number, y: number, angle: number }} [options.pose] where to start
+ * @param {number} [options.duration] milliseconds; 0 draws each move at once
+ * @param {{ now: () => number, schedule: (cb: (t: number) => void) => any, cancel: (handle: any) => void }} [options.clock]
+ */
+export function createAnimator({ draw, pose = { x: 0, y: 0, angle: 0 }, duration = STEP_MS, clock = defaultClock() }) {
+  let shown = { ...pose };
+  let from = { ...pose };
+  let target = { ...pose };
+  let startedAt = 0;
+  let handle = null;
+  /** @type {(() => void) | null} */
+  let finish = null;
+
+  const paint = () => {
+    draw(shown);
+  };
+
+  const settle = () => {
+    if (handle !== null) clock.cancel(handle);
+    handle = null;
+    shown = { ...target };
+    paint();
+    const done = finish;
+    finish = null;
+    done?.();
+  };
+
+  const tick = (time) => {
+    handle = null;
+    const t = (time - startedAt) / duration;
+    if (t >= 1) {
+      settle();
+      return;
+    }
+    shown = tweenPose(from, target, t);
+    paint();
+    handle = clock.schedule(tick);
+  };
+
+  return {
+    /** Where the view is drawing the hero right now. */
+    get pose() {
+      return { ...shown };
+    },
+    get running() {
+      return handle !== null;
+    },
+
+    /** Jumps, with no tween: arriving on a floor, or a rotation redraw. */
+    set(next) {
+      if (handle !== null) clock.cancel(handle);
+      handle = null;
+      finish?.();
+      finish = null;
+      shown = { ...next };
+      from = { ...next };
+      target = { ...next };
+      paint();
+    },
+
+    /**
+     * Tweens to a pose the game has already moved to.
+     * @returns {Promise<void>} resolves when the tween has finished drawing
+     */
+    moveTo(next) {
+      if (handle !== null) clock.cancel(handle);
+      handle = null;
+      finish?.();
+      finish = null;
+
+      from = { ...shown };
+      target = { ...next };
+      if (duration <= 0) {
+        settle();
+        return Promise.resolve();
+      }
+      startedAt = clock.now();
+      paint();
+      return new Promise((resolve) => {
+        finish = resolve;
+        handle = clock.schedule(tick);
+      });
+    },
+
+    /** Ends the current tween on its target, for example before a screen change. */
+    settle,
+
+    /** Draws again from the same pose: what a rotation does. */
+    redraw: paint,
+  };
+}

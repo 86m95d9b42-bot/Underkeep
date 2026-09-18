@@ -24,6 +24,7 @@ import {
   tweenPose,
   poseFor,
   STEP_MS,
+  createAnimator,
 } from '../src/dungeon/view.js';
 
 describe('field of view', () => {
@@ -214,5 +215,133 @@ describe('the movement tween', () => {
       expect(at.y).toBeLessThanOrEqual(from.y);
       expect(at.y).toBeGreaterThanOrEqual(to.y);
     }
+  });
+});
+
+describe('the step animator', () => {
+  /** A clock the test drives by hand, so the tween can be checked frame by frame. */
+  function fakeClock() {
+    let t = 0;
+    let next = 1;
+    /** @type {Map<number, (t: number) => void>} */
+    const pending = new Map();
+    return {
+      now: () => t,
+      schedule(cb) {
+        const handle = next++;
+        pending.set(handle, cb);
+        return handle;
+      },
+      cancel(handle) {
+        pending.delete(handle);
+      },
+      /** Runs every frame that is waiting, at the new time. */
+      advance(ms) {
+        t += ms;
+        const due = [...pending.entries()];
+        pending.clear();
+        for (const [, cb] of due) cb(t);
+      },
+      get waiting() {
+        return pending.size;
+      },
+    };
+  }
+
+  const setup = (options = {}) => {
+    const clock = fakeClock();
+    const drawn = [];
+    const animator = createAnimator({
+      draw: (pose) => drawn.push({ ...pose }),
+      pose: poseFor([2, 2], 0),
+      clock,
+      ...options,
+    });
+    return { clock, drawn, animator };
+  };
+
+  it('starts where it was told to, without drawing', () => {
+    const { animator, drawn } = setup();
+    expect(animator.pose).toEqual(poseFor([2, 2], 0));
+    expect(drawn).toHaveLength(0);
+    expect(animator.running).toBe(false);
+  });
+
+  it('tweens a step over 140 ms and lands exactly on the target', async () => {
+    const { animator, clock, drawn } = setup();
+    const target = poseFor([2, 1], 0);
+
+    const done = animator.moveTo(target);
+    expect(animator.running).toBe(true);
+
+    clock.advance(STEP_MS / 2);
+    const middle = animator.pose;
+    expect(middle.y).toBeLessThan(2.5);
+    expect(middle.y).toBeGreaterThan(1.5);
+    expect(middle).toEqual(tweenPose(poseFor([2, 2], 0), target, 0.5));
+
+    clock.advance(STEP_MS / 2);
+    await done;
+    expect(animator.pose).toEqual(target);
+    expect(animator.running).toBe(false);
+    // Every frame drew, and the last one is the target.
+    expect(drawn.length).toBeGreaterThan(2);
+    expect(drawn.at(-1)).toEqual(target);
+  });
+
+  it('turns the short way round, west to north', async () => {
+    const { animator, clock } = setup({ pose: poseFor([2, 2], 3) });
+    const done = animator.moveTo(poseFor([2, 2], 0));
+    clock.advance(STEP_MS / 2);
+    // West is PI and north is -PI/2: the quarter turn goes on round, not back.
+    expect(animator.pose.angle).toBeGreaterThan(Math.PI);
+    clock.advance(STEP_MS);
+    await done;
+    expect(animator.pose.angle).toBeCloseTo(-Math.PI / 2, 10);
+  });
+
+  it('starts a new step from what is on screen, and never loses the target', async () => {
+    const { animator, clock } = setup();
+    animator.moveTo(poseFor([2, 1], 0));
+    clock.advance(STEP_MS / 2);
+    const interrupted = animator.pose;
+
+    const done = animator.moveTo(poseFor([2, 0], 0));
+    expect(animator.pose).toEqual(interrupted);
+    clock.advance(STEP_MS);
+    await done;
+    expect(animator.pose).toEqual(poseFor([2, 0], 0));
+  });
+
+  it('jumps with no tween when the game sets a pose, or when the tween is off', async () => {
+    const { animator, clock, drawn } = setup();
+    animator.set(poseFor([9, 9], 2));
+    expect(animator.pose).toEqual(poseFor([9, 9], 2));
+    expect(animator.running).toBe(false);
+    expect(drawn.at(-1)).toEqual(poseFor([9, 9], 2));
+    expect(clock.waiting).toBe(0);
+
+    const instant = setup({ duration: 0 });
+    await instant.animator.moveTo(poseFor([3, 3], 1));
+    expect(instant.animator.pose).toEqual(poseFor([3, 3], 1));
+    expect(instant.clock.waiting).toBe(0);
+  });
+
+  it('settles on the target when the screen changes mid-step', async () => {
+    const { animator, clock } = setup();
+    const done = animator.moveTo(poseFor([5, 2], 1));
+    clock.advance(STEP_MS / 4);
+    animator.settle();
+    await done;
+    expect(animator.pose).toEqual(poseFor([5, 2], 1));
+    expect(animator.running).toBe(false);
+    expect(clock.waiting).toBe(0);
+  });
+
+  it('redraws the same pose, which is what a rotation does', () => {
+    const { animator, drawn } = setup();
+    animator.redraw();
+    animator.redraw();
+    expect(drawn).toEqual([poseFor([2, 2], 0), poseFor([2, 2], 0)]);
   });
 });

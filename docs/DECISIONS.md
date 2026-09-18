@@ -4,6 +4,15 @@ Rulings here override the other documents. Add new entries at the top of each li
 
 ## Decisions
 
+- **2026-09-18 — Grid movement.** `src/dungeon/movement.js` resolves one press of the movement pad; `createAnimator` in `view.js` draws the 140 ms tween. Five rulings the documents left open:
+  - **Turning does not cost a step.** `05` counts steps for the step clock, the Hollow Stalker and torches, and never says whether a turn is one. Only entering a tile increments `steps`, so a player who looks around is not punished for it.
+  - **Movement agrees with the solvability checker, tile for tile.** `blockedBy` reads doors exactly as `canStep` does, and `test/movement.test.js` compares the two over every adjacent pair on all ten floors: anywhere the checker calls reachable, the hero can walk. The one deliberate difference is a **teleporter pad**, which the checker refuses to route through but the hero may step onto.
+  - **A blocked step reports what the hero is allowed to notice.** A one-way door from behind and an unfound secret door both return `looksLike: "wall"`, so the log cannot give them away (`03` section 6). The code still knows which it was.
+  - **A web curtain blocks the step; a visible pit does not.** `03` section 8 says a curtain blocks the corridor until burned, so it is the one hazard that stops movement, and `clearHazard` is what the BURN context key will call. A pit is a Reflex save rather than a wall, so it is walked over, and the checker treats it the same way. Every other hazard raises an event and does nothing yet — spinners, teleporters, ice and deep water are Phase 7.
+  - **A second press mid-step does not queue.** The state has already moved, so the new tween starts from whatever is on screen and ends on the resolved pose. The tween can never leave the view showing somewhere the hero is not.
+
+  The visit's changes live in an **exploration state** — position, facing, steps, explored tiles, doors opened, secrets found, hazards cleared — which is `05` section 14's "Floor Changes" held as Sets in memory. Turning those into the saved arrays is Phase 8's job.
+
 - **2026-09-18 — The dungeon view, and the second vendored file.** `src/dungeon/raycaster.js` needed the same module-wrapper change as the generator, for the same reason and with the same factory untouched (see the entry below). Three more notes:
   - **`view.js` is allowed to touch the DOM.** CLAUDE.md excepts the raycaster from the no-DOM rule for `src/dungeon/`, and `07` section 4 puts its wiring at `src/dungeon/view.js`, so the exception covers both. Everything in the file that is a rule rather than a canvas call — field of view, light sources, door offsets, the movement tween — is a pure export, and those are what the tests use.
   - **The wide field of view is tested as arithmetic, not as pixels.** `07` derives it as `2 · atan(tan(TALL_FOV / 2) · (2 / 1.125))`, which `test/view.test.js` checks to twelve decimal places. A browser check cannot stand in for that: setting `WIDE_FOV = TALL_FOV` left the rendered wall height unmoved, because the renderer takes its *vertical* field of view from canvas height. `npm run view-check` therefore claims only what it can see — that a real floor draws with depth shading, that the pixel cap holds, and that darkness closes the view down.
@@ -100,6 +109,7 @@ Rulings here override the other documents. Add new entries at the top of each li
 
 ## Open questions
 
+- **Which RNG stream a hazard rolls on.** `05` names five streams — layout, encounter, combat, loot, restock — and none obviously covers a roll made at step time, such as a spinner's new facing or a fountain's d6. Phase 7 needs an answer. (Default: the `encounter` stream, which the step clock already draws from.)
 - **Floors 1–3 cannot reach the critical-path pacing target.** `05` section 2 asks for 150–300 steps from arrival to the boss, and defines the critical path as the *shortest* walking route (section 3 step 5). The full sweep (10,000 seeds × 10 floors) measures what each grid size can actually produce:
 
   | Floors | Grid | Median steps | Within 150–300 |

@@ -23,6 +23,25 @@
     "exportDisabled": "Needs a saved game",
     "importDisabled": "Adventurer mode only"
   },
+  "explore": {
+    "blocked": {
+      "wall": "Solid wall.",
+      "stuck": "The door is stuck fast.",
+      "locked": "The door is locked.",
+      "keyed": "This door takes a key.",
+      "sealed": "Runes hold this door shut.",
+      "barred": "Barred from the other side.",
+      "web": "A web curtain blocks the way."
+    },
+    "context": {
+      "search": "SEARCH",
+      "open": "OPEN",
+      "touch": "TOUCH",
+      "drink": "DRINK",
+      "offer": "OFFER",
+      "burn": "BURN"
+    }
+  },
   "common": {
     "back": "Back",
     "cancel": "CANCEL",
