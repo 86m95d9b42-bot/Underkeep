@@ -1,0 +1,311 @@
+/* Shared UI parts. One class per part in src/ui/parts/, sized in --u only.
+   00-build-outline.md, "Visual design system". */
+
+/* --- Text --- */
+.label {
+  font-family: var(--font-label);
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+}
+.title {
+  font-family: var(--font-label);
+  font-weight: 400;
+  font-size: var(--fs-heading);
+  line-height: 1.05;
+}
+.display {
+  font-family: var(--font-label);
+  font-weight: 400;
+  font-size: var(--fs-display);
+  line-height: 1;
+}
+.body {
+  font-size: var(--fs-body);
+}
+.hint {
+  font-size: var(--fs-hint);
+  color: var(--muted);
+}
+.section-label {
+  font-family: var(--font-label);
+  font-weight: 400;
+  font-size: var(--fs-micro);
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+
+/* --- Button --- */
+.btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--u) * 0.05);
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: calc(var(--u) * 0.09) calc(var(--u) * 0.14);
+  text-align: center;
+  font-family: var(--font-body);
+  border-radius: var(--radius);
+  border: var(--line) solid var(--bone);
+  background: var(--panel);
+  color: var(--bone);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn > .label {
+  font-size: var(--fs-button);
+}
+.btn > .hint {
+  font-size: var(--fs-hint);
+}
+.btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--ground);
+}
+.btn--primary > .hint {
+  color: var(--ground);
+}
+.btn--risky {
+  border-color: var(--danger);
+}
+.btn--risky > .hint {
+  color: var(--danger);
+}
+.btn[disabled] {
+  opacity: 0.45;
+  cursor: default;
+}
+.btn--icon {
+  flex-direction: row;
+  width: auto;
+  aspect-ratio: 1;
+  padding: 0;
+  flex-shrink: 0;
+}
+.btn--small > .label {
+  font-size: var(--fs-body);
+}
+.btn--selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--ground);
+}
+
+/* --- Top bar (always rows 1–2) --- */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 0.22);
+  padding: 0 calc(var(--u) * 0.05);
+  border-bottom: var(--line) solid var(--rule);
+}
+.topbar__text {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  min-width: 0;
+}
+.topbar__title {
+  font-family: var(--font-label);
+  font-weight: 400;
+  font-size: var(--fs-heading);
+  line-height: 1.05;
+}
+.topbar__sub {
+  font-size: var(--fs-hint);
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.topbar__chips {
+  display: flex;
+  gap: calc(var(--u) * 0.1);
+  flex-shrink: 0;
+}
+/* The top bar's own buttons sit inside its two rows rather than filling them. */
+.topbar > .btn {
+  height: calc(var(--u) * 1.45);
+}
+
+/* --- Meter bar (HP / FP / XP) --- */
+.bar {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 0.14);
+}
+.bar__name {
+  font-family: var(--font-label);
+  font-weight: 400;
+  font-size: var(--fs-micro);
+  width: calc(var(--u) * 0.6);
+  flex-shrink: 0;
+}
+.bar__track {
+  flex-grow: 1;
+  height: calc(var(--u) * 0.37);
+  border: var(--line-thin) solid var(--bone);
+  border-radius: calc(var(--u) * 0.12);
+  overflow: hidden;
+  background: var(--ground);
+}
+.bar__fill {
+  height: 100%;
+}
+.bar--hp .bar__fill {
+  background: var(--danger);
+}
+.bar--fp .bar__fill {
+  background: var(--focus);
+}
+.bar--xp .bar__fill {
+  background: var(--success);
+}
+.bar__value {
+  font-size: var(--fs-body);
+  min-width: calc(var(--u) * 1.25);
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* --- Chip --- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--u) * 0.08);
+  white-space: nowrap;
+  padding: calc(var(--u) * 0.07) calc(var(--u) * 0.18);
+  border-radius: calc(var(--u) * 0.14);
+  border: var(--line-thin) solid var(--bone);
+  background: var(--panel-raised);
+  color: var(--bone);
+  font-family: var(--font-label);
+  font-weight: 400;
+  font-size: calc(var(--u) * 0.28);
+  line-height: 1.1;
+}
+.chip--accent {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.chip--danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.chip--muted {
+  border-color: var(--rule);
+  color: var(--muted);
+}
+
+/* --- Scroll panel --- */
+.panel {
+  box-sizing: border-box;
+  background: var(--panel);
+  border: var(--line) solid var(--bone);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.panel--plain {
+  background: transparent;
+  border-color: var(--rule);
+}
+.scrollpanel {
+  box-sizing: border-box;
+  /* Fills its region rather than growing with its content: the region's height
+     is what the list scrolls inside, and nothing may spill onto the screen. */
+  height: 100%;
+  background: var(--panel);
+  border: var(--line) solid var(--bone);
+  border-radius: var(--radius);
+  overflow-x: hidden;
+}
+
+/* --- List row --- */
+.listrow {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 0.18);
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: calc(var(--u) * 0.2) calc(var(--u) * 0.18);
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-bottom: var(--line-thin) solid var(--rule);
+  border-radius: 0;
+  color: var(--bone);
+  font-family: var(--font-body);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.listrow--selected {
+  background: var(--panel-raised);
+}
+.listrow[disabled] {
+  opacity: 0.45;
+  cursor: default;
+}
+.listrow__text {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  min-width: 0;
+  gap: calc(var(--u) * 0.03);
+}
+.listrow__name {
+  font-size: var(--fs-body);
+}
+.listrow__side {
+  flex-shrink: 0;
+  text-align: right;
+  font-family: var(--font-label);
+  font-weight: 400;
+  font-size: var(--fs-micro);
+}
+
+/* --- Settings-style stack: a label over its control --- */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 0.14);
+  padding: calc(var(--u) * 0.23) calc(var(--u) * 0.18);
+  border-bottom: var(--line-thin) solid var(--rule);
+}
+.field__label {
+  font-family: var(--font-label);
+  font-weight: 400;
+  font-size: calc(var(--u) * 0.32);
+}
+.field--locked .field__value {
+  font-size: var(--fs-body);
+  color: var(--muted);
+}
+
+/* --- Segmented control --- */
+.segmented {
+  display: grid;
+  gap: var(--gap);
+  height: calc(var(--u) * 1.2);
+}
+
+/* --- Sheet (over a dimmed screen) --- */
+.sheet {
+  display: grid;
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  gap: var(--gap);
+  box-sizing: border-box;
+  padding: calc(var(--u) * 0.14);
+  background: var(--ground);
+  border: var(--line) solid var(--bone);
+  border-radius: var(--radius-sheet);
+  opacity: 1;
+}
+#app.wide .sheet {
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+}
