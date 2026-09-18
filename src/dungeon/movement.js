@@ -88,6 +88,7 @@ export function tileAhead(pos, facing) {
  * @property {number} sinceCheck       ticks towards the next wandering check
  * @property {number} checks           wandering checks rolled this visit
  * @property {Set<string>} explored    tiles the hero has stood on
+ * @property {Set<string>} seen        tiles the hero knows of, walked or not
  * @property {Set<string>} doorsOpened
  * @property {Set<string>} secretsFound
  * @property {Set<string>} hazardsCleared  burned web curtains and the like
@@ -111,7 +112,11 @@ export function createExploration(floor) {
     pos: [x, y],
     facing: floor.start.facing,
     ...createClock(),
+    // Map memory. `automap.js` owns what goes in: a Dark Zone is never
+    // remembered, so neither set is written to by movement itself
+    // (`05` section 10).
     explored: new Set([key(x, y)]),
+    seen: new Set([key(x, y)]),
     doorsOpened: new Set(),
     secretsFound: new Set(),
     hazardsCleared: new Set(),
@@ -322,20 +327,19 @@ export function resolveMove(floor, ex, command) {
  * Applies a resolved move. This is the one step the game state takes; the save
  * is written from here and only then does anything animate.
  *
- * The clock is not wound here. `outcome.cost` says how much time the move took
- * — 1 for a step or a turn, 0 for walking into a wall (`01` section 9) — and
- * the caller spends it through `step-clock.js`, which is where the encounter
- * stream is.
+ * Two things are deliberately not done here. The clock is not wound:
+ * `outcome.cost` says how much time the move took — 1 for a step or a turn, 0
+ * for walking into a wall (`01` section 9) — and the caller spends it through
+ * `step-clock.js`, which is where the encounter stream is. And the map is not
+ * written: `automap.remember` owns that, because what the hero remembers
+ * depends on the light (`05` section 10).
  *
  * @param {Exploration} ex
  * @param {ReturnType<typeof resolveMove>} outcome
  */
 export function commitMove(ex, outcome) {
   ex.facing = outcome.to.facing;
-  if (outcome.moved) {
-    ex.pos = [...outcome.to.pos];
-    ex.explored.add(key(...outcome.to.pos));
-  }
+  if (outcome.moved) ex.pos = [...outcome.to.pos];
   return ex;
 }
 

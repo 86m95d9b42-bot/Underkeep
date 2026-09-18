@@ -17,7 +17,29 @@ const PAGE = process.env.URL ?? `file://${join(ROOT, 'dist', 'index.html')}`;
 const OUT = join(ROOT, 'dist', 'shots');
 
 /** Every screen the shell can open, by its router id. Grows with each phase. */
-const SCREENS = ['title', 'settings', 'explore', 'pause'];
+const SCREENS = ['title', 'settings', 'explore', 'pause', 'map'];
+
+/**
+ * Some screens are only worth looking at with something on them. The page
+ * exposes the run at `globalThis.underkeep`, so a shot can put the game into
+ * the state it wants first — here, a walked floor for the Automap.
+ */
+const PREPARE = {
+  map: `(() => {
+    const { run, router } = globalThis.underkeep;
+    const step = () => run.press('forward').outcome.moved;
+    // The left-hand rule covers a floor instead of looping in a corner.
+    for (let i = 0; i < 400; i++) {
+      run.press('turnLeft');
+      if (step()) continue;
+      run.press('turnRight'); if (step()) continue;
+      run.press('turnRight'); if (step()) continue;
+      run.press('turnRight'); step();
+    }
+    router.render();
+    return run.ex.explored.size;
+  })()`,
+};
 
 if (!process.env.URL && !existsSync(join(ROOT, 'dist', 'index.html'))) {
   console.error('  no dist/index.html \u2014 run `npm run build` first');
@@ -34,6 +56,7 @@ for (const screen of SCREENS) {
   for (const size of sizes) {
     await chrome.setSize(size.width, size.height);
     await chrome.open(`${PAGE}#${screen}`, 800);
+    if (PREPARE[screen]) await chrome.evaluate(PREPARE[screen]);
     await writeFile(join(OUT, `${screen}-${size.name}.png`), await chrome.screenshot());
     console.log(`  dist/shots/${screen}-${size.name}.png`);
   }

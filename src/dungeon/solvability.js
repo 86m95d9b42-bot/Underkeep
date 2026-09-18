@@ -14,7 +14,7 @@
  *
  * No DOM, no randomness: given a floor, the answer is always the same.
  */
-import { TILE } from './floor-builder.js';
+import { TILE, byText } from './floor-builder.js';
 
 const DIRS = [
   [0, -1],
@@ -233,7 +233,7 @@ export function repairOneWayDoors(floor) {
     const [at, door] = directional.sort((a, b) => {
       const da = Math.abs(a[1].pos[0] - sx) + Math.abs(a[1].pos[1] - sy);
       const db = Math.abs(b[1].pos[0] - sx) + Math.abs(b[1].pos[1] - sy);
-      return da - db || a[0].localeCompare(b[0]);
+      return da - db || byText(a[0], b[0]);
     })[0];
     floor.doors[at] = { kind: 'open', pos: door.pos, wasOneDirectional: door.kind };
     demoted += 1;

@@ -56,6 +56,16 @@ const DIRS = [
 export const FACING = { N: 0, E: 1, S: 2, W: 3 };
 
 /**
+ * Ties in every sort here break on this, and never on `localeCompare`: a floor
+ * has to rebuild identically in Node and in a browser, and locale-aware
+ * comparison does not promise that (docs/DECISIONS.md).
+ * @param {string} a @param {string} b
+ */
+export function byText(a, b) {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
+/**
  * Runs `fn` with `Math.random` replaced by a seeded stream.
  *
  * The vendored generator calls `Math.random()` internally, and Underkeep needs
@@ -764,7 +774,7 @@ export function assignRoomRoles(rooms, spec, rng) {
   const free = () =>
     rooms
       .filter((room) => roles.get(room.id) === null && room.depth >= 0 && room.openTiles > 0)
-      .sort((a, b) => b.depth - a.depth || a.id.localeCompare(b.id));
+      .sort((a, b) => b.depth - a.depth || byText(a.id, b.id));
 
   /**
    * @param {string} role

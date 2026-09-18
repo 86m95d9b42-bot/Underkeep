@@ -24,6 +24,7 @@ import {
   COMMANDS,
 } from '../dungeon/movement.js';
 import { tick, inSafeZone, costOf } from '../dungeon/step-clock.js';
+import { remember } from '../dungeon/automap.js';
 import { layoutStream, carriedStreams } from '../engine/rng.js';
 import { t } from '../data/strings.js';
 
@@ -129,6 +130,7 @@ export function createRun({ masterSeed, floor: floorNumber = 1, hero = { ...PLAC
   // The hero is standing on the up stairs and its waystone, so the log opens
   // with what is underfoot — the same events as walking onto the tile.
   record(arrivalEvents(floor, ex.pos, ex));
+  remember(floor, ex);
 
   const run = {
     get masterSeed() {
@@ -169,6 +171,9 @@ export function createRun({ masterSeed, floor: floorNumber = 1, hero = { ...PLAC
     press(command) {
       const outcome = resolveMove(floor, ex, command);
       commitMove(ex, outcome);
+      // What the hero can see from the new tile goes on the map before
+      // anything else happens (`05` section 10).
+      if (outcome.moved) remember(floor, ex);
 
       const events = [
         ...outcome.events,

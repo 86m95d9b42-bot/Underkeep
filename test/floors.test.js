@@ -4,6 +4,7 @@
  * from the documents.
  */
 import { describe, it, expect } from 'vitest';
+import { byText } from '../src/dungeon/floor-builder.js';
 import {
   floorSpec,
   allFloorSpecs,
@@ -226,5 +227,46 @@ describe('room density for the vendored generator', () => {
         expect(Math.floor(grid * grid * 0.08 * density), `${grid} / ${wanted}`).toBe(wanted);
       }
     }
+  });
+});
+
+describe('a floor rebuilds the same everywhere, not just in Node', () => {
+  it('breaks ties without asking the locale', () => {
+    // localeCompare is locale-aware, and a headless Chrome and a Node process
+    // do not have to agree: with it, floor 1 of the demo seed came out with
+    // different room roles and different door locks in the browser than in the
+    // tests (docs/DECISIONS.md, 2026-09-18).
+    expect(byText('r10', 'r2')).toBe(-1);
+    expect(byText('r2', 'r10')).toBe(1);
+    expect(byText('r2', 'r2')).toBe(0);
+    expect(['r10', 'r2', 'r1'].sort(byText)).toEqual(['r1', 'r10', 'r2']);
+  });
+
+  it('keeps locale-aware comparison out of the game code entirely', async () => {
+    const { readdir, readFile } = await import('node:fs/promises');
+    const { join } = await import('node:path');
+    const roots = ['src/engine', 'src/dungeon', 'src/systems', 'src/save'];
+    const found = [];
+
+    for (const root of roots) {
+      let names = [];
+      try {
+        names = await readdir(root);
+      } catch {
+        continue; // a directory a later phase adds
+      }
+      for (const name of names.filter((n) => n.endsWith('.js'))) {
+        // The vendored modules are not ours to rewrite (`07`).
+        if (name === 'raycaster.js' || name === 'dungeon-generator.js') continue;
+        const source = await readFile(join(root, name), 'utf8');
+        for (const [index, line] of source.split('\n').entries()) {
+          const code = line.trim();
+          // Comments may name the thing they are warning about.
+          if (code.startsWith('*') || code.startsWith('//') || code.startsWith('/*')) continue;
+          if (/localeCompare|toLocale[A-Z]|\bIntl\./.test(line)) found.push(`${root}/${name}:${index + 1}`);
+        }
+      }
+    }
+    expect(found).toEqual([]);
   });
 });

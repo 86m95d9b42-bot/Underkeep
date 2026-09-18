@@ -34,7 +34,7 @@ Work top to bottom. Check a box when the task is done and tested. Each phase end
 - [x] Step clock and wandering monster check (log only for now)
 - [x] Exploration screen with movement pad, context key, log, and swipe controls (wide layout: pad left, side buttons right, view centered)
 - [x] Pause Menu sheet (built with Exploration: it is where the back gesture goes)
-- [ ] Automap screen with explored-tile memory
+- [x] Automap screen with explored-tile memory
 - [ ] **Done when:** every floor from a seed can be walked from arrival to the boss arena
 
 ## Phase 3 — Fight

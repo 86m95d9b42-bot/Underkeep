@@ -25,7 +25,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PAGE = join(ROOT, 'dist', 'index.html');
 
 /** Every screen the shell can open, by its router id. Grows with each phase. */
-const SCREENS = ['title', 'settings', 'explore', 'pause'];
+const SCREENS = ['title', 'settings', 'explore', 'pause', 'map'];
 
 if (!existsSync(PAGE)) {
   console.error('  no dist/index.html — run `npm run build` first');
@@ -60,11 +60,12 @@ const PROBE = `(() => {
     pageScrollY: root.scrollHeight - root.clientHeight,
     pageScrollX: root.scrollWidth - root.clientWidth,
     fits: box.width <= innerWidth + 0.5 && box.height <= innerHeight + 0.5,
-    scrollPanels: app.querySelectorAll('.scroll').length,
-    // Anything wider than its box that is not inside a .scroll panel would
-    // clip text or push the frame sideways.
+    scrollPanels: app.querySelectorAll('.scroll, .scroll-x').length,
+    // Anything wider than its box that is not inside a scrolling panel would
+    // clip text or push the frame sideways. A .scroll-x panel is the sideways
+    // kind (the Automap's legend), and is allowed to be wider than its box.
     overflowing: regions
-      .filter((r) => !r.closest('.scroll') && r.scrollWidth > r.clientWidth + 1)
+      .filter((r) => !r.closest('.scroll, .scroll-x') && r.scrollWidth > r.clientWidth + 1)
       .map((r) => r.dataset.region),
     twoRows: Math.round(twoRows * 100) / 100,
     shortTargets: tapTargets

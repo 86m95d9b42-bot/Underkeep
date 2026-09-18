@@ -47,15 +47,18 @@ async function main() {
   const cssCode = css.outputFiles[0].text;
 
   let html = await readFile(join(ROOT, 'index.html'), 'utf8');
+  // The replacements are functions, not strings: minified code contains
+  // sequences like `$&` and `$<`, which String.replace would read as
+  // replacement patterns and paste the surrounding HTML back into the page.
   html = html
     .replace('data-build="0"', 'data-build="1"')
     .replace(
       '<link rel="stylesheet" href="./src/styles/index.css" />',
-      `<style>${forInlineTag(cssCode)}</style>`,
+      () => `<style>${forInlineTag(cssCode)}</style>`,
     )
     .replace(
       '<script type="module" src="./src/main.js"></script>',
-      `<script type="module">${forInlineTag(jsCode)}</script>`,
+      () => `<script type="module">${forInlineTag(jsCode)}</script>`,
     );
 
   if (html.includes('src/main.js') || html.includes('src/styles/index.css')) {

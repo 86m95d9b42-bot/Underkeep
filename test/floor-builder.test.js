@@ -266,12 +266,24 @@ describe('rebuilding from a seed', () => {
   });
 });
 
+/**
+ * A stream-maker that refuses to produce a floor at all: every attempt throws
+ * `RegenerateFloor`, which is what an unfinishable floor does from inside the
+ * builder. It says "this attempt failed" without depending on what a
+ * particular sequence of draws happens to carve.
+ */
+function refuses(reason = 'forced') {
+  return () => {
+    throw new RegenerateFloor(reason);
+  };
+}
+
 describe('when a floor cannot be finished', () => {
   it('tries again with the next seed, and says which attempt won', () => {
-    // 05 section 3 step 10. A stream of zeros makes the generator produce a
-    // floor the builder cannot finish, so attempt 0 is forced to fail here.
+    // 05 section 3 step 10: a floor that cannot be finished is rebuilt with
+    // the next attempt number.
     const failFirst = (seed, floor, attempt) =>
-      attempt === 0 ? () => 0 : layoutStream(seed, floor, attempt);
+      attempt === 0 ? refuses('no room for the arena') : layoutStream(seed, floor, attempt);
 
     const floor = buildFloor(1, 99, failFirst);
     expect(floor.attempt).toBe(1);
@@ -281,7 +293,7 @@ describe('when a floor cannot be finished', () => {
 
   it('asks the stream for each attempt in turn', () => {
     const makeStream = vi.fn((seed, floor, attempt) =>
-      attempt < 2 ? () => 0 : layoutStream(seed, floor, attempt),
+      attempt < 2 ? refuses() : layoutStream(seed, floor, attempt),
     );
     buildFloor(1, 31337, makeStream);
     expect(makeStream.mock.calls.map((call) => call[2])).toEqual([0, 1, 2]);
@@ -290,7 +302,7 @@ describe('when a floor cannot be finished', () => {
   it('gives up with every reason listed, rather than looping forever', () => {
     let error;
     try {
-      buildFloor(1, 1, () => () => 0);
+      buildFloor(1, 1, () => refuses('nothing fits'));
     } catch (err) {
       error = err;
     }

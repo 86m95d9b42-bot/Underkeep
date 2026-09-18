@@ -204,7 +204,6 @@ describe('resolving a move', () => {
     expect(ex.pos).toEqual([2, 1]);
     expect(ex.facing).toBe(FACING.E);
     expect(outcome.cost).toBe(1);
-    expect(ex.explored.has('2,1')).toBe(true);
     expect(outcome.events.map((e) => e.type)).toContain('newTile');
   });
 
@@ -237,11 +236,9 @@ describe('resolving a move', () => {
 
     const outcome = resolveMove(floor, ex, 'forward');
     expect(ex.pos).toEqual([1, 1]);
-    expect(ex.explored.has('2,1')).toBe(false);
 
     commitMove(ex, outcome);
     expect(ex.pos).toEqual([2, 1]);
-    expect(ex.explored.has('2,1')).toBe(true);
   });
 
   it('raises an event for what the hero steps onto', () => {
@@ -359,8 +356,6 @@ describe('movement on a generated floor', () => {
 
     walk(floor, ex, route);
     expect(ex.pos).toEqual(floor.arena.door);
-    // Every tile walked is remembered, which is what the automap draws.
-    expect(ex.explored.size).toBe(new Set(route.map((p) => key(...p))).add(key(...floor.start.pos)).size);
   });
 
   it('remembers where it has been, and rebuilds the same way twice', () => {
@@ -372,7 +367,7 @@ describe('movement on a generated floor', () => {
     walk(floor, one, route);
     walk(floor, two, route);
     expect(two.pos).toEqual(one.pos);
-    expect([...two.explored].sort()).toEqual([...one.explored].sort());
+    expect(two.facing).toBe(one.facing);
   });
 });
 

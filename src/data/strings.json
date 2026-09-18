@@ -103,6 +103,25 @@
     "quit": "QUIT TO TITLE",
     "quitHint": "This run ends here"
   },
+  "map": {
+    "title": "FLOOR",
+    "legend": "Map legend",
+    "center": "CENTER",
+    "zoomOut": "ZOOM −",
+    "zoomIn": "ZOOM +",
+    "zoomOutLabel": "Zoom out",
+    "zoomInLabel": "Zoom in",
+    "legendNames": {
+      "you": "YOU",
+      "trap": "TRAP",
+      "hazard": "HAZARD",
+      "chest": "CHEST",
+      "waystone": "WAYSTONE",
+      "safeRoom": "SAFE ROOM",
+      "lockedDoor": "LOCKED DOOR",
+      "grave": "GRAVE"
+    }
+  },
   "common": {
     "back": "Back",
     "cancel": "CANCEL",

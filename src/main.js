@@ -12,6 +12,7 @@ import { title } from './ui/screens/title.js';
 import { settings as settingsScreen } from './ui/screens/settings.js';
 import { explore } from './ui/screens/explore.js';
 import { pause } from './ui/screens/pause.js';
+import { map } from './ui/screens/map.js';
 import { createRun, PLACEHOLDER_HERO } from './systems/run.js';
 
 const app = /** @type {HTMLElement} */ (document.getElementById('app'));
@@ -52,6 +53,7 @@ const screens = {
   settings: settingsScreen,
   explore,
   pause,
+  map,
 };
 
 /** @type {ReturnType<typeof createRouter>} */
@@ -72,6 +74,11 @@ settings.subscribe((values) => {
   applySettings(values);
   router.render();
 });
+
+// The tools drive the game from outside the page: `npm run shots` walks a
+// floor before shooting the Automap, and `npm run check` opens each screen.
+// It is one object on the global, and nothing in the game reads it.
+globalThis.underkeep = { run, router, settings };
 
 // The URL fragment may name a screen, which is how tools/shots.js opens each
 // one for a frame check. Anything unknown just starts at the Title screen.

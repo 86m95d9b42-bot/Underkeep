@@ -54,6 +54,13 @@ const DungeonGenerator = (function(factory){
 
   const TILE={FLOOR:0,WALL:1,STAIRS_DOWN:2,STAIRS_UP:3,DOOR:4,ILLUSION:5,PIT:6};
 
+  // Underkeep change (docs/DECISIONS.md, 2026-09-18): the four shuffles below
+  // were `sort(()=>Math.random()-.5)`, whose number of comparisons depends on
+  // the engine's sort, so the same seed drew a different number of times in
+  // Node and in Chrome and built a different floor. Fisher-Yates draws exactly
+  // once per element everywhere, and is unbiased as well.
+  function shuffle(list){for(let i=list.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=list[i];list[i]=list[j];list[j]=t;}return list;}
+
   function isWalkable(v){return v===TILE.FLOOR||v===TILE.STAIRS_DOWN||v===TILE.STAIRS_UP||v===TILE.DOOR||v===TILE.ILLUSION||v===TILE.PIT;}
   // A dead-end/spawn search only cares about tiles a character could have
   // walked in from — pits are deliberately excluded (you don't "arrive"
@@ -129,7 +136,7 @@ const DungeonGenerator = (function(factory){
       const stk=[[sx,sy]];map[sy][sx]=_C;
       while(stk.length){
         const[cx,cy]=stk[stk.length-1];
-        const dirs=[[0,-2],[2,0],[0,2],[-2,0]].sort(()=>Math.random()-.5);
+        const dirs=shuffle([[0,-2],[2,0],[0,2],[-2,0]]);
         let carved=false;
         for(const[dx,dy]of dirs){
           const nx=cx+dx,ny=cy+dy;
@@ -165,8 +172,8 @@ const DungeonGenerator = (function(factory){
       }
       if(!fn.length)continue;
       const roll=Math.floor(Math.random()*6)+1;
-      if(roll===1||roll===3){fn.sort(()=>Math.random()-.5);for(const[nx,ny]of fn){if(!adjDoor(nx,ny)){map[ny][nx]=_D;break;}}}
-      else if(roll===2){fn.sort(()=>Math.random()-.5);for(const[nx,ny]of fn){if(!adjDoor(nx,ny)){map[ny][nx]=_IL;break;}}}
+      if(roll===1||roll===3){shuffle(fn);for(const[nx,ny]of fn){if(!adjDoor(nx,ny)){map[ny][nx]=_D;break;}}}
+      else if(roll===2){shuffle(fn);for(const[nx,ny]of fn){if(!adjDoor(nx,ny)){map[ny][nx]=_IL;break;}}}
     }
 
     // --- Connect rooms to maze ---
@@ -208,7 +215,7 @@ const DungeonGenerator = (function(factory){
 
     // --- Place pits (2% of corridor tiles) ---
     const pitCands=[];for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++)if(map[y][x]===_C)pitCands.push([x,y]);
-    pitCands.sort(()=>Math.random()-.5);
+    shuffle(pitCands);
     function adjPit(x,y){for(const[nx,ny]of[[x-1,y],[x+1,y],[x,y-1],[x,y+1]]){if(nx>=0&&nx<w&&ny>=0&&ny<h&&map[ny][nx]===_PIT)return true;}return false;}
     for(const[px,py]of pitCands){if(map[py][px]!==_C)continue;if(Math.random()<0.02&&!adjPit(px,py))map[py][px]=_PIT;}
 

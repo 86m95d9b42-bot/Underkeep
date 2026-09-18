@@ -159,3 +159,59 @@
   width: calc(var(--u) * 0.66);
   height: calc(var(--u) * 0.66);
 }
+
+/* --- Automap (00-build-outline.md, Exploration; 05 section 10) --- */
+
+/* The map is the one place a drag means something, so it takes the gesture
+   rather than letting the page have it. */
+.mapframe {
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: calc(var(--u) * 0.1);
+  background: var(--ground);
+  border: var(--line) solid var(--bone);
+  border-radius: var(--radius);
+  touch-action: none;
+  cursor: grab;
+}
+
+/* The legend scrolls sideways rather than wrapping (00, Automap). */
+.legend {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 0.1);
+  padding: 0 calc(var(--u) * 0.05);
+}
+.legend > .chip {
+  flex: 0 0 auto;
+  gap: calc(var(--u) * 0.1);
+}
+.legend svg {
+  width: calc(var(--u) * 0.3);
+  height: calc(var(--u) * 0.3);
+  overflow: visible;
+}
+
+/* In landscape the legend has four columns and three rows to itself, so it
+   wraps down the panel instead of running off the side. */
+#app.wide .legend {
+  flex-wrap: wrap;
+  align-content: flex-start;
+  align-items: flex-start;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: calc(var(--u) * 0.05);
+}
+
+/* CENTER and the two zoom keys: a row in portrait, a column in landscape. */
+.maskeys {
+  display: flex;
+  gap: var(--gap);
+}
+.maskeys > .btn {
+  flex: 1 1 0;
+  min-width: 0;
+}
+#app.wide .maskeys {
+  flex-direction: column;
+}
