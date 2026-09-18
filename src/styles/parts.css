@@ -298,6 +298,8 @@
 .sheet {
   display: grid;
   grid-template-columns: repeat(9, minmax(0, 1fr));
+  /* A header row, then one row the contents fill. */
+  grid-template-rows: calc(var(--u) * 1.6) minmax(0, 1fr);
   gap: var(--gap);
   box-sizing: border-box;
   padding: calc(var(--u) * 0.14);

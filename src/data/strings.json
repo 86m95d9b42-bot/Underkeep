@@ -48,8 +48,60 @@
         "1250": "Something follows your footsteps."
       },
       "stalker": "The Hollow Stalker comes out of the dark.",
-      "safeRoom": "Something enormous shifts beyond the door…"
+      "safeRoom": "Something enormous shifts beyond the door…",
+      "stairs": {
+        "down": "Stairs lead down into the dark.",
+        "up": "Stairs lead back up."
+      },
+      "waystone": "A waystone hums under your feet.",
+      "pit": "An open pit gapes here.",
+      "burned": "Your torch takes the webbing away."
+    },
+    "title": "EXPLORE",
+    "pad": {
+      "forward": "FWD",
+      "back": "BACK",
+      "strafe": "STEP",
+      "turn": "TURN",
+      "strafeLeftLabel": "Strafe left",
+      "strafeRightLabel": "Strafe right",
+      "forwardLabel": "Move forward",
+      "backLabel": "Move back",
+      "turnLeftLabel": "Turn left",
+      "turnRightLabel": "Turn right"
+    },
+    "side": {
+      "map": "MAP",
+      "pack": "PACK",
+      "hero": "HERO",
+      "menu": "MENU"
+    },
+    "chips": {
+      "facing": "FACING",
+      "steps": "STEPS",
+      "floor": "F"
+    },
+    "hint": {
+      "search": "5 steps",
+      "open": "Inspect",
+      "touch": "Waystone",
+      "drink": "Fountain",
+      "offer": "Shrine",
+      "burn": "Torch"
     }
+  },
+  "pause": {
+    "title": "PAUSED",
+    "sub": "Nothing is saved yet",
+    "resume": "RESUME",
+    "hero": "HERO",
+    "map": "MAP",
+    "camp": "CAMP",
+    "campHint": "1 ration",
+    "settings": "SETTINGS",
+    "hall": "HALL OF THE DEAD",
+    "quit": "QUIT TO TITLE",
+    "quitHint": "This run ends here"
   },
   "common": {
     "back": "Back",

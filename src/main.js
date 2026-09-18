@@ -10,6 +10,9 @@ import { createSettings } from './shell/settings.js';
 import { createHaptics } from './shell/haptics.js';
 import { title } from './ui/screens/title.js';
 import { settings as settingsScreen } from './ui/screens/settings.js';
+import { explore } from './ui/screens/explore.js';
+import { pause } from './ui/screens/pause.js';
+import { createRun, PLACEHOLDER_HERO } from './systems/run.js';
 
 const app = /** @type {HTMLElement} */ (document.getElementById('app'));
 const isBuild = document.documentElement.dataset.build === '1';
@@ -25,14 +28,30 @@ function applySettings(values) {
 applySettings(settings.all);
 
 /**
- * Phase 1 has no save layer yet, so screens read an empty stand-in. Phase 6
- * replaces this with the real IndexedDB store (05 section 11).
+ * Phase 2 has no character creation and no save layer, so the game starts on
+ * one fixed seed with a stand-in hero. New Game (Phase 4) chooses the seed and
+ * the hero; the IndexedDB store (Phase 8) reloads them.
  */
-const save = { hasGame: false, lastPlayed: null };
+const DEMO_SEED = 20260918;
+const run = createRun({ masterSeed: DEMO_SEED, floor: 1 });
+
+const save = {
+  hasGame: true,
+  lastPlayed: {
+    name: PLACEHOLDER_HERO.name,
+    level: PLACEHOLDER_HERO.level,
+    floor: run.floor.floor,
+    theme: run.floor.spec.theme,
+    mode: 'Adventurer',
+    played: '0m',
+  },
+};
 
 const screens = {
   title,
   settings: settingsScreen,
+  explore,
+  pause,
 };
 
 /** @type {ReturnType<typeof createRouter>} */
@@ -45,7 +64,7 @@ router = createRouter({
   app,
   screens,
   frame: () => watcher.frame,
-  ctx: { settings, haptics, save },
+  ctx: { settings, haptics, save, run },
 });
 
 // A settings change repaints whatever screen is open.

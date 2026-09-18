@@ -17,7 +17,7 @@ const PAGE = process.env.URL ?? `file://${join(ROOT, 'dist', 'index.html')}`;
 const OUT = join(ROOT, 'dist', 'shots');
 
 /** Every screen the shell can open, by its router id. Grows with each phase. */
-const SCREENS = ['title', 'settings'];
+const SCREENS = ['title', 'settings', 'explore', 'pause'];
 
 if (!process.env.URL && !existsSync(join(ROOT, 'dist', 'index.html'))) {
   console.error('  no dist/index.html \u2014 run `npm run build` first');

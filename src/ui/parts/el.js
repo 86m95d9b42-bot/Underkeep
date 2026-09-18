@@ -60,4 +60,17 @@ export const ICONS = {
   menu: ['M4 6h16', 'M4 12h16', 'M4 18h16'],
   close: ['M6 6l12 12', 'M18 6L6 18'],
   keep: ['M4 21V9a8 8 0 0 1 16 0v12', 'M4 21h16', 'M8 21v-3h3v-3h3v-3h3'],
+
+  // The movement pad (00-build-outline.md, Exploration).
+  stepLeft: ['M20 12H5', 'M11 5l-7 7 7 7'],
+  stepRight: ['M4 12h15', 'M13 5l7 7-7 7'],
+  stepForward: ['M12 20V5', 'M5 11l7-7 7 7'],
+  stepBack: ['M12 4v15', 'M5 13l7 7 7-7'],
+  turnLeft: ['M9 14L4 9l5-5', 'M4 9h10a6 6 0 0 1 0 12h-2'],
+  turnRight: ['M15 14l5-5-5-5', 'M20 9H10a6 6 0 0 0 0 12h2'],
+
+  // The side column.
+  map: ['M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z', 'M9 4v14', 'M15 6v14'],
+  pack: ['M6 8h12l-1 12H7z', 'M9 8a3 3 0 0 1 6 0'],
+  hero: ['M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0', 'M4 21c1-5 4-7 8-7s7 2 8 7'],
 };

@@ -32,7 +32,8 @@ Work top to bottom. Check a box when the task is done and tested. Each phase end
 - [x] `view.js`: wire the supplied raycaster — FOV and aspect per frame, fog distance from the light source, door offsets, capped canvas resolution (`07` section 4)
 - [x] Grid movement with a 140 ms tween between tiles (display only; state changes in one step)
 - [x] Step clock and wandering monster check (log only for now)
-- [ ] Exploration screen with movement pad, context key, log, and swipe controls (wide layout: pad left, side buttons right, view centered)
+- [x] Exploration screen with movement pad, context key, log, and swipe controls (wide layout: pad left, side buttons right, view centered)
+- [x] Pause Menu sheet (built with Exploration: it is where the back gesture goes)
 - [ ] Automap screen with explored-tile memory
 - [ ] **Done when:** every floor from a seed can be walked from arrival to the boss arena
 

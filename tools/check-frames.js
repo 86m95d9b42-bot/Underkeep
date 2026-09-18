@@ -25,7 +25,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PAGE = join(ROOT, 'dist', 'index.html');
 
 /** Every screen the shell can open, by its router id. Grows with each phase. */
-const SCREENS = ['title', 'settings'];
+const SCREENS = ['title', 'settings', 'explore', 'pause'];
 
 if (!existsSync(PAGE)) {
   console.error('  no dist/index.html — run `npm run build` first');

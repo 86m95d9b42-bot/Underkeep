@@ -1,0 +1,161 @@
+/* Screen-specific pieces. Everything shared lives in parts.css; this file is
+   for the few classes one screen needs, sized in --u like everything else. */
+
+/* --- Exploration (00-build-outline.md, "Exploration") --- */
+
+/* HP and FP stack in portrait and sit side by side across the wide frame's
+   single top row. */
+.bars {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: calc(var(--u) * 0.1);
+  padding: 0 calc(var(--u) * 0.05);
+}
+#app.wide .bars {
+  flex-direction: row;
+  align-items: center;
+  gap: calc(var(--u) * 0.3);
+}
+#app.wide .bars > .bar {
+  flex: 1 1 0;
+}
+
+/* The menu corner: the button and the floor chip side by side, so a disabled
+   reason has the height of both rows to wrap into. */
+.menucorner {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: center;
+  gap: calc(var(--u) * 0.08);
+  overflow: hidden;
+}
+.menucorner > .btn {
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: auto;
+  aspect-ratio: auto;
+  padding: calc(var(--u) * 0.04);
+  min-width: 0;
+}
+.menucorner > .chip {
+  flex: 0 0 auto;
+  align-self: center;
+}
+
+/* The dungeon view: a bordered box the canvas fills exactly, with the status
+   chips floating over its top corners. */
+.viewport {
+  position: relative;
+  overflow: hidden;
+  background: #0e0c0a;
+  border: var(--line) solid var(--bone);
+  border-radius: var(--radius);
+}
+.viewport__canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* The canvas is capped at 480 px on its long side and scaled up, so keep the
+     pixels crisp rather than blurring them (07 section 4). */
+  image-rendering: pixelated;
+}
+.viewport__chips {
+  position: absolute;
+  top: calc(var(--u) * 0.14);
+  left: calc(var(--u) * 0.14);
+  right: calc(var(--u) * 0.14);
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--u) * 0.1);
+  pointer-events: none;
+}
+
+/* The message log: newest line on top. */
+.log {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 0.04);
+  box-sizing: border-box;
+  padding: calc(var(--u) * 0.14) calc(var(--u) * 0.23);
+  background: var(--panel);
+  border: var(--line) solid var(--bone);
+  border-radius: var(--radius);
+  font-size: var(--fs-body);
+  line-height: 1.3;
+}
+.log__line--accent {
+  color: var(--accent);
+}
+.log__line--muted {
+  color: var(--muted);
+}
+.log__line--danger {
+  color: var(--danger);
+}
+
+/* A movement pad key: icon over a three- or four-letter label. */
+.padkey {
+  gap: calc(var(--u) * 0.03);
+  padding: calc(var(--u) * 0.05);
+}
+.padkey__label {
+  font-family: var(--font-label);
+  font-size: var(--fs-micro);
+  line-height: 1;
+}
+
+/* The side column: icon over the word. */
+.sidekey {
+  gap: calc(var(--u) * 0.04);
+  padding: calc(var(--u) * 0.05);
+}
+.sidekey > .label {
+  font-size: var(--fs-body);
+}
+
+/* A slot the screen repaints: the context key changes with what is ahead. */
+.keyslot {
+  display: grid;
+}
+
+/* The context key sits in a two-column slot in portrait, so its second line
+   is kept to one line and clipped rather than pushing the region sideways. */
+.keyslot > .btn {
+  overflow: hidden;
+}
+.keyslot .label {
+  font-size: var(--fs-body);
+}
+.keyslot .label,
+.keyslot .hint {
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- Pause Menu (a sheet over Exploration) --- */
+
+/* One column of keys that share the sheet's height evenly. */
+.sheet__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-height: 0;
+}
+.sheet__body > .btn {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+/* In landscape a pad key is one column wide, so it shows its icon alone, as
+   the ExploreWide mockup does. The aria-label still names it. */
+#app.wide .padkey__label {
+  display: none;
+}
+#app.wide .padkey svg {
+  width: calc(var(--u) * 0.66);
+  height: calc(var(--u) * 0.66);
+}

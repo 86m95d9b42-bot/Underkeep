@@ -175,7 +175,7 @@ export function sheet({ title, sideNote, onClose, children = [] }) {
     'div',
     {
       class: 'region topbar',
-      style: { gridColumn: '1 / -1', gridRow: '1 / 3' },
+      style: { gridColumn: '1 / -1', gridRow: '1 / 2' },
     },
     [
       el('div', { class: 'topbar__text' }, [

@@ -259,6 +259,31 @@ export function contextFor(floor, ex) {
 }
 
 /**
+ * What being on a tile raises. Nothing is resolved here — the trap, hazard and
+ * curiosity rules are Phase 7 — but the events are raised so there is one place
+ * for them to be handled, and the run uses the same list when the hero first
+ * arrives on a floor.
+ *
+ * @param {import('./floor-builder.js').Floor} floor
+ * @param {[number, number]} at
+ * @param {Exploration} ex
+ */
+export function arrivalEvents(floor, at, ex) {
+  /** @type {object[]} */
+  const events = [];
+  const landed = whatIsAt(floor, at, ex);
+  if (landed.stairs) events.push({ type: 'stairs', direction: landed.stairs, at });
+  if (landed.waystone) events.push({ type: 'waystone', at });
+  if (landed.pit) events.push({ type: 'pit', at });
+  if (landed.hazard) events.push({ type: 'hazard', kind: landed.hazard.kind, at, hazard: landed.hazard });
+  if (landed.trap && !landed.trap.sprung && !landed.trap.disarmed) {
+    events.push({ type: 'trap', at, trap: landed.trap });
+  }
+  if (!ex.explored.has(key(...at))) events.push({ type: 'newTile', at });
+  return events;
+}
+
+/**
  * Resolves one press of the movement pad, without changing anything.
  *
  * @param {import('./floor-builder.js').Floor} floor
@@ -288,19 +313,7 @@ export function resolveMove(floor, ex, command) {
   }
 
   events.push({ type: 'step', from: from.pos, to, heading: headingFor(ex.facing, command) });
-
-  // Arrival: what the new tile holds. Nothing is resolved here — the trap,
-  // hazard and curiosity rules are Phase 7 — but the events are raised now so
-  // there is one place for them to be handled.
-  const landed = whatIsAt(floor, to, ex);
-  if (landed.stairs) events.push({ type: 'stairs', direction: landed.stairs, at: to });
-  if (landed.waystone) events.push({ type: 'waystone', at: to });
-  if (landed.pit) events.push({ type: 'pit', at: to });
-  if (landed.hazard) events.push({ type: 'hazard', kind: landed.hazard.kind, at: to, hazard: landed.hazard });
-  if (landed.trap && !landed.trap.sprung && !landed.trap.disarmed) {
-    events.push({ type: 'trap', at: to, trap: landed.trap });
-  }
-  if (!ex.explored.has(key(...to))) events.push({ type: 'newTile', at: to });
+  events.push(...arrivalEvents(floor, to, ex));
 
   return { command, from, to: { pos: to, facing: ex.facing }, moved: true, turned: false, blocked: null, cost: 1, events };
 }
