@@ -1,0 +1,151 @@
+/* The 9:18 fullscreen shell. The first two blocks are the shell CSS from
+   00-build-outline.md, used verbatim; everything after adds the derived size
+   tokens and the pieces the layout engine needs. */
+
+html, body {
+  margin: 0; height: 100%; overflow: hidden;
+  overscroll-behavior: none; touch-action: manipulation;
+  background: #0B0908; -webkit-user-select: none; user-select: none;
+}
+body { position: fixed; inset: 0; }
+#app {
+  --u: min(
+    (100vw - env(safe-area-inset-left) - env(safe-area-inset-right)) / 9,
+    (100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 18
+  );
+  position: absolute; left: 50%; top: 50%;
+  width: calc(var(--u) * 9); height: calc(var(--u) * 18);
+  transform: translate(-50%, -50%);
+  display: grid; overflow: hidden;
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  grid-template-rows: repeat(18, minmax(0, 1fr));
+  gap: calc(var(--u) * 0.14); padding: calc(var(--u) * 0.18);
+  box-sizing: border-box;
+  font-size: calc(var(--u) * 0.36);
+}
+.scroll { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+
+/* wide frame */
+#app.wide {
+  --u: min(
+    (100vw - env(safe-area-inset-left) - env(safe-area-inset-right)) / 18,
+    (100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 9
+  );
+  width: calc(var(--u) * 18); height: calc(var(--u) * 9);
+  grid-template-columns: repeat(18, minmax(0, 1fr));
+  grid-template-rows: repeat(9, minmax(0, 1fr));
+}
+
+/* --- Additions to the outline's shell --- */
+
+/* A unit never grows past 72 px, so a big tablet letterboxes instead of
+   turning into giant buttons (00-build-outline.md, "Choosing the frame"). */
+#app {
+  --u: min(
+    (100vw - env(safe-area-inset-left) - env(safe-area-inset-right)) / 9,
+    (100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 18,
+    72px
+  );
+}
+#app.wide {
+  --u: min(
+    (100vw - env(safe-area-inset-left) - env(safe-area-inset-right)) / 18,
+    (100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 9,
+    72px
+  );
+}
+
+/* Sizes derived from --u. Declared on #app so var(--u) resolves. */
+#app {
+  --line: calc(var(--u) * 0.07); /* 3 px outlines */
+  --line-thin: calc(var(--u) * 0.046); /* 2 px dividers */
+  --radius: calc(var(--u) * 0.23); /* 10 px corners */
+  --radius-sheet: calc(var(--u) * 0.32); /* 14 px sheet corners */
+  --gap: calc(var(--u) * 0.14);
+  --pad: calc(var(--u) * 0.18);
+  --inset: calc(var(--u) * 0.2);
+
+  --fs-hint: calc(var(--u) * 0.28 * var(--text-scale));
+  --fs-body: calc(var(--u) * 0.32 * var(--text-scale));
+  --fs-button: calc(var(--u) * 0.42 * var(--text-scale));
+  --fs-micro: calc(var(--u) * 0.3);
+  --fs-heading: calc(var(--u) * 0.55);
+  --fs-display: calc(var(--u) * 1.06);
+
+  background: var(--ground);
+  color: var(--bone);
+  font-family: var(--font-body);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+/* Every screen region is placed by the layout engine. */
+.region {
+  min-width: 0;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+/* The screen underneath a sheet stays visible but dimmed. */
+#app.has-sheet > .region:not(.sheet):not(.sheet-scrim) {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.sheet-scrim {
+  grid-column: 1 / -1;
+  grid-row: 1 / -1;
+  background: transparent;
+}
+
+/* Nothing but a .scroll panel scrolls, and it never chains to the page. */
+.scroll {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.scroll::-webkit-scrollbar {
+  display: none;
+}
+.scroll-x {
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+.scroll-x::-webkit-scrollbar {
+  display: none;
+}
+
+/* Text inputs are the one place selection and the system keyboard are wanted. */
+input,
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
+  font: inherit;
+}
+
+/* A visible focus ring for keyboard and switch-control users. */
+:focus-visible {
+  outline: var(--line) solid var(--accent);
+  outline-offset: calc(var(--u) * 0.04);
+}
+
+/* Panels flash their outline colour for 150 ms on a tap. No other animation
+   is needed to understand the game. */
+@keyframes uk-flash {
+  from {
+    border-color: var(--accent);
+  }
+  to {
+    border-color: inherit;
+  }
+}
+.flash {
+  animation: uk-flash 150ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .flash {
+    animation: none;
+  }
+}
