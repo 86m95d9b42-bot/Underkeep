@@ -67,6 +67,29 @@ function checkFloors(json) {
 }
 
 /**
+ * locks.json: the tier table and door kinds of `03` section 6. A door kind the
+ * floor builder can produce but that has no entry here would leave the game
+ * with no way to describe it.
+ */
+function checkLocks(json) {
+  const order = json.lockTierRoll?.order ?? [];
+  for (const band of json.lockTierRoll?.bands ?? []) {
+    if (!order.includes(band.lock)) problems.push(`locks.json band "${band.lock}" is not in the order list`);
+    if (!json.tiers?.[band.tier]) problems.push(`locks.json band "${band.lock}" names tier "${band.tier}", which has no entry`);
+  }
+  const bands = json.lockTierRoll?.bands ?? [];
+  for (let i = 1; i < bands.length; i += 1) {
+    if (bands[i].upTo <= bands[i - 1].upTo) problems.push('locks.json lock bands are out of order');
+  }
+  for (const [name, kind] of Object.entries(json.doorKinds ?? {})) {
+    if (name.startsWith('_')) continue;
+    if (!kind.opensWith?.length) problems.push(`locks.json door kind "${name}" has no way to open it`);
+  }
+  const [min, max] = json.secretDoors?.perFloor ?? [];
+  if (!(min >= 1 && min <= max)) problems.push('locks.json secretDoors.perFloor is not a sane range');
+}
+
+/**
  * file name -> checker. A file with no checker is only parsed, which still
  * catches the most common failure: a trailing comma in hand-edited JSON.
  * @type {Record<string, (json: any) => void>}
@@ -74,6 +97,7 @@ function checkFloors(json) {
 const CHECKS = {
   'strings.json': checkStrings,
   'floors.json': checkFloors,
+  'locks.json': checkLocks,
 };
 
 const files = (await readdir(DATA)).filter((f) => f.endsWith('.json')).sort();

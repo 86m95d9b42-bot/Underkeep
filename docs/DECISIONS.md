@@ -4,6 +4,14 @@ Rulings here override the other documents. Add new entries at the top of each li
 
 ## Decisions
 
+- **2026-09-18 — Doors, locks and secret doors.** Four readings the documents left open, plus a new data file:
+  - **`src/data/locks.json`** holds `03` section 6: the tier TN table, the d10 + F lock-tier bands, the door kinds and the secret-door numbers. The build outline's data pipeline names `traps.json` for `03` sections 3–5; the lock half needed a home before Phase 7, and the tier TN table is shared by both.
+  - **The Good cap applies to locked doors, not keyed ones.** `05` section 3 step 7 states "capped at Good locks" on the **Stuck / Locked** row only, and gives its reason as "so bashing always remains possible". A Keyed door is its own row, and `03` section 6 sets its pick difficulty at Masterwork TN + 2 deliberately; its guarantee is that the key is reachable first, which the builder enforces by sealing every keyed door before choosing where the keys go.
+  - **The Stuck / Locked share is split about one third stuck.** The documents give one combined share (25% + 2% x F) and never split it. `stuckShare` in `locks.json` is 0.34.
+  - **The Secret Stash is sealed by turning the corridor tile into the dead end into a secret door**, with the dead end itself as the chamber. Digging a fresh chamber beyond the dead end was the first attempt; it needs a walled-in tile on the far side, which three floors in four do not have, and 313 of 400 floors lost their stash. The corridor tile is used only when it has exactly two open sides, so sealing it cuts off the stash and nothing else.
+
+  A consequence worth knowing: **a finished floor is no longer fully connected.** The stash is meant to be unreachable until its secret door is found, so connectivity is now checked with secret doors counted as passable.
+
 - **2026-09-18 — Room roles are assigned most-constrained first.** `05` section 3 step 6 gives each role a count but no order, and every floor wants more rooms than it reliably has: floor 10 asks for up to 14 roles across 12–15 rooms. The order is therefore:
   1. **Treasure, all of it at once.** It is the only role the document ties to depth ("the deepest rooms **off** the critical path"), so anything placed before it could take a deeper room. Placing it in two passes was the first implementation, and a lair did exactly that.
   2. **One each of curiosity and theme**, so a cramped floor still has one of everything.

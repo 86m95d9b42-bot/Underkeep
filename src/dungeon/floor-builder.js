@@ -12,6 +12,7 @@
  */
 import DungeonGenerator from './dungeon-generator.js';
 import { floorSpec } from '../data/floors.js';
+import { assignDoorTypes, placeKeys, placeSecretDoors } from './doors.js';
 
 export { DungeonGenerator };
 export const TILE = DungeonGenerator.TILE;
@@ -515,6 +516,9 @@ export function pickSafeRoom(rooms, map, arena) {
  * @property {[number, number][]} criticalPath  arrival to the arena door
  * @property {[number, number] | null} secretStash  the dead end to seal
  * @property {Record<string, number>} roleCounts  how many of each role were placed
+ * @property {Record<string, any>} doors    side table, keyed "x,y"
+ * @property {Record<string, any>} keys     side table, keyed "x,y"
+ * @property {Record<string, any>} secrets  side table, keyed "x,y"
  * @property {import('../data/floors.js').FloorSpec} spec
  */
 
@@ -561,6 +565,26 @@ export function buildFloor(floor, masterSeed, makeStream) {
       // Step 4's last role: a dead end to be sealed behind a secret door.
       const secretStash = pickSecretStash(map, spec, upStairs, path, [upStairs, waystone]);
 
+      // Steps 5 and 6: door kinds, lock tiers, keys and secret doors. The
+      // partly built floor is handed over, because every rule about doors is
+      // written in terms of the route and the room roles above.
+      const sofar = {
+        floor,
+        width: spec.width,
+        height: spec.height,
+        map,
+        rooms: roled,
+        arena,
+        stairs: { up: upStairs, down: arena.stairsDown },
+        start: { pos: upStairs, facing },
+        criticalPath: path,
+        secretStash,
+        spec,
+      };
+      const { doors } = assignDoorTypes(sofar, rng);
+      const keys = placeKeys(sofar, doors, rng);
+      const { secrets } = placeSecretDoors(sofar, doors, rng);
+
       return {
         floor,
         masterSeed,
@@ -577,6 +601,9 @@ export function buildFloor(floor, masterSeed, makeStream) {
         criticalPath: path,
         secretStash,
         roleCounts: placed,
+        doors,
+        keys,
+        secrets,
         spec,
       };
     } catch (err) {
@@ -768,10 +795,34 @@ export function pickSecretStash(map, spec, arrival, path, taken) {
   const onPath = new Set(path.map(([x, y]) => `${x},${y}`));
   const used = new Set(taken.map(([x, y]) => `${x},${y}`));
 
+  /**
+   * A dead end can be sealed when the tile leading into it is a plain corridor
+   * with exactly two open sides — the dead end and the way back. That tile
+   * becomes the secret door and the dead end becomes the chamber, so nothing
+   * has to be dug and nothing else is cut off.
+   *
+   * Digging a fresh chamber beyond the dead end was the first attempt. It
+   * needed a walled-in tile on the far side, which three floors in four do not
+   * have, and most floors lost their stash.
+   */
+  const sealable = ([x, y]) => {
+    const open = DIRS.filter(([dx, dy]) => isWalkable(map[y + dy]?.[x + dx]));
+    if (open.length !== 1) return false;
+    const [ox, oy] = open[0];
+    const nx = x + ox;
+    const ny = y + oy;
+    if (onPath.has(`${nx},${ny}`) || used.has(`${nx},${ny}`)) return false;
+    // The corridor tile must lead nowhere else, or sealing it would cut off
+    // more than the stash.
+    const neighbours = DIRS.filter(([dx, dy]) => isWalkable(map[ny + dy]?.[nx + dx]));
+    return neighbours.length === 2;
+  };
+
   const candidates = DungeonGenerator.findDeadEnds(map, spec.width, spec.height)
     .map(({ x, y }) => /** @type {[number, number]} */ ([x, y]))
     .filter(([x, y]) => !onPath.has(`${x},${y}`) && !used.has(`${x},${y}`))
-    .filter(([x, y]) => fromArrival[y][x] > 0);
+    .filter(([x, y]) => fromArrival[y][x] > 0)
+    .filter(sealable);
 
   if (candidates.length === 0) return null;
   return candidates.reduce((best, pos) =>

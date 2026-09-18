@@ -1,0 +1,49 @@
+{
+  "_source": "03-traps-locks-treasure.md sections 2 and 6. The tier TN table is shared with traps, which get their own file in Phase 7.",
+
+  "tiers": {
+    "_source": "03 section 2: every trap and lock has a tier. F is the floor number.",
+    "crude": { "detectTn": { "base": 8, "perFloor": 1 }, "pickTn": { "base": 8, "perFloor": 1 }, "saveDc": { "base": 9, "perFloor": 1 }, "chestLootBonus": 0 },
+    "standard": { "detectTn": { "base": 10, "perFloor": 1 }, "pickTn": { "base": 10, "perFloor": 1 }, "saveDc": { "base": 10, "perFloor": 1 }, "chestLootBonus": 0 },
+    "masterwork": { "detectTn": { "base": 13, "perFloor": 1 }, "pickTn": { "base": 13, "perFloor": 1 }, "saveDc": { "base": 12, "perFloor": 1 }, "chestLootBonus": 5 },
+    "arcane": { "detectTn": { "base": 14, "perFloor": 1 }, "pickTn": { "base": 14, "perFloor": 1 }, "saveDc": { "base": 13, "perFloor": 1 }, "chestLootBonus": 10 }
+  },
+
+  "lockTierRoll": {
+    "_source": "03 section 6: roll d10 + F. 1-5 Simple, 6-11 Good, 12-15 Masterwork, 16+ Sealed.",
+    "dice": "d10",
+    "bands": [
+      { "upTo": 5, "lock": "simple", "tier": "crude" },
+      { "upTo": 11, "lock": "good", "tier": "standard" },
+      { "upTo": 15, "lock": "masterwork", "tier": "masterwork" },
+      { "upTo": 999, "lock": "sealed", "tier": "arcane" }
+    ],
+    "order": ["simple", "good", "masterwork", "sealed"]
+  },
+
+  "doorKinds": {
+    "_source": "03 section 6, Door Types",
+    "open": { "opensWith": ["walk"] },
+    "stuck": { "opensWith": ["bash"], "bashTn": { "base": 8, "perFloor": 1 }, "canPick": false },
+    "locked": { "opensWith": ["pick", "bash", "knock", "skeletonKey"], "hasLock": true },
+    "keyed": { "opensWith": ["key", "pick"], "hasLock": true, "pickTierBonus": 2, "needsKey": "floorKey" },
+    "sealed": { "opensWith": ["dispelWard", "scrollOfDispel", "runeKey"], "hasLock": true, "tier": "arcane", "needsKey": "runeKey" },
+    "barred": { "opensWith": ["fromFarSide"], "createsShortcut": true },
+    "secret": { "opensWith": ["walk"], "hidden": true },
+    "oneWay": { "opensWith": ["walk"], "oneDirection": true }
+  },
+
+  "secretDoors": {
+    "_source": "03 section 6, Secret Doors; 05 section 3 step 7",
+    "perFloor": [2, 4],
+    "findTn": { "base": 12, "perFloor": 1 },
+    "passiveNoticePenalty": -4,
+    "xpPerFloor": 10,
+    "neverOnCriticalPath": true
+  },
+
+  "stuckShare": {
+    "_source": "03 section 6 gives one 'Stuck / Locked' share without splitting it. See docs/DECISIONS.md.",
+    "value": 0.34
+  }
+}
