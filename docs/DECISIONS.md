@@ -4,8 +4,16 @@ Rulings here override the other documents. Add new entries at the top of each li
 
 ## Decisions
 
+- **2026-09-18 — The step clock.** `src/dungeon/step-clock.js` and `floors.json`'s `stepClock` block hold `01` section 9, `03` section 1 and `05` sections 5 and 7: a d6 every ten ticks, an encounter on a 1, one wider from floor 6 down, doubled in a Dark Zone. Checks roll on the **encounter** stream, which `05` section 11 names for exactly this and carries in the save. Four readings:
+  - **A safe room stops the clock rather than silencing it.** `05` section 5 says arena and Safe Room steps "don't count toward the step clock's wandering monster checks", so steps taken there don't advance the counter at all — a hero who walks in at 9 walks out at 9. The arena's stairs alcove counts as arena.
+  - **The Hollow Stalker counts every step, safe rooms included.** It is an anti-grinding clock rather than a danger clock (`02`), so hiding in the Safe Room does not slow it down. Its warnings at 1,000 and 1,250 steps are each given once.
+  - **A slow action rolls every check it crosses.** A Careful Search costs 20 steps and so pays for two checks, not one. `03` section 1's whole point is that being careful brings monsters.
+  - **The clock is part of the exploration state**, not a second object: `createExploration` includes the counters, so a visit is one thing to save. `movement.js` no longer counts steps itself — it reports `cost` and the clock spends it, which keeps the encounter stream out of the pure movement rules.
+
+  Which monsters arrive is Phase 3: a successful check raises a `wanderingCheck` event and the log says something has found you. The `04` items that bend the clock — the Cursed Beacon's wider range, the Potion of Invisibility's skipped check — are already parameters, so Phase 5 has nothing to reopen here.
+
 - **2026-09-18 — Grid movement.** `src/dungeon/movement.js` resolves one press of the movement pad; `createAnimator` in `view.js` draws the 140 ms tween. Five rulings the documents left open:
-  - **Turning does not cost a step.** `05` counts steps for the step clock, the Hollow Stalker and torches, and never says whether a turn is one. Only entering a tile increments `steps`, so a player who looks around is not punished for it.
+  - **A step and a turn each cost one tick; walking into a wall costs nothing.** `01` section 9 is explicit — "Each step or turn advances the game clock by 1" — and this entry first said the opposite, before the step clock was built. A blocked move is the one that costs nothing: the hero never left the tile. `resolveMove` reports the cost and `step-clock.js` spends it.
   - **Movement agrees with the solvability checker, tile for tile.** `blockedBy` reads doors exactly as `canStep` does, and `test/movement.test.js` compares the two over every adjacent pair on all ten floors: anywhere the checker calls reachable, the hero can walk. The one deliberate difference is a **teleporter pad**, which the checker refuses to route through but the hero may step onto.
   - **A blocked step reports what the hero is allowed to notice.** A one-way door from behind and an unfound secret door both return `looksLike: "wall"`, so the log cannot give them away (`03` section 6). The code still knows which it was.
   - **A web curtain blocks the step; a visible pit does not.** `03` section 8 says a curtain blocks the corridor until burned, so it is the one hazard that stops movement, and `clearHazard` is what the BURN context key will call. A pit is a Reflex save rather than a wall, so it is walked over, and the checker treats it the same way. Every other hazard raises an event and does nothing yet — spinners, teleporters, ice and deep water are Phase 7.
@@ -109,7 +117,7 @@ Rulings here override the other documents. Add new entries at the top of each li
 
 ## Open questions
 
-- **Which RNG stream a hazard rolls on.** `05` names five streams — layout, encounter, combat, loot, restock — and none obviously covers a roll made at step time, such as a spinner's new facing or a fountain's d6. Phase 7 needs an answer. (Default: the `encounter` stream, which the step clock already draws from.)
+- **Which RNG stream a hazard rolls on.** `05` names five streams, and the wandering check is settled — section 11 gives it to `encounter`, which is what `step-clock.js` uses. What is still open is the rest of the step-time rolls: a spinner's new facing, a fountain's d6, a pole breaking. Phase 7 needs an answer. (Default: the `encounter` stream too, since it is already the exploration stream and is carried in the save.)
 - **Floors 1–3 cannot reach the critical-path pacing target.** `05` section 2 asks for 150–300 steps from arrival to the boss, and defines the critical path as the *shortest* walking route (section 3 step 5). The full sweep (10,000 seeds × 10 floors) measures what each grid size can actually produce:
 
   | Floors | Grid | Median steps | Within 150–300 |

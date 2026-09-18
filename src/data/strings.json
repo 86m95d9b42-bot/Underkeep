@@ -40,6 +40,15 @@
       "drink": "DRINK",
       "offer": "OFFER",
       "burn": "BURN"
+    },
+    "log": {
+      "wandering": "Something has found you.",
+      "stalkerWarning": {
+        "1000": "You feel watched.",
+        "1250": "Something follows your footsteps."
+      },
+      "stalker": "The Hollow Stalker comes out of the dark.",
+      "safeRoom": "Something enormous shifts beyond the door…"
     }
   },
   "common": {

@@ -190,7 +190,8 @@ describe('resolving a move', () => {
     expect(outcome.moved).toBe(false);
     expect(ex.facing).toBe(FACING.S);
     expect(ex.pos).toEqual([1, 1]);
-    expect(ex.steps).toBe(0);
+    // 01 section 9: "Each step or turn advances the game clock by 1."
+    expect(outcome.cost).toBe(1);
     expect(outcome.events[0]).toMatchObject({ type: 'turn', facing: FACING.S });
   });
 
@@ -202,7 +203,7 @@ describe('resolving a move', () => {
     expect(outcome.moved).toBe(true);
     expect(ex.pos).toEqual([2, 1]);
     expect(ex.facing).toBe(FACING.E);
-    expect(ex.steps).toBe(1);
+    expect(outcome.cost).toBe(1);
     expect(ex.explored.has('2,1')).toBe(true);
     expect(outcome.events.map((e) => e.type)).toContain('newTile');
   });
@@ -214,7 +215,6 @@ describe('resolving a move', () => {
     move(floor, ex, 'back');
     expect(ex.pos).toEqual([1, 1]);
     expect(ex.facing).toBe(FACING.E);
-    expect(ex.steps).toBe(2);
   });
 
   it('changes nothing when the way is blocked', () => {
@@ -226,7 +226,8 @@ describe('resolving a move', () => {
     expect(outcome.moved).toBe(false);
     expect(outcome.blocked.reason).toBe('locked');
     expect(ex.pos).toEqual(before.pos);
-    expect(ex.steps).toBe(0);
+    // Walking into a locked door costs no time at all.
+    expect(outcome.cost).toBe(0);
     expect(outcome.events[0].type).toBe('blocked');
   });
 
@@ -236,11 +237,11 @@ describe('resolving a move', () => {
 
     const outcome = resolveMove(floor, ex, 'forward');
     expect(ex.pos).toEqual([1, 1]);
-    expect(ex.steps).toBe(0);
+    expect(ex.explored.has('2,1')).toBe(false);
 
     commitMove(ex, outcome);
     expect(ex.pos).toEqual([2, 1]);
-    expect(ex.steps).toBe(1);
+    expect(ex.explored.has('2,1')).toBe(true);
   });
 
   it('raises an event for what the hero steps onto', () => {
@@ -358,7 +359,6 @@ describe('movement on a generated floor', () => {
 
     walk(floor, ex, route);
     expect(ex.pos).toEqual(floor.arena.door);
-    expect(ex.steps).toBe(route.length);
     // Every tile walked is remembered, which is what the automap draws.
     expect(ex.explored.size).toBe(new Set(route.map((p) => key(...p))).add(key(...floor.start.pos)).size);
   });
@@ -372,7 +372,6 @@ describe('movement on a generated floor', () => {
     walk(floor, one, route);
     walk(floor, two, route);
     expect(two.pos).toEqual(one.pos);
-    expect(two.steps).toBe(one.steps);
     expect([...two.explored].sort()).toEqual([...one.explored].sort());
   });
 });

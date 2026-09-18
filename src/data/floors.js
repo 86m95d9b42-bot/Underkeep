@@ -137,6 +137,7 @@ export function hazardAllowed(floor, hazard) {
 }
 
 export const pacing = floors.pacing;
+export const stepClock = floors.stepClock;
 export const bossArena = floors.bossArena;
 export const hazardRules = floors.hazardRules;
 export const chestDepthBonus = floors.chestDepthBonus;

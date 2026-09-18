@@ -15,6 +15,7 @@
  * exploration state.
  */
 import { TILE } from './floor-builder.js';
+import { createClock } from './step-clock.js';
 
 const key = (x, y) => `${x},${y}`;
 
@@ -84,6 +85,8 @@ export function tileAhead(pos, facing) {
  * @property {[number, number]} pos
  * @property {number} facing
  * @property {number} steps            steps this visit (`05` section 14)
+ * @property {number} sinceCheck       ticks towards the next wandering check
+ * @property {number} checks           wandering checks rolled this visit
  * @property {Set<string>} explored    tiles the hero has stood on
  * @property {Set<string>} doorsOpened
  * @property {Set<string>} secretsFound
@@ -96,6 +99,8 @@ export function tileAhead(pos, facing) {
  * "Floor Changes"). Sets are used in memory; the save module turns them into
  * the arrays the template lists.
  *
+ * The step clock's counters live here too, so a visit is one object to save.
+ *
  * @param {import('./floor-builder.js').Floor} floor
  * @returns {Exploration}
  */
@@ -105,7 +110,7 @@ export function createExploration(floor) {
     floor: floor.floor,
     pos: [x, y],
     facing: floor.start.facing,
-    steps: 0,
+    ...createClock(),
     explored: new Set([key(x, y)]),
     doorsOpened: new Set(),
     secretsFound: new Set(),
@@ -271,14 +276,15 @@ export function resolveMove(floor, ex, command) {
   if (spec.travel === null) {
     const facing = turnBy(ex.facing, spec.quarterTurns);
     events.push({ type: 'turn', from: ex.facing, facing });
-    return { command, from, to: { pos: from.pos, facing }, moved: false, turned: true, blocked: null, events };
+    return { command, from, to: { pos: from.pos, facing }, moved: false, turned: true, blocked: null, cost: 1, events };
   }
 
   const to = /** @type {[number, number]} */ (targetTile(ex.pos, ex.facing, command));
   const blocked = blockedBy(floor, ex.pos, to, ex);
   if (blocked) {
     events.push({ type: 'blocked', ...blocked });
-    return { command, from, to: from, moved: false, turned: false, blocked, events };
+    // Walking into a wall costs nothing: the hero never left the tile.
+    return { command, from, to: from, moved: false, turned: false, blocked, cost: 0, events };
   }
 
   events.push({ type: 'step', from: from.pos, to, heading: headingFor(ex.facing, command) });
@@ -296,12 +302,17 @@ export function resolveMove(floor, ex, command) {
   }
   if (!ex.explored.has(key(...to))) events.push({ type: 'newTile', at: to });
 
-  return { command, from, to: { pos: to, facing: ex.facing }, moved: true, turned: false, blocked: null, events };
+  return { command, from, to: { pos: to, facing: ex.facing }, moved: true, turned: false, blocked: null, cost: 1, events };
 }
 
 /**
  * Applies a resolved move. This is the one step the game state takes; the save
  * is written from here and only then does anything animate.
+ *
+ * The clock is not wound here. `outcome.cost` says how much time the move took
+ * — 1 for a step or a turn, 0 for walking into a wall (`01` section 9) — and
+ * the caller spends it through `step-clock.js`, which is where the encounter
+ * stream is.
  *
  * @param {Exploration} ex
  * @param {ReturnType<typeof resolveMove>} outcome
@@ -310,7 +321,6 @@ export function commitMove(ex, outcome) {
   ex.facing = outcome.to.facing;
   if (outcome.moved) {
     ex.pos = [...outcome.to.pos];
-    ex.steps += 1;
     ex.explored.add(key(...outcome.to.pos));
   }
   return ex;

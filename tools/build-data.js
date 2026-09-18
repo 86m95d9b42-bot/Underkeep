@@ -69,6 +69,28 @@ function checkFloors(json) {
     }
   }
 
+  // The step clock: a check that never comes round, or a warning that fires
+  // after the Stalker has already arrived, would only show up in play.
+  const clock = json.stepClock;
+  if (!(clock?.checkEvery >= 1) || !(clock?.die >= 2) || !(clock?.encounterUpTo >= 1)) {
+    problems.push('floors.json stepClock is missing its d6-every-ten-steps rule');
+  } else {
+    if (clock.encounterUpTo >= clock.die) problems.push('floors.json stepClock makes every check an encounter');
+    for (const [action, cost] of Object.entries(clock.actionSteps ?? {})) {
+      if (!(Number.isInteger(cost) && cost >= 1)) problems.push(`floors.json stepClock action "${action}" costs ${cost}`);
+    }
+    if (!clock.safeRoles?.length) problems.push('floors.json stepClock names no safe room roles');
+    const warnings = clock.hollowStalker?.warnAtSteps ?? [];
+    for (const at of warnings) {
+      if (!(at > 0 && at < json.pacing?.hollowStalkerSteps)) {
+        problems.push(`floors.json stepClock warns at ${at}, which is not before the Stalker arrives`);
+      }
+    }
+    if (warnings.some((at, i) => i > 0 && at <= warnings[i - 1])) {
+      problems.push('floors.json stepClock warnings are out of order');
+    }
+  }
+
   for (const [kind, rule] of Object.entries(json.specialDoors ?? {})) {
     if (kind.startsWith('_') || typeof rule !== 'object') continue;
     if (!(rule.minFloor >= 1 && rule.minFloor <= 10)) problems.push(`floors.json ${kind} has an impossible minFloor`);

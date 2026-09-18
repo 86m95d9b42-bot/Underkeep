@@ -12,6 +12,43 @@
     ],
     "hollowStalkerSteps": 1500
   },
+  "stepClock": {
+    "_source": "01 section 9 (wandering monsters, light), 03 section 1 (the cost of every action), 05 sections 5 and 7.",
+    "checkEvery": 10,
+    "die": 6,
+    "encounterUpTo": 1,
+    "deepFloorsFrom": 6,
+    "deepFloorsBonus": 1,
+    "darknessMultiplier": 2,
+    "actionSteps": {
+      "search": 5,
+      "carefulSearch": 20,
+      "pick": 5,
+      "disarm": 5,
+      "bash": 2,
+      "key": 1,
+      "pole": 1,
+      "item": 1,
+      "knock": 1,
+      "dispelWard": 5
+    },
+    "noiseInSix": {
+      "bash": 2,
+      "knock": 1
+    },
+    "safeRoles": [
+      "safeRoom",
+      "bossArena"
+    ],
+    "hollowStalker": {
+      "_source": "02, The Hollow Stalker; the threshold is pacing.hollowStalkerSteps.",
+      "warnAtSteps": [
+        1000,
+        1250
+      ],
+      "returnsAfterSteps": 100
+    }
+  },
   "bossArena": {
     "_source": "05 section 5; 07 section 3 step 1",
     "size": 9,

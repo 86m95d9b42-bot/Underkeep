@@ -31,7 +31,7 @@ Work top to bottom. Check a box when the task is done and tested. Each phase end
 - [x] Generator sweep test: 10,000 seeds × 10 floors all pass — pacing met on floors 4–10, floors 1–3 short (open question in `DECISIONS.md`)
 - [x] `view.js`: wire the supplied raycaster — FOV and aspect per frame, fog distance from the light source, door offsets, capped canvas resolution (`07` section 4)
 - [x] Grid movement with a 140 ms tween between tiles (display only; state changes in one step)
-- [ ] Step clock and wandering monster check (log only for now)
+- [x] Step clock and wandering monster check (log only for now)
 - [ ] Exploration screen with movement pad, context key, log, and swipe controls (wide layout: pad left, side buttons right, view centered)
 - [ ] Automap screen with explored-tile memory
 - [ ] **Done when:** every floor from a seed can be walked from arrival to the boss arena
