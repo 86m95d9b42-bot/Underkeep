@@ -55,7 +55,11 @@
       },
       "waystone": "A waystone hums under your feet.",
       "pit": "An open pit gapes here.",
-      "burned": "Your torch takes the webbing away."
+      "burned": "Your torch takes the webbing away.",
+      "keyTaken": "You pick up a key.",
+      "keyOpen": "The key turns and the door swings open.",
+      "bashOpen": "The door gives way.",
+      "bashFail": "The door holds."
     },
     "title": "EXPLORE",
     "pad": {
@@ -88,6 +92,25 @@
       "drink": "Fountain",
       "offer": "Shrine",
       "burn": "Torch"
+    },
+    "way": {
+      "bash": "Bash",
+      "key": "Key",
+      "pick": "Pick",
+      "knock": "Knock",
+      "skeletonKey": "Skeleton key",
+      "dispelWard": "Dispel"
+    },
+    "reason": {
+      "noKey": "Its key is elsewhere",
+      "noLockpicks": "No lockpicks",
+      "noKnock": "You don't know Knock",
+      "noSkeletonKey": "No skeleton key",
+      "noDispel": "Runes: needs Dispel Ward",
+      "noRuneKey": "Needs its rune key",
+      "notPickable": "Stuck fast; bash it",
+      "barred": "Barred from the far side",
+      "shut": "No way through"
     }
   },
   "pause": {

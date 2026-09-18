@@ -21,10 +21,12 @@ import {
   lookAhead,
   whatIsAt,
   clearHazard,
+  openDoor,
   COMMANDS,
 } from '../dungeon/movement.js';
-import { tick, inSafeZone, costOf } from '../dungeon/step-clock.js';
+import { tick, inSafeZone, costOf, rollNoiseCheck } from '../dungeon/step-clock.js';
 import { remember } from '../dungeon/automap.js';
+import { bestWay, waysToOpen, tryOpen, stepsFor, bashTn } from './locks.js';
 import { layoutStream, carriedStreams } from '../engine/rng.js';
 import { t } from '../data/strings.js';
 
@@ -69,6 +71,15 @@ export function lineFor(event) {
       return { text: t('explore.log.safeRoom'), tone: 'accent' };
     case 'burned':
       return { text: t('explore.log.burned') };
+    case 'key':
+      return { text: t('explore.log.keyTaken'), tone: 'accent' };
+    case 'opened':
+      return {
+        text: t(event.method === 'key' ? 'explore.log.keyOpen' : 'explore.log.bashOpen'),
+        tone: 'accent',
+      };
+    case 'heldShut':
+      return { text: t('explore.log.bashFail'), tone: 'muted' };
     case 'wanderingCheck':
     case 'noiseCheck':
       // Which monsters arrive is Phase 3; a failed check stays silent, as it
@@ -81,6 +92,20 @@ export function lineFor(event) {
     default:
       return null;
   }
+}
+
+/**
+ * The reason a shut door cannot be opened: the first thing the hero is missing.
+ * `03` section 6 gives each kind exactly one way in for the minimum hero, so
+ * the first unusable way is the one worth naming.
+ *
+ * @param {object} door
+ * @param {import('../dungeon/movement.js').Exploration} ex
+ * @param {object} hero
+ */
+export function firstReason(door, ex, hero) {
+  const ways = waysToOpen(door, { keysHeld: ex.keysTaken, has: hero.has ?? {} });
+  return ways.find((way) => !way.usable)?.why ?? 'shut';
 }
 
 /**
@@ -180,28 +205,98 @@ export function createRun({ masterSeed, floor: floorNumber = 1, hero = { ...PLAC
         ...safeRoomEvents(),
         ...spend(outcome.cost, 'steps'),
       ];
+      // A key underfoot is picked up on the way past: it belongs to the floor,
+      // not to a pack, until inventory arrives in Phase 5.
+      for (const event of events) if (event.type === 'key') ex.keysTaken.add(event.key.id);
       record(events);
       return { outcome, events };
     },
 
     /**
-     * The context key. Burning a web curtain is the one action of the six that
-     * Phase 2 can finish: a lit torch does it with no roll (`03` section 8).
-     * The rest — opening, searching, waystones, fountains — are Phase 6 and
-     * Phase 7, and `canAct` says so.
+     * The context key.
+     *
+     * Two of its six actions work today, and both are what `05` section 4's
+     * minimum hero can do, so every floor stays walkable: burning a web
+     * curtain with a torch (`03` section 8, no roll), and opening a door by
+     * bashing it or turning its key (`03` section 6). Searching, waystones and
+     * fountains arrive with Phase 6 and Phase 7.
      */
     act() {
-      if (run.context !== 'burn') return { events: [] };
-      const at = run.ahead.at;
-      clearHazard(ex, at);
-      const events = [{ type: 'burned', at }, ...spend(costOf('item'), 'burn')];
+      const ahead = run.ahead;
+      const at = ahead.at;
+
+      if (run.context === 'burn') {
+        clearHazard(ex, at);
+        const events = [{ type: 'burned', at }, ...spend(costOf('item'), 'burn')];
+        record(events);
+        return { events };
+      }
+
+      const door = run.doorAhead;
+      if (!door) return { events: [] };
+
+      const outcome = tryOpen({
+        door,
+        floor: floor.floor,
+        rng: rng.combat,
+        keysHeld: ex.keysTaken,
+        has: hero.has ?? {},
+        bashBonus: hero.bashBonus ?? 0,
+      });
+      if (!outcome) return { events: [] };
+
+      /** @type {object[]} */
+      const events = [];
+      if (outcome.opened) {
+        openDoor(ex, at);
+        events.push({ type: 'opened', at, method: outcome.method, roll: outcome.roll ?? null });
+      } else {
+        events.push({ type: 'heldShut', at, roll: outcome.roll, tn: outcome.tn });
+      }
+      // The time it took, then the noise it made: bashing is 2-in-6 to bring
+      // something along (`03` section 6).
+      events.push(...spend(outcome.steps, outcome.method));
+      if (outcome.noisy) events.push(rollNoiseCheck(rng.encounter, 'bash'));
+
       record(events);
       return { events };
     },
 
+    /** The door the hero is facing, when there is one still shut. */
+    get doorAhead() {
+      const ahead = run.ahead;
+      if (!ahead.door) return null;
+      const at = `${ahead.at[0]},${ahead.at[1]}`;
+      if (ahead.door.kind === 'open' || ex.doorsOpened.has(at)) return null;
+      return ahead.door;
+    },
+
+    /** How the hero would open the door ahead, if they can. */
+    get openingWay() {
+      const door = run.doorAhead;
+      return door ? bestWay(door, { keysHeld: ex.keysTaken, has: hero.has ?? {} }) : null;
+    },
+
     /** Why the context key is disabled, or undefined when it can be pressed. */
     get actReason() {
-      return run.context === 'burn' ? undefined : t('common.comingSoon');
+      if (run.context === 'burn') return undefined;
+      if (run.context === 'open' && run.doorAhead) {
+        // A door with no way through says which one is missing, not "later".
+        const way = run.openingWay;
+        return way ? undefined : t(`explore.reason.${firstReason(run.doorAhead, ex, hero)}`);
+      }
+      return t('common.comingSoon');
+    },
+
+    /** What the context key's second line says. */
+    get actHint() {
+      const way = run.openingWay;
+      if (!way) return null;
+      const steps = stepsFor(way.method);
+      const tn = way.method === 'bash' ? bashTn(run.doorAhead, floor.floor) : null;
+      return tn === null
+        ? `${t(`explore.way.${way.method}`)} · ${steps}`
+        : `${t(`explore.way.${way.method}`)} · TN ${tn}`;
     },
 
     /** Drops a line into the log by hand, for the screen's own messages. */

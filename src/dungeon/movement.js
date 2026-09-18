@@ -92,6 +92,7 @@ export function tileAhead(pos, facing) {
  * @property {Set<string>} doorsOpened
  * @property {Set<string>} secretsFound
  * @property {Set<string>} hazardsCleared  burned web curtains and the like
+ * @property {Set<string>} keysTaken    ids of the floor's keys picked up
  */
 
 /**
@@ -120,6 +121,7 @@ export function createExploration(floor) {
     doorsOpened: new Set(),
     secretsFound: new Set(),
     hazardsCleared: new Set(),
+    keysTaken: new Set(),
   };
 }
 
@@ -283,6 +285,11 @@ export function arrivalEvents(floor, at, ex) {
   if (landed.hazard) events.push({ type: 'hazard', kind: landed.hazard.kind, at, hazard: landed.hazard });
   if (landed.trap && !landed.trap.sprung && !landed.trap.disarmed) {
     events.push({ type: 'trap', at, trap: landed.trap });
+  }
+  // A key lies where the builder put it, and belongs to the floor rather than
+  // to a pack: `05` section 14 saves it as `keysTaken`.
+  if (landed.keyItem && !ex.keysTaken?.has(landed.keyItem.id)) {
+    events.push({ type: 'key', at, key: landed.keyItem });
   }
   if (!ex.explored.has(key(...at))) events.push({ type: 'newTile', at });
   return events;

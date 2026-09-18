@@ -35,7 +35,9 @@ Work top to bottom. Check a box when the task is done and tested. Each phase end
 - [x] Exploration screen with movement pad, context key, log, and swipe controls (wide layout: pad left, side buttons right, view centered)
 - [x] Pause Menu sheet (built with Exploration: it is where the back gesture goes)
 - [x] Automap screen with explored-tile memory
-- [ ] **Done when:** every floor from a seed can be walked from arrival to the boss arena
+- [x] Doors the minimum hero can open: bash and keys, so the walk is not blocked (`03` section 6; the rest of the lock rules stay in Phase 7)
+- [x] `npm run walk`: walks every floor of N seeds from arrival to the arena door
+- [x] **Done when:** every floor from a seed can be walked from arrival to the boss arena
 
 ## Phase 3 — Fight
 

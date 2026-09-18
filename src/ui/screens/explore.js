@@ -247,7 +247,9 @@ export const explore = {
       contextSlot.replaceChildren(
         button({
           label: t(`explore.context.${action}`),
-          hint: t(`explore.hint.${action}`),
+          // A door says how it would be opened — "Bash · TN 11" — rather than
+          // the generic line (`00`, Exploration: each key shows odds or steps).
+          hint: run.actHint ?? t(`explore.hint.${action}`),
           // Amber whenever there is something to act on (`00`, Exploration).
           kind: action === 'search' ? 'secondary' : 'primary',
           reason: run.actReason,
