@@ -4,6 +4,14 @@ Rulings here override the other documents. Add new entries at the top of each li
 
 ## Decisions
 
+- **2026-09-18 — The event hook system.** `src/engine/hooks.js` is `06` section 16: one register per fight, fourteen events fired in the section's order, and a payload the hooks read and change in place. Four rulings:
+  - **The documented order is a name, not a number.** A hook registered as `poisoned`, `crit` or `cleave` sorts itself by where `06` section 16's own table lists it; a hook whose name the table does not list runs after the listed ones, in registration order. `ORDER` in the module is that table, transcribed. A hook may still give an explicit `order` when it needs one.
+  - **Hook priority is decided at firing time**, not at registration: a hook belongs to a unit, and whether it runs in the target's group, the attacker's, or the field's depends on who the event is about. One `hit` hook on a monster is therefore first when it is hit and second when it hits.
+  - **Cancelling stops the chain.** `payload.cancel()` — or a hook returning `false` — ends that event, which is how Counterspell stops an action and Blink turns a hit into a miss. Nothing after it runs.
+  - **Uses are the framework's job**, not each skill's: `once: true` for Undying, and `limit: { uses, per: 'turn' | 'round' | 'combat' | 'rest' }` for Cleave's once per turn and Ferocity's once per combat, reset by the engine at the matching boundary (`06` section 3 step 2 resets the reaction flags this way).
+
+  **`src/engine/condition-hooks.js` is the first thing registered on it**, and it is deliberately a separate file: `conditions.js` knows nothing about combat, `hooks.js` knows nothing about conditions, and this one knows both. Poison, Burning and Bleeding become `turnStart` hooks in the documented order; the end-of-turn saves and duration ticks become `turnEnd`; Sickened expires on `roundEnd`; waking a sleeper is `damageTaken`; and the after-combat sweep is `combatEnd`. It takes the engine's services — the combat stream, a save-bonus lookup, a way to apply damage — as arguments, so it can be tested with none of them.
+
 - **2026-09-18 — Conditions.** `src/data/conditions.json` is `01` section 7's table as data and `src/engine/conditions.js` is the engine over it: durations, stacking, control immunity and Grit. Six rulings:
   - **Control immunity counts turns, not rounds.** `01` says "2 rounds" and `06` section 10 says "2 of the hero's turns"; CLAUDE.md gives timing to `06`, so the window ticks with the hero's own turn, beside the duration tick.
   - **Grit grants no immunity window.** Grit ends the control conditions because the hero tore free, not because they ran out (`01`), so the hero can be caught again at once. Only a condition that *ends* opens its window.
