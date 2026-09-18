@@ -506,12 +506,15 @@ export function pickSafeRoom(rooms, map, arena) {
  * @property {number} width
  * @property {number} height
  * @property {number[][]} map      terrain only
- * @property {{ id: string, rect: [number, number, number, number], role: string | null, depth: number | null }[]} rooms
+ * @property {{ id: string, rect: [number, number, number, number], role: string, depth: number, onCriticalPath: boolean, openTiles: number }[]} rooms
  * @property {object} arena
  * @property {string | null} safeRoom  the id of the room before the arena
  * @property {{ up: [number, number], down: [number, number] }} stairs
  * @property {[number, number]} waystone
  * @property {{ pos: [number, number], facing: number }} start
+ * @property {[number, number][]} criticalPath  arrival to the arena door
+ * @property {[number, number] | null} secretStash  the dead end to seal
+ * @property {Record<string, number>} roleCounts  how many of each role were placed
  * @property {import('../data/floors.js').FloorSpec} spec
  */
 
@@ -521,7 +524,7 @@ export function pickSafeRoom(rooms, map, arena) {
  *
  * @param {number} floor 1 to 10
  * @param {number} masterSeed
- * @param {(masterSeed: number, floor: number, attempt: number) => () => number} makeStream
+ * @param {(masterSeed: number, floor: number, attempt: number) => import('../engine/rng.js').Stream} makeStream
  *   normally `layoutStream` from the rng module; taken as an argument so this
  *   file needs no opinion about where randomness comes from
  * @returns {Floor}
@@ -532,20 +535,31 @@ export function buildFloor(floor, masterSeed, makeStream) {
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
     try {
-      const { map, rooms } = generateLayout(spec, makeStream(masterSeed, floor, attempt));
+      const rng = makeStream(masterSeed, floor, attempt);
+      const { map, rooms } = generateLayout(spec, rng);
 
       const arena = stampBossArena(map, spec);
       const { upStairs, waystone, facing } = placeArrival(map, spec, arena);
       const safe = pickSafeRoom(rooms, map, arena);
 
+      // Step 3: measure. The critical path and the depth score are what every
+      // later placement rule is written in terms of.
+      const path = criticalPath(map, upStairs, arena.entrance);
+
       const named = rooms.map((room, index) => ({
         id: `r${index}`,
         rect: /** @type {[number, number, number, number]} */ ([room.x, room.y, room.w, room.h]),
-        // Roles and depth are the next step of 07 section 3; only the two
-        // rooms this step knows about are named now.
         role: index === safe.index ? 'safeRoom' : null,
-        depth: null,
       }));
+      // The arena is a room too, as the save template in 05 section 14 has it,
+      // though the generator never placed it.
+      named.push({ id: 'arena', rect: arena.rect, role: 'bossArena' });
+
+      const measured = measureRooms(map, named, upStairs, path);
+      const { rooms: roled, placed } = assignRoomRoles(measured, spec, rng);
+
+      // Step 4's last role: a dead end to be sealed behind a secret door.
+      const secretStash = pickSecretStash(map, spec, upStairs, path, [upStairs, waystone]);
 
       return {
         floor,
@@ -554,12 +568,15 @@ export function buildFloor(floor, masterSeed, makeStream) {
         width: spec.width,
         height: spec.height,
         map,
-        rooms: named,
+        rooms: roled,
         arena,
         safeRoom: named[safe.index].id,
         stairs: { up: upStairs, down: arena.stairsDown },
         waystone,
         start: { pos: upStairs, facing },
+        criticalPath: path,
+        secretStash,
+        roleCounts: placed,
         spec,
       };
     } catch (err) {
@@ -570,5 +587,194 @@ export function buildFloor(floor, masterSeed, makeStream) {
 
   throw new Error(
     `floor ${floor} could not be built in ${MAX_ATTEMPTS} attempts:\n  ${problems.join('\n  ')}`,
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Steps 3 and 4 — measuring the floor, then giving each room a role          */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The shortest walking route from the arrival tile to the arena door
+ * (`05` section 3 step 5). Everything downstream leans on this: locks on the
+ * critical path are capped at Good, sealed doors are never on it, and treasure
+ * rooms sit off it.
+ *
+ * The route is walked downhill through distances measured from the arena, and
+ * ties break on a fixed compass order, so one floor always has one path.
+ *
+ * @param {number[][]} map
+ * @param {[number, number]} from the arrival tile
+ * @param {[number, number]} to the tile outside the arena door
+ * @returns {[number, number][]} from the arrival tile to `to`, both included
+ */
+export function criticalPath(map, from, to) {
+  const toTarget = distancesFrom(map, to);
+  if (toTarget[from[1]][from[0]] < 0) throw new RegenerateFloor('the arena cannot be walked to');
+
+  /** @type {[number, number][]} */
+  const path = [[...from]];
+  let [x, y] = from;
+  let left = toTarget[y][x];
+
+  while (left > 0) {
+    let next = null;
+    for (const [dx, dy] of DIRS) {
+      const nx = x + dx;
+      const ny = y + dy;
+      const d = toTarget[ny]?.[nx];
+      if (d !== undefined && d >= 0 && d < left) {
+        next = [nx, ny];
+        left = d;
+        break;
+      }
+    }
+    /* c8 ignore next */
+    if (!next) throw new RegenerateFloor('the route to the arena runs out halfway');
+    path.push(next);
+    [x, y] = next;
+  }
+  return path;
+}
+
+/**
+ * Walking distance from the arrival tile to every room, and whether the
+ * critical path runs through it. The depth score places rewards and danger
+ * (`05` section 3 step 5, `07` step 3).
+ *
+ * A room's depth is the nearest of its tiles, because that is where the hero
+ * arrives. A room the arena stamped over may have no reachable tiles left, and
+ * gets a depth of -1.
+ *
+ * @param {number[][]} map
+ * @param {{ rect: [number, number, number, number] }[]} rooms
+ * @param {[number, number]} arrival
+ * @param {[number, number][]} path
+ */
+export function measureRooms(map, rooms, arrival, path) {
+  const fromArrival = distancesFrom(map, arrival);
+  const onPath = new Set(path.map(([x, y]) => `${x},${y}`));
+
+  return rooms.map((room) => {
+    const [rx, ry, rw, rh] = room.rect;
+    let depth = -1;
+    let crosses = false;
+    let open = 0;
+
+    for (let y = ry; y < ry + rh; y++) {
+      for (let x = rx; x < rx + rw; x++) {
+        if (!isWalkable(map[y]?.[x])) continue;
+        open += 1;
+        if (onPath.has(`${x},${y}`)) crosses = true;
+        const d = fromArrival[y][x];
+        if (d >= 0 && (depth === -1 || d < depth)) depth = d;
+      }
+    }
+    return { ...room, depth, onCriticalPath: crosses, openTiles: open };
+  });
+}
+
+/**
+ * Gives every room a role (`05` section 3 step 6).
+ *
+ * Rooms are assigned most-constrained first, because a treasure room has to be
+ * deep and off the critical path while a lair will take any room at all:
+ * treasure, then curiosity, then theme, then lairs, and whatever is left is
+ * plain. Each floor wants more rooms than it always has — floor 10 asks for up
+ * to 14 of its 12 to 15 — so each kind takes its minimum first and the extras
+ * are shared out only while rooms remain.
+ *
+ * @param {ReturnType<typeof measureRooms>} rooms measured, and already carrying
+ *   any role this floor's shape fixed (the arena and its Safe Room)
+ * @param {import('../data/floors.js').FloorSpec} spec
+ * @param {import('../engine/rng.js').Stream} rng the layout stream
+ */
+export function assignRoomRoles(rooms, spec, rng) {
+  const roles = new Map(rooms.map((room) => [room.id, room.role ?? null]));
+
+  /** Rooms still free, deepest first; unreachable rooms are never given a role. */
+  const free = () =>
+    rooms
+      .filter((room) => roles.get(room.id) === null && room.depth >= 0 && room.openTiles > 0)
+      .sort((a, b) => b.depth - a.depth || a.id.localeCompare(b.id));
+
+  /**
+   * @param {string} role
+   * @param {number} count
+   * @param {(room: any) => boolean} [allowed]
+   * @param {boolean} [deepestFirst] false picks at random from the layout stream
+   */
+  const give = (role, count, allowed = () => true, deepestFirst = false) => {
+    let given = 0;
+    for (let i = 0; i < count; i += 1) {
+      const options = free().filter(allowed);
+      if (options.length === 0) break;
+      const room = deepestFirst ? options[0] : rng.pick(options);
+      roles.set(room.id, role);
+      given += 1;
+    }
+    return given;
+  };
+
+  /** @param {[number, number]} range */
+  const least = ([min]) => min;
+  /** @param {[number, number]} range */
+  const most = ([, max]) => max;
+
+  const { treasure, curiosity, theme } = spec.roomRoles;
+  const offPath = (room) => !room.onCriticalPath;
+
+  // Treasure goes first and all at once. It is the only role the document ties
+  // to depth ("the deepest rooms off the critical path"), so if anything else
+  // were placed in between it could take a room deeper than the treasure.
+  const placed = {
+    treasure: give('treasure', rng.range(least(treasure), most(treasure)), offPath, true),
+  };
+
+  // Then a minimum of each of the others, so a floor short of rooms still has
+  // one of everything, and the lairs that carry its encounters.
+  placed.curiosity = give('curiosity', least(curiosity));
+  placed.theme = give('theme', least(theme));
+  placed.lair = give('lair', spec.counts.lairs);
+
+  // Extras only while there are rooms to spare.
+  placed.curiosity += give('curiosity', rng.range(0, most(curiosity) - least(curiosity)));
+  placed.theme += give('theme', rng.range(0, most(theme) - least(theme)));
+
+  for (const room of rooms) if (roles.get(room.id) === null) roles.set(room.id, 'plain');
+
+  return {
+    rooms: rooms.map((room) => ({ ...room, role: roles.get(room.id) })),
+    placed,
+  };
+}
+
+/**
+ * The Secret Stash: a dead end sealed behind a secret door, holding a chest
+ * (`05` section 3 step 6). The tile is chosen here; the secret door itself is
+ * placed with the other doors, in the next step of `07` section 3.
+ *
+ * The farthest dead end from arrival that is not already spoken for, so the
+ * stash is a genuine find rather than something passed on the way in.
+ *
+ * @param {number[][]} map
+ * @param {import('../data/floors.js').FloorSpec} spec
+ * @param {[number, number]} arrival
+ * @param {[number, number][]} path
+ * @param {[number, number][]} taken tiles already used (stairs, waystone)
+ */
+export function pickSecretStash(map, spec, arrival, path, taken) {
+  const fromArrival = distancesFrom(map, arrival);
+  const onPath = new Set(path.map(([x, y]) => `${x},${y}`));
+  const used = new Set(taken.map(([x, y]) => `${x},${y}`));
+
+  const candidates = DungeonGenerator.findDeadEnds(map, spec.width, spec.height)
+    .map(({ x, y }) => /** @type {[number, number]} */ ([x, y]))
+    .filter(([x, y]) => !onPath.has(`${x},${y}`) && !used.has(`${x},${y}`))
+    .filter(([x, y]) => fromArrival[y][x] > 0);
+
+  if (candidates.length === 0) return null;
+  return candidates.reduce((best, pos) =>
+    fromArrival[pos[1]][pos[0]] > fromArrival[best[1]][best[0]] ? pos : best,
   );
 }

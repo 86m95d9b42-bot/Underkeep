@@ -212,8 +212,10 @@ describe('every floor builds', () => {
         if (d >= 0) nearest = Math.min(nearest, d);
       }
     }
-    // No other room is closer to the arena than the one chosen.
+    // No other room is closer to the arena than the one chosen. The arena is
+    // itself listed as a room, so it is skipped.
     for (const room of floor.rooms) {
+      if (room.role === 'bossArena') continue;
       const [rx, ry, rw, rh] = room.rect;
       for (let y = ry; y < ry + rh; y++) {
         for (let x = rx; x < rx + rw; x++) {
@@ -323,5 +325,168 @@ describe('across many seeds', () => {
         expect(dist[floor.waystone[1]][floor.waystone[0]], `${where}: waystone`).toBeGreaterThanOrEqual(0);
       }
     }
+  });
+});
+
+describe('the critical path', () => {
+  const floors = allFloorSpecs().map((spec) => [spec.floor, buildFloor(spec.floor, SEED, layoutStream)]);
+
+  it.each(floors)('floor %i runs from arrival to the arena door, step by step', (number, floor) => {
+    // 05 section 3 step 5: the shortest walking route from arrival to the arena.
+    const path = floor.criticalPath;
+    expect(path[0]).toEqual(floor.start.pos);
+    expect(path.at(-1)).toEqual(floor.arena.entrance);
+
+    for (const [x, y] of path) expect(isWalkable(floor.map[y][x])).toBe(true);
+
+    for (let i = 1; i < path.length; i += 1) {
+      const gap = Math.abs(path[i][0] - path[i - 1][0]) + Math.abs(path[i][1] - path[i - 1][1]);
+      expect(gap, `step ${i} jumps`).toBe(1);
+    }
+  });
+
+  it.each(floors)('floor %i takes the shortest route there is', (number, floor) => {
+    const dist = distancesFrom(floor.map, floor.arena.entrance);
+    expect(floor.criticalPath).toHaveLength(dist[floor.start.pos[1]][floor.start.pos[0]] + 1);
+  });
+
+  it.each(floors)('floor %i never repeats a tile', (number, floor) => {
+    const seen = new Set(floor.criticalPath.map(([x, y]) => `${x},${y}`));
+    expect(seen.size).toBe(floor.criticalPath.length);
+  });
+});
+
+describe('room depth', () => {
+  const floor = buildFloor(6, SEED, layoutStream);
+
+  it('measures every room from the arrival tile', () => {
+    // 07 step 3: flood-fill distances from the arrival tile.
+    const dist = distancesFrom(floor.map, floor.start.pos);
+    for (const room of floor.rooms) {
+      const [rx, ry, rw, rh] = room.rect;
+      let nearest = -1;
+      for (let y = ry; y < ry + rh; y++) {
+        for (let x = rx; x < rx + rw; x++) {
+          const d = dist[y]?.[x];
+          if (d >= 0 && (nearest === -1 || d < nearest)) nearest = d;
+        }
+      }
+      expect(room.depth, room.id).toBe(nearest);
+    }
+  });
+
+  it('puts the arena deeper than the room the hero arrives nearest', () => {
+    const arena = floor.rooms.find((room) => room.role === 'bossArena');
+    const shallowest = Math.min(...floor.rooms.filter((r) => r.depth >= 0).map((r) => r.depth));
+    expect(arena.depth).toBeGreaterThan(shallowest);
+  });
+
+  it('marks the rooms the critical path runs through', () => {
+    const onPath = new Set(floor.criticalPath.map(([x, y]) => `${x},${y}`));
+    for (const room of floor.rooms) {
+      const [rx, ry, rw, rh] = room.rect;
+      let crosses = false;
+      for (let y = ry; y < ry + rh; y++) {
+        for (let x = rx; x < rx + rw; x++) if (onPath.has(`${x},${y}`)) crosses = true;
+      }
+      expect(room.onCriticalPath, room.id).toBe(crosses);
+    }
+  });
+});
+
+describe('room roles', () => {
+  const floors = allFloorSpecs().map((spec) => [spec.floor, buildFloor(spec.floor, SEED, layoutStream)]);
+
+  it.each(floors)('floor %i gives every room exactly one role', (number, floor) => {
+    const known = ['bossArena', 'safeRoom', 'treasure', 'curiosity', 'theme', 'lair', 'plain'];
+    for (const room of floor.rooms) expect(known, room.id).toContain(room.role);
+
+    expect(floor.rooms.filter((r) => r.role === 'bossArena')).toHaveLength(1);
+    expect(floor.rooms.filter((r) => r.role === 'safeRoom')).toHaveLength(1);
+  });
+
+  it.each(floors)('floor %i places the lairs 05 section 3 step 6 asks for', (number, floor) => {
+    // 2 + floor(F / 2).
+    const lairs = floor.rooms.filter((room) => room.role === 'lair');
+    expect(lairs).toHaveLength(floor.spec.counts.lairs);
+  });
+
+  it.each(floors)('floor %i keeps each other role inside its range', (number, floor) => {
+    const count = (role) => floor.rooms.filter((room) => room.role === role).length;
+    for (const role of ['treasure', 'curiosity', 'theme']) {
+      const [min, max] = floor.spec.roomRoles[role];
+      expect(count(role), role).toBeGreaterThanOrEqual(min);
+      expect(count(role), role).toBeLessThanOrEqual(max);
+    }
+  });
+
+  it.each(floors)('floor %i puts treasure rooms off the critical path', (number, floor) => {
+    // 05 section 3 step 6: deepest rooms off the critical path.
+    for (const room of floor.rooms.filter((r) => r.role === 'treasure')) {
+      expect(room.onCriticalPath, `${room.id} is on the path`).toBe(false);
+    }
+  });
+
+  it.each(floors)('floor %i puts treasure in the deepest rooms it can', (number, floor) => {
+    const treasure = floor.rooms.filter((r) => r.role === 'treasure');
+    const rivals = floor.rooms.filter(
+      (r) => !r.onCriticalPath && r.depth >= 0 && ['plain', 'lair', 'curiosity', 'theme'].includes(r.role),
+    );
+    const shallowestTreasure = Math.min(...treasure.map((r) => r.depth));
+    for (const room of rivals) {
+      expect(room.depth, `${room.id} is deeper than a treasure room`).toBeLessThanOrEqual(
+        shallowestTreasure,
+      );
+    }
+  });
+
+  it('never gives a role to a room the arena ate', () => {
+    for (let seed = 1; seed <= 12; seed += 1) {
+      for (let number = 1; number <= 10; number += 1) {
+        const floor = buildFloor(number, seed * 3571, layoutStream);
+        for (const room of floor.rooms) {
+          if (room.depth >= 0) continue;
+          expect(room.role, `${number}/${room.id}`).toBe('plain');
+        }
+      }
+    }
+  });
+});
+
+describe('the secret stash', () => {
+  const floors = allFloorSpecs().map((spec) => [spec.floor, buildFloor(spec.floor, SEED, layoutStream)]);
+
+  it.each(floors)('floor %i hides it at a dead end away from the route', (number, floor) => {
+    // 05 section 3 step 6: a dead end sealed with a secret door.
+    expect(floor.secretStash).not.toBeNull();
+    const [sx, sy] = floor.secretStash;
+
+    const deadEnds = DungeonGenerator.findDeadEnds(floor.map, floor.width, floor.height);
+    expect(deadEnds.some((end) => end.x === sx && end.y === sy)).toBe(true);
+
+    const onPath = floor.criticalPath.some(([x, y]) => x === sx && y === sy);
+    expect(onPath).toBe(false);
+
+    expect(floor.secretStash).not.toEqual(floor.stairs.up);
+    expect(floor.secretStash).not.toEqual(floor.waystone);
+
+    const dist = distancesFrom(floor.map, floor.start.pos);
+    expect(dist[sy][sx]).toBeGreaterThan(0);
+  });
+});
+
+describe('roles are drawn from the layout stream', () => {
+  it('assigns the same roles every time for one seed', () => {
+    const once = buildFloor(5, 24680, layoutStream);
+    const twice = buildFloor(5, 24680, layoutStream);
+    expect(twice.rooms.map((r) => [r.id, r.role])).toEqual(once.rooms.map((r) => [r.id, r.role]));
+    expect(twice.criticalPath).toEqual(once.criticalPath);
+    expect(twice.secretStash).toEqual(once.secretStash);
+  });
+
+  it('assigns different roles for different seeds', () => {
+    const a = buildFloor(5, 111, layoutStream).rooms.map((r) => r.role).join();
+    const b = buildFloor(5, 222, layoutStream).rooms.map((r) => r.role).join();
+    expect(b).not.toBe(a);
   });
 });

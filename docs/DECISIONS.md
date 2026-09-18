@@ -4,6 +4,16 @@ Rulings here override the other documents. Add new entries at the top of each li
 
 ## Decisions
 
+- **2026-09-18 — Room roles are assigned most-constrained first.** `05` section 3 step 6 gives each role a count but no order, and every floor wants more rooms than it reliably has: floor 10 asks for up to 14 roles across 12–15 rooms. The order is therefore:
+  1. **Treasure, all of it at once.** It is the only role the document ties to depth ("the deepest rooms **off** the critical path"), so anything placed before it could take a deeper room. Placing it in two passes was the first implementation, and a lair did exactly that.
+  2. **One each of curiosity and theme**, so a cramped floor still has one of everything.
+  3. **Every lair**, since lairs carry the floor's fixed encounters.
+  4. **The extras** of curiosity and theme, only while rooms remain.
+
+  Measured over 300 floors (30 seeds x 10 floors): lairs are never short of the documented count, and 11% of floors end with no plain rooms at all, which the table permits ("Plain | The rest").
+
+  **Depth is measured from the arrival tile, not an arrival room.** `07` step 3 says to flood-fill from the arrival tile, and arrival is a dead end here rather than a room, so there is usually no room to call the arrival room. **The arena is listed as a room** with role `bossArena`, as the save template in `05` section 14 has it, even though the generator never placed it. **The Secret Stash is chosen as a dead end here**; the secret door that seals it is placed with the other doors in the next step.
+
 - **2026-09-18 — Stamping the boss arena over a finished floor.** `07` section 3 step 1 says to carve the arena "into the largest clear region". No generated floor has one: the maze fills the grid, and the emptiest 11 × 11 block still holds about 50 walkable tiles. So the arena is stamped over the map at the site that destroys fewest walkable tiles (ties break outward from the middle, deterministically), and the floor is then repaired by digging the shortest run of wall back to anything the stamp cut off.
 
   Two rules of `05` section 5 needed protecting explicitly, and both were wrong in the first working version:
