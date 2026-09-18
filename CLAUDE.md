@@ -82,8 +82,17 @@ npm run dev        # local dev server with live reload (serve over LAN for phone
 npm run build      # data check + bundle + inline into dist/index.html
 npm test           # rule tests
 npm run data       # rebuild and validate src/data/*.json
+npm run check      # open every screen at six device sizes and check the shell rules
+npm run shots      # screenshot every screen in both frames into dist/shots/
 npm run sim        # balance simulator (Phase 7+)
 ```
+
+`check` and `shots` need the built page (`npm run build` first) and headless Chrome;
+set `CHROME` if it isn't at the usual macOS path. Add each new screen's router id to
+the `SCREENS` list in `tools/check-frames.js` and `tools/shots.js` as it's built.
+
+One-off setup, already run and committed: `npm run fonts` (downloads Bungee and
+Atkinson Hyperlegible into `assets/fonts/`) and `npm run icons` (draws the app icons).
 
 ## Style
 

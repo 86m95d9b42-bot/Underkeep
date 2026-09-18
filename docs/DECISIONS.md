@@ -4,6 +4,14 @@ Rulings here override the other documents. Add new entries at the top of each li
 
 ## Decisions
 
+- **2026-09-18 — Phase 1 shell choices.** Six small rulings the documents did not settle, each behind a named constant:
+  - **Text size setting.** `--text-scale` multiplies body and hint text only; Bungee labels and titles are sized to their boxes and do not scale. S is 1.00 and gives the documented minimums on a 390 px frame (hint 12 px, body 14 px, button 18 px); M is 1.08 (the mockups) and L is 1.20. In `src/styles/tokens.css`.
+  - **The 2-row tap target rule** applies to regions placed on the screen grid. Controls inside a `.scroll` panel follow the mockups instead, which use 52 px rows; a 14-row settings list cannot hold nine labelled 2-row controls. Checked by `npm run check`.
+  - **EXPORT / IMPORT in the wide Settings screen** take rows 8–9, not the outline's row 9 alone, so they keep the 2-row minimum.
+  - **The release is `dist/index.html` plus four files.** JS, CSS, and fonts are inlined into the one page as the outline says; `sw.js`, `manifest.webmanifest`, and the icons stay separate because an installable app needs real URLs for them.
+  - **Screens a later phase will add** disable their button with the reason "Not built yet" rather than going missing, so the layout never shifts as phases land. `router.has(id)` reports what exists.
+  - **The URL fragment may name a screen** (`#settings`), which is how `npm run check` and `npm run shots` open each one. Unknown fragments start at the Title screen.
+
 - **2026-09-18 — Supplied engine modules.** `src/dungeon/dungeon-generator.js` and `src/dungeon/raycaster.js` from Depths of Dreadmoor are the floor generator and renderer. They're vendored unchanged; Underkeep wraps them (`docs/07-engine-modules.md`). This replaces the growing-tree carving described in `05` section 3 steps 1–4.
 - **2026-09-18 — Tiles hold terrain only.** Locks, traps, chests, hazards, keys, and the waystone live in side tables keyed "x,y", not in the tile grid. ILLUSION tiles are secret doors; PIT tiles are discovered pit traps.
 - **2026-09-18 — No sprites in the 3D view.** The raycaster draws walls only, so monsters, chests, and waystones appear in UI panels and on the automap. A billboard layer would be a later decision.
@@ -23,6 +31,7 @@ Rulings here override the other documents. Add new entries at the top of each li
 
 ## Open questions
 
+- **Tap targets inside scrolling lists.** The build outline's own Settings mockup uses 52 px segmented controls, which is under the 2-row minimum (about 80 px). Phase 1 reads the minimum as applying to grid-placed regions only. Confirm, or raise the in-list controls and accept more scrolling.
 - **Letterbox.** Space left over in either frame is plain black bars. Keep that, or fill the bars with a subtle dungeon pattern? (Default: plain black.)
 - **Tablet in portrait.** Currently the phone layout scaled up, capped at 72 px units. Worth a wider two-pane portrait layout later, or leave it? (Default: leave it.)
 - **Art style.** The raycaster starts with its flat shaded fallback (no textures). Wall textures are plain ImageData when someone makes them. Monster and portrait art are still placeholders. Pixel art, line art, or text-only cards? (Default: bold line-art walls; enemy cards are text with HP bars.)

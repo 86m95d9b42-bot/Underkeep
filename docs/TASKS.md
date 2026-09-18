@@ -4,18 +4,18 @@ Work top to bottom. Check a box when the task is done and tested. Each phase end
 
 ## Phase 1 — Shell
 
-- [ ] Project setup: `package.json` (esbuild, vitest, fake-indexeddb as dev dependencies), `.gitignore`, npm scripts from `CLAUDE.md`
-- [ ] Build script: bundle `src/main.js`, inline JS, CSS, and fonts into `dist/index.html`
-- [ ] Dev server reachable from a phone on the same Wi-Fi
-- [ ] `index.html` with the viewport tag and `#app`
-- [ ] Shell CSS: tall 9:18 frame and wide 18:9 frame, `--u` with a 72 px cap, no page scroll, `.scroll` class
-- [ ] Layout engine: regions with `tall` placements plus the four wide patterns (fold, stage + controls, list + detail, panel); each screen names its pattern
-- [ ] Frame switching on resize and rotation, re-rendering the current screen without touching state
-- [ ] Design tokens as CSS custom properties; self-hosted Bungee and Atkinson Hyperlegible
-- [ ] UI parts: `button` (primary, secondary, risky, disabled + reason), `topBar`, `bar` (HP/FP/XP), `chip`, `listRow`, `scrollPanel`, `sheet`, `segmented`
-- [ ] Router: one screen at a time, sheets over a dimmed screen, back button and back gesture
-- [ ] Title screen and Settings screen (settings saved to localStorage)
-- [ ] Manifest (fullscreen, portrait, icons) and service worker (offline)
+- [x] Project setup: `package.json` (esbuild, vitest, fake-indexeddb as dev dependencies), `.gitignore`, npm scripts from `CLAUDE.md`
+- [x] Build script: bundle `src/main.js`, inline JS, CSS, and fonts into `dist/index.html`
+- [x] Dev server reachable from a phone on the same Wi-Fi
+- [x] `index.html` with the viewport tag and `#app`
+- [x] Shell CSS: tall 9:18 frame and wide 18:9 frame, `--u` with a 72 px cap, no page scroll, `.scroll` class
+- [x] Layout engine: regions with `tall` placements plus the four wide patterns (fold, stage + controls, list + detail, panel); each screen names its pattern
+- [x] Frame switching on resize and rotation, re-rendering the current screen without touching state
+- [x] Design tokens as CSS custom properties; self-hosted Bungee and Atkinson Hyperlegible
+- [x] UI parts: `button` (primary, secondary, risky, disabled + reason), `topBar`, `bar` (HP/FP/XP), `chip`, `listRow`, `scrollPanel`, `sheet`, `segmented`
+- [x] Router: one screen at a time, sheets over a dimmed screen, back button and back gesture
+- [x] Title screen and Settings screen (settings saved to localStorage)
+- [x] Manifest (fullscreen, portrait, icons) and service worker (offline)
 - [ ] **Done when:** installs on iOS and Android, opens fullscreen in both orientations, rotates without losing state, and nothing scrolls or zooms outside `.scroll` panels
 
 ## Phase 2 — Walk
