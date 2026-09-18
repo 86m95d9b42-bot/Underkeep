@@ -56,10 +56,9 @@
  * falls back to a flat shaded color for that tile type instead of
  * failing.
  */
-(function(root, factory){
-  if(typeof module==='object'&&module.exports){module.exports=factory();}
-  else{root.Raycaster=factory();}
-})(typeof self!=='undefined'?self:this, function(){
+const Raycaster = (function(factory){
+  return factory();
+})(function(){
   'use strict';
 
   // Matches dungeon-generator.js's TILE values by default. Override per
@@ -337,3 +336,14 @@
 
   return {create,TILE};
 });
+
+// --- Added for Underkeep ---------------------------------------------------
+// The original UMD wrapper cannot load in this project: package.json sets
+// "type": "module", so this file is an ES module in Node, esbuild and Vite
+// alike, where top-level `this` is undefined and `module` is either missing or
+// a read-only namespace object. Both of its branches therefore threw before
+// the factory ever ran. The wrapper is reduced to calling the factory, and the
+// exports below replace it. The factory itself is untouched.
+// The same change was made to dungeon-generator.js; see docs/DECISIONS.md.
+export default Raycaster;
+export const { create, TILE } = Raycaster;

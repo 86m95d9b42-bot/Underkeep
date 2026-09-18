@@ -4,6 +4,11 @@ Rulings here override the other documents. Add new entries at the top of each li
 
 ## Decisions
 
+- **2026-09-18 — The dungeon view, and the second vendored file.** `src/dungeon/raycaster.js` needed the same module-wrapper change as the generator, for the same reason and with the same factory untouched (see the entry below). Three more notes:
+  - **`view.js` is allowed to touch the DOM.** CLAUDE.md excepts the raycaster from the no-DOM rule for `src/dungeon/`, and `07` section 4 puts its wiring at `src/dungeon/view.js`, so the exception covers both. Everything in the file that is a rule rather than a canvas call — field of view, light sources, door offsets, the movement tween — is a pure export, and those are what the tests use.
+  - **The wide field of view is tested as arithmetic, not as pixels.** `07` derives it as `2 · atan(tan(TALL_FOV / 2) · (2 / 1.125))`, which `test/view.test.js` checks to twelve decimal places. A browser check cannot stand in for that: setting `WIDE_FOV = TALL_FOV` left the rendered wall height unmoved, because the renderer takes its *vertical* field of view from canvas height. `npm run view-check` therefore claims only what it can see — that a real floor draws with depth shading, that the pixel cap holds, and that darkness closes the view down.
+  - **Doors are drawn open only when the hero has opened them**, except plain archways, which are holes in the wall and always open. Secret doors never appear in the offsets: until found they are wall, and the raycaster draws an ILLUSION tile as wall of its own accord.
+
 - **2026-09-18 — The generator sweep, and where the slow tests live.** `npm run sweep` builds 10,000 seeds × 10 floors across worker threads: **100,000 floors in 307 s, 0 build failures, 0 unsolvable, 2.22% needing a rebuild** (the worst case took 4 attempts of the 8 allowed). `test/sweep.test.js` runs the same checks over 40 seeds so they run on every change, and `vitest.config.js` raises the test timeout to 60 s — the generator tests build hundreds of floors and sat close enough to the 5 s default to fail on a busy machine.
 
 - **2026-09-18 — The solvability check, and repairing rather than rebuilding.** `05` section 4 is implemented as written: a pessimistic flood fill with keys, then a second one run backwards for the "get back from anywhere" rule. Three readings, and one change of approach:

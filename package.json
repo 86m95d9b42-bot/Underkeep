@@ -15,7 +15,8 @@
     "sim": "node tools/sim.js",
     "shots": "node tools/shots.js",
     "check": "node tools/check-frames.js",
-    "sweep": "node tools/sweep.js"
+    "sweep": "node tools/sweep.js",
+    "view-check": "node tools/view-check.js"
   },
   "devDependencies": {
     "esbuild": "^0.25.0",
