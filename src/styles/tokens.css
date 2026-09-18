@@ -1,0 +1,45 @@
+/* Design tokens. 00-build-outline.md, "Visual design system".
+   Colours live here; every size lives on #app because sizes are multiples of
+   --u, and --u is only defined on #app. */
+
+:root {
+  /* Palette */
+  --ground: #14110f;
+  --panel: #221e1a;
+  --panel-raised: #2c2721;
+  --bone: #f3ead8;
+  --muted: #bfb4a0;
+  --rule: #443d35;
+  --accent: #f2b544;
+  --danger: #e5484d;
+  --focus: #4c9eeb;
+  --success: #6ccb7a;
+  --letterbox: #0b0908;
+
+  /* Rarity colours share the palette; listed separately so item code reads
+     as rarity, not as colour. */
+  --rarity-common: var(--bone);
+  --rarity-uncommon: var(--success);
+  --rarity-rare: var(--focus);
+  --rarity-unique: var(--accent);
+  --rarity-cursed: var(--danger);
+  --rarity-unknown: var(--muted);
+
+  /* Type families */
+  --font-label: Bungee, Impact, sans-serif;
+  --font-body: 'Atkinson Hyperlegible', Verdana, sans-serif;
+
+  /* Text size setting. S is the documented minimum (12 / 14 / 18 px on a
+     390 px frame); M and L step up from it. See docs/DECISIONS.md. */
+  --text-scale: 1.08;
+}
+
+:root[data-text='s'] {
+  --text-scale: 1;
+}
+:root[data-text='m'] {
+  --text-scale: 1.08;
+}
+:root[data-text='l'] {
+  --text-scale: 1.2;
+}
