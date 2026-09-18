@@ -4,6 +4,12 @@ Rulings here override the other documents. Add new entries at the top of each li
 
 ## Decisions
 
+- **2026-09-18 — floors.json scope and two superseded numbers.** `floors.json` holds the floor table from `05` section 2 plus the per-floor counts from section 3 (steps 6-9), because the next Phase 2 tasks consume exactly those and CLAUDE.md forbids magic numbers in logic. Restocking (`05` section 8) is left out; Phase 6 owns it. Two numbers are kept for the record but cannot currently be honoured, because the vendored generator replaced `05` section 3 steps 1-4:
+  - **Floor 3's twistier corridors** (80% newest cell in the growing-tree carve). The vendored generator takes only `roomDensity`, with no maze-bias knob, so floor 3 is stored as `corridorStyle: "twisty"` and gets its identity from goblin camps instead.
+  - **The 70% room-to-corridor door rate and the 8% extra-connector rate.** The generator places its own doors and loops.
+
+  **Room counts reach the generator as a density.** The documents give room counts; the module takes `roomDensity` and derives `maxRooms = floor(w * h * 0.08 * density)`. `roomDensityFor()` inverts that from the top of each floor's range, adding half a room first so the generator's own `floor()` cannot land a room short. It is a cap on attempts, not a promise, so the builder still has to check the range.
+
 - **2026-09-18 — Seeded RNG details.** Two choices in `src/engine/rng.js` that affect what replays:
   - **A cancelled advantage still draws two dice.** `06` section 6 step 5 says one advantage and one disadvantage cancel. The stream draws both dice either way and keeps the first, so a roll costs the same two draws however the caller reached the cancellation, and a replay of the same fight stays in step.
   - **Regenerating a floor uses an attempt number, not literally `seed + 1`.** `05` section 3 says a floor failing the solvability check is regenerated with `seed + 1`. `layoutStream(masterSeed, floor, attempt)` mixes the attempt into the seed instead, which is deterministic in the same way and cannot collide with a neighbouring floor's stream.

@@ -1,0 +1,208 @@
+{
+  "_source": "05-dungeon-generation-saving.md sections 2, 3 (steps 6-9), 5 and 6. Counts that the documents give as formulas are stored as formulas here and resolved by src/data/floors.js.",
+
+  "pacing": {
+    "_source": "05 section 2, Pacing Targets",
+    "criticalPathSteps": [150, 300],
+    "fullClearSteps": [600, 1000],
+    "hollowStalkerSteps": 1500
+  },
+
+  "bossArena": {
+    "_source": "05 section 5; 07 section 3 step 1",
+    "size": 9,
+    "sizeByFloor": { "10": 11 },
+    "entrances": 1,
+    "entranceNeverLockedOrTrapped": true,
+    "downStairsBehindArena": true,
+    "safeRoom": {
+      "wanderingChecks": false,
+      "campingInterrupted": false,
+      "trapsOrHazards": false
+    },
+    "wanderingChecksInArena": false
+  },
+
+  "counts": {
+    "_rule": "value = base + floor(floorNumber * perFloor)",
+    "lairs": { "base": 2, "perFloor": 0.5, "_source": "05 section 3 step 6: 2 + floor(F/2)" },
+    "chests": { "base": 3, "perFloor": 0.5, "_source": "05 section 3 step 9: 3 + floor(F/2)" },
+    "floorTraps": { "base": 4, "perFloor": 1, "_source": "05 section 3 step 9: 4 + F" }
+  },
+
+  "rates": {
+    "_rule": "value = base + floorNumber * perFloor, not rounded",
+    "lockedDoors": {
+      "base": 0.25,
+      "perFloor": 0.02,
+      "_source": "05 section 3 step 7: 25% + 2% x F of all doors"
+    },
+    "roomToCorridorDoors": {
+      "base": 0.7,
+      "perFloor": 0,
+      "_source": "05 section 3 step 4; the vendored generator places its own doors"
+    },
+    "extraConnectors": {
+      "base": 0.08,
+      "perFloor": 0,
+      "_source": "05 section 3 step 2; superseded by the vendored generator"
+    }
+  },
+
+  "roomRoles": {
+    "_source": "05 section 3 step 6",
+    "treasure": [1, 2],
+    "curiosity": [1, 2],
+    "theme": [1, 3],
+    "secretStash": [1, 1]
+  },
+
+  "specialDoors": {
+    "_source": "05 section 3 step 7",
+    "criticalPathMaxLockTier": "good",
+    "keyed": { "minFloor": 3, "count": [0, 2] },
+    "sealed": { "minFloor": 5, "count": [0, 1] },
+    "barred": { "minFloor": 3, "count": [0, 2] },
+    "oneWay": { "minFloor": 4, "count": [0, 2] },
+    "secret": { "minFloor": 1, "count": [2, 4] }
+  },
+
+  "doorTraps": {
+    "_source": "05 section 3 step 9: 1 in 6 doors, 1 in 4 on floors 6+",
+    "oneIn": 6,
+    "oneInFromFloor": 6,
+    "oneInDeep": 4,
+    "noArcaneOnCriticalPath": true
+  },
+
+  "chestDepthBonus": {
+    "_source": "05 section 3 step 9: deepest 40% of rooms add +2",
+    "deepestShare": 0.4,
+    "bonus": 2
+  },
+
+  "floorTrapPlacement": {
+    "_source": "05 section 3 step 9",
+    "minDistanceFromArrival": 3,
+    "forbidden": ["stairs", "waystone", "safeRoom", "bossArena"]
+  },
+
+  "hazardRules": {
+    "_source": "05 section 3 step 8",
+    "spinner": { "corridorsOnly": true, "minDistanceFromStairsAndDoors": 5 },
+    "dark_zone": { "maxFloorTileShare": 0.1, "neverOver": ["stairs", "waystone", "bossArena"] },
+    "deep_water": { "maxRunOnCriticalPath": 3 },
+    "teleporter_pad": { "destinationMustBeReachable": true },
+    "anti_magic_field": { "neverIn": ["bossArena", "safeRoom"] },
+    "ice_slide": { "roomsOnly": true, "everyEntryMustReachANonIceExit": true },
+    "web_curtain": { "blocksCorridor": true, "bashTn": { "base": 10, "perFloor": 1 } }
+  },
+
+  "floors": [
+    {
+      "floor": 1,
+      "id": "cellars",
+      "theme": "The Cellars",
+      "grid": 33,
+      "rooms": [8, 10],
+      "hazards": [],
+      "features": ["wine_rack"]
+    },
+    {
+      "floor": 2,
+      "id": "old_crypt",
+      "theme": "The Old Crypt",
+      "grid": 33,
+      "rooms": [8, 10],
+      "hazards": ["spinner"],
+      "features": ["sarcophagus"]
+    },
+    {
+      "floor": 3,
+      "id": "goblin_warrens",
+      "theme": "Goblin Warrens",
+      "grid": 33,
+      "rooms": [9, 11],
+      "hazards": ["spinner"],
+      "features": ["goblin_camp"],
+      "corridorStyle": "twisty"
+    },
+    {
+      "floor": 4,
+      "id": "fungal_caverns",
+      "theme": "Fungal Caverns",
+      "grid": 41,
+      "rooms": [10, 12],
+      "hazards": ["spinner", "dark_zone"],
+      "features": ["glowcap_room", "web_curtain"]
+    },
+    {
+      "floor": 5,
+      "id": "drowned_halls",
+      "theme": "The Drowned Halls",
+      "grid": 41,
+      "rooms": [10, 12],
+      "hazards": ["spinner", "dark_zone", "deep_water", "teleporter_pad"],
+      "features": ["flooded_corridor"]
+    },
+    {
+      "floor": 6,
+      "id": "pale_flame",
+      "theme": "Sanctum of the Pale Flame",
+      "grid": 41,
+      "rooms": [11, 13],
+      "hazards": ["spinner", "dark_zone", "deep_water", "teleporter_pad", "anti_magic_field"],
+      "features": ["altar"]
+    },
+    {
+      "floor": 7,
+      "id": "iron_forge",
+      "theme": "The Iron Forge",
+      "grid": 41,
+      "rooms": [11, 13],
+      "hazards": ["spinner", "dark_zone", "deep_water", "teleporter_pad", "anti_magic_field"],
+      "features": ["lava_channel", "heat_vent"]
+    },
+    {
+      "floor": 8,
+      "id": "silent_library",
+      "theme": "The Silent Library",
+      "grid": 49,
+      "rooms": [12, 14],
+      "hazards": ["spinner", "dark_zone", "deep_water", "teleporter_pad", "anti_magic_field"],
+      "features": ["bookshelf"]
+    },
+    {
+      "floor": 9,
+      "id": "frozen_deep",
+      "theme": "The Frozen Deep",
+      "grid": 49,
+      "rooms": [12, 14],
+      "hazards": [
+        "spinner",
+        "dark_zone",
+        "deep_water",
+        "teleporter_pad",
+        "anti_magic_field",
+        "ice_slide"
+      ],
+      "features": ["frozen_lake"]
+    },
+    {
+      "floor": 10,
+      "id": "ashen_lair",
+      "theme": "The Ashen Lair",
+      "grid": 49,
+      "rooms": [12, 15],
+      "hazards": [
+        "spinner",
+        "dark_zone",
+        "deep_water",
+        "teleporter_pad",
+        "anti_magic_field",
+        "ice_slide"
+      ],
+      "features": ["ash_pit", "dragon_hoard"]
+    }
+  ]
+}

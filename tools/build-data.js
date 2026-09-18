@@ -31,12 +31,49 @@ function checkStrings(json, path = 'strings') {
 }
 
 /**
+ * floors.json: the ten floors of `05` section 2, and the counts of section 3.
+ * A missing hazard rule or an out-of-order room range would only show up as a
+ * broken floor mid-game, so it is caught here instead.
+ */
+function checkFloors(json) {
+  const rows = json.floors;
+  if (!Array.isArray(rows) || rows.length !== 10) {
+    problems.push(`floors.json has ${rows?.length ?? 0} floors, expected 10`);
+    return;
+  }
+
+  const ids = new Set();
+  for (const [index, row] of rows.entries()) {
+    const where = `floors.json floor ${row.floor ?? index + 1}`;
+    if (row.floor !== index + 1) problems.push(`${where} is out of order`);
+    if (!row.id || ids.has(row.id)) problems.push(`${where} has a missing or repeated id`);
+    ids.add(row.id);
+    if (!(row.grid % 2)) problems.push(`${where} has an even grid (${row.grid}); maze carving needs odd`);
+    if (!(row.rooms?.[0] <= row.rooms?.[1])) problems.push(`${where} has a backwards room range`);
+
+    // Every hazard a floor may use needs a placement rule, or the builder
+    // would place it with no constraints at all.
+    for (const hazard of row.hazards ?? []) {
+      if (!json.hazardRules?.[hazard]) problems.push(`${where} allows "${hazard}" with no rule in hazardRules`);
+    }
+    if (!row.features?.length) problems.push(`${where} has no theme feature`);
+  }
+
+  for (const [kind, rule] of Object.entries(json.specialDoors ?? {})) {
+    if (kind.startsWith('_') || typeof rule !== 'object') continue;
+    if (!(rule.minFloor >= 1 && rule.minFloor <= 10)) problems.push(`floors.json ${kind} has an impossible minFloor`);
+    if (!(rule.count?.[0] <= rule.count?.[1])) problems.push(`floors.json ${kind} has a backwards count range`);
+  }
+}
+
+/**
  * file name -> checker. A file with no checker is only parsed, which still
  * catches the most common failure: a trailing comma in hand-edited JSON.
  * @type {Record<string, (json: any) => void>}
  */
 const CHECKS = {
   'strings.json': checkStrings,
+  'floors.json': checkFloors,
 };
 
 const files = (await readdir(DATA)).filter((f) => f.endsWith('.json')).sort();
