@@ -13,6 +13,7 @@
 import DungeonGenerator from './dungeon-generator.js';
 import { floorSpec } from '../data/floors.js';
 import { assignDoorTypes, placeKeys, placeSecretDoors } from './doors.js';
+import { furnishFloor } from './furnish.js';
 
 export { DungeonGenerator };
 export const TILE = DungeonGenerator.TILE;
@@ -519,6 +520,13 @@ export function pickSafeRoom(rooms, map, arena) {
  * @property {Record<string, any>} doors    side table, keyed "x,y"
  * @property {Record<string, any>} keys     side table, keyed "x,y"
  * @property {Record<string, any>} secrets  side table, keyed "x,y"
+ * @property {Record<string, any>} traps    side table, keyed "x,y"
+ * @property {Record<string, any>} chests   side table, keyed "x,y"
+ * @property {Record<string, any>} hazards  side table, keyed "x,y"
+ * @property {Record<string, any>} lairs    side table, keyed by room id
+ * @property {Record<string, any>} curiosities side table, keyed "x,y"
+ * @property {object | null} grave       left where a hero died (05 section 9)
+ * @property {object | null} returnMark  left by a Scroll of Return
  * @property {import('../data/floors.js').FloorSpec} spec
  */
 
@@ -585,6 +593,10 @@ export function buildFloor(floor, masterSeed, makeStream) {
       const keys = placeKeys(sofar, doors, rng);
       const { secrets } = placeSecretDoors(sofar, doors, rng);
 
+      // The remaining side tables (07 section 1). They need the doors and the
+      // room roles above, so they come last.
+      const furnished = furnishFloor({ ...sofar, doors, secrets, waystone }, rng);
+
       return {
         floor,
         masterSeed,
@@ -604,6 +616,14 @@ export function buildFloor(floor, masterSeed, makeStream) {
         doors,
         keys,
         secrets,
+        traps: furnished.traps,
+        chests: furnished.chests,
+        hazards: furnished.hazards,
+        lairs: furnished.lairs,
+        curiosities: furnished.curiosities,
+        // Filled in as the game is played, not at generation (05 section 9).
+        grave: null,
+        returnMark: null,
         spec,
       };
     } catch (err) {

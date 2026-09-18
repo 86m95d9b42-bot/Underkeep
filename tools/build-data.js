@@ -59,6 +59,16 @@ function checkFloors(json) {
     if (!row.features?.length) problems.push(`${where} has no theme feature`);
   }
 
+  if (!(json.hazardCount?.base >= 0)) problems.push('floors.json has no hazardCount');
+  if (!json.curiosities?.kinds?.length) problems.push('floors.json lists no kinds of curiosity');
+  // A hazard that covers ground needs to know how much, or it takes the floor.
+  for (const [kind, rule] of Object.entries(json.hazardRules ?? {})) {
+    if (kind.startsWith('_')) continue;
+    if (rule.maxFloorTileShare && !rule.blobTiles) {
+      problems.push(`floors.json ${kind} has a share cap but no blobTiles size`);
+    }
+  }
+
   for (const [kind, rule] of Object.entries(json.specialDoors ?? {})) {
     if (kind.startsWith('_') || typeof rule !== 'object') continue;
     if (!(rule.minFloor >= 1 && rule.minFloor <= 10)) problems.push(`floors.json ${kind} has an impossible minFloor`);

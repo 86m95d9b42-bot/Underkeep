@@ -4,6 +4,13 @@ Rulings here override the other documents. Add new entries at the top of each li
 
 ## Decisions
 
+- **2026-09-18 — Side tables, and a count the documents never give.** Traps, chests, hazards, lairs and curiosities are now side tables keyed "x,y", finishing the list in `07` section 1. Three things needed deciding:
+  - **How many hazards a floor gets.** `05` section 3 step 8 and `03` section 8 give every hazard's placement rules and effects but never a count. `hazardCount` in `floors.json` is 1 + ⌊F ÷ 2⌋, spread across the kinds the floor allows, which runs from one hazard on floor 2 to six on floor 10.
+  - **The 10% darkness cap is on the floor, not on one patch.** `05` says a Dark Zone may cover "up to 10% of floor tiles". Read per patch it produced a single 125-tile blackout on floor 9. It is now a running total, with each patch 6 to 20 tiles; measured over 200 floors the worst floor is 5.4% dark.
+  - **What each thing does is left to its own phase.** A trap entry carries its position, whether an Arcane kind is allowed there, and its found/disarmed/sprung state, but `kind` is null until `traps.json` arrives in Phase 7. A lair carries its room and `encounter: null` until the encounter tables arrive in Phase 3. Chests carry a lock, a tier and the depth bonus, but no contents until Phase 5.
+
+  One chest to a room, so a lair cannot end up holding three.
+
 - **2026-09-18 — Doors, locks and secret doors.** Four readings the documents left open, plus a new data file:
   - **`src/data/locks.json`** holds `03` section 6: the tier TN table, the d10 + F lock-tier bands, the door kinds and the secret-door numbers. The build outline's data pipeline names `traps.json` for `03` sections 3–5; the lock half needed a home before Phase 7, and the tier TN table is shared by both.
   - **The Good cap applies to locked doors, not keyed ones.** `05` section 3 step 7 states "capped at Good locks" on the **Stuck / Locked** row only, and gives its reason as "so bashing always remains possible". A Keyed door is its own row, and `03` section 6 sets its pick difficulty at Masterwork TN + 2 deliberately; its guarantee is that the key is reachable first, which the builder enforces by sealing every keyed door before choosing where the keys go.
