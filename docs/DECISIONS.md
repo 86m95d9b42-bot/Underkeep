@@ -4,6 +4,16 @@ Rulings here override the other documents. Add new entries at the top of each li
 
 ## Decisions
 
+- **2026-09-18 — Conditions.** `src/data/conditions.json` is `01` section 7's table as data and `src/engine/conditions.js` is the engine over it: durations, stacking, control immunity and Grit. Six rulings:
+  - **Control immunity counts turns, not rounds.** `01` says "2 rounds" and `06` section 10 says "2 of the hero's turns"; CLAUDE.md gives timing to `06`, so the window ticks with the hero's own turn, beside the duration tick.
+  - **Grit grants no immunity window.** Grit ends the control conditions because the hero tore free, not because they ran out (`01`), so the hero can be caught again at once. Only a condition that *ends* opens its window.
+  - **The protections are a flag on the unit, not a check for "is this the hero".** A unit with `protected` gets control immunity and Grit; monsters do not. That keeps the engine to plain objects, and leaves room for a summon or an ally to be given the same courtesy later.
+  - **"Stronger replaces weaker" is measured by average damage**, so the Brood Mother's 1d6 poison replaces 1d4 and never the other way round (`06` section 10). Duration still refreshes to the longer of the two, and only Drained stacks.
+  - **A condition applied during the unit's own turn carries a flag** that makes it skip the first tick, which is exactly what `06` section 10 asks for and is invisible everywhere else.
+  - **Names and effect lines live in `strings.json`, the mechanics in `conditions.json`**, and `npm run data` fails if a condition has no name, no way to end, or is listed in an order it does not belong to. Knocked Down is `rounds: 1` plus "ends after your own attack", which is the "whichever comes first" rule in `06` section 10.
+
+  The engine is deliberately free of the combat loop: nothing here rolls initiative or applies damage, it only says what a condition does and when it goes. The event hook system (`06` section 16) is the next task, and it is what will call these.
+
 - **2026-09-18 — Opening doors, and Phase 2's "done when".** A stuck or locked door on the critical path stopped the walk to the arena, which is the whole point of Phase 2, so the **minimum hero's half of `03` section 6 is built now** rather than waiting for the Chest / Door screen in Phase 7: **bashing** (d20 + Might + Brute Force + crowbar vs the lock's TN + 2, 2 steps, a 2-in-6 noise check) and **the matching key** (automatic, 1 step). Picking, Knock, Dispel Ward and the Skeleton Key are listed in `src/systems/locks.js` with the reason each cannot be used yet, so the context key says "No lockpicks" rather than "Not built yet", and Phase 5 only has to hand the hero the means. Four notes:
   - **Keys belong to the floor, not to a pack.** `05` section 14 saves `keysTaken`, so walking over a key picks it up and the exploration state remembers it. Inventory (Phase 5) changes nothing here.
   - **Which stream a roll comes from.** The bash d20 draws from **combat**, the stream `05` section 11 gives to attack rolls and saves; the noise check that follows draws from **encounter**, with the other wandering checks. That answers the open question this file carried for exploration rolls.

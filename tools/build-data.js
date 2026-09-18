@@ -122,6 +122,64 @@ function checkLocks(json) {
 }
 
 /**
+ * conditions.json: `01` section 7's table and `06` section 10. A condition the
+ * engine can apply but that the player has no words for, or an order naming a
+ * condition that does not exist, would only show up mid-fight.
+ */
+function checkConditions(json, strings) {
+  const ids = Object.keys(json.conditions ?? {});
+  if (ids.length === 0) {
+    problems.push('conditions.json has no conditions');
+    return;
+  }
+
+  for (const id of ids) {
+    const rules = json.conditions[id];
+    const where = `conditions.json ${id}`;
+    if (rules.save && !['body', 'reflex', 'mind'].includes(rules.save)) {
+      problems.push(`${where} saves against "${rules.save}", which is not a save type`);
+    }
+    if (rules.rounds !== undefined && !(rules.rounds >= 1)) {
+      problems.push(`${where} lasts ${rules.rounds} rounds`);
+    }
+    // Every condition has to end somehow, or it would last for ever.
+    const ends =
+      rules.rounds ||
+      rules.save ||
+      rules.endsOnHealing ||
+      rules.endsOnDamage ||
+      rules.endsOnHittingSource ||
+      rules.endsAtRoundEnd ||
+      rules.endsOnAction ||
+      rules.endsAfterOwnAttack ||
+      rules.persists ||
+      rules.freedByFire ||
+      rules.breakFree;
+    if (!ends) problems.push(`${where} has no way to end`);
+    // And a name to show for it (CLAUDE.md: player-facing text lives in strings).
+    if (!strings?.conditions?.[id]?.name) problems.push(`${where} has no name in strings.json`);
+  }
+
+  for (const list of ['controlConditions', 'startOfTurnDamageOrder', 'endOfTurnSaveOrder']) {
+    for (const id of json[list] ?? []) {
+      if (!ids.includes(id)) problems.push(`conditions.json ${list} names "${id}", which has no entry`);
+    }
+  }
+  for (const id of json.startOfTurnDamageOrder ?? []) {
+    if (!json.conditions[id]?.damagePerTurn) {
+      problems.push(`conditions.json ${id} is in the damage order but deals none`);
+    }
+  }
+  for (const id of json.endOfTurnSaveOrder ?? []) {
+    if (!json.conditions[id]?.save) {
+      problems.push(`conditions.json ${id} is in the save order but has no save`);
+    }
+  }
+  if (!(json.controlImmunityTurns >= 1)) problems.push('conditions.json has no control immunity window');
+  if (!(json.gritLostTurns >= 1)) problems.push('conditions.json has no Grit threshold');
+}
+
+/**
  * file name -> checker. A file with no checker is only parsed, which still
  * catches the most common failure: a trailing comma in hand-edited JSON.
  * @type {Record<string, (json: any) => void>}
@@ -130,20 +188,29 @@ const CHECKS = {
   'strings.json': checkStrings,
   'floors.json': checkFloors,
   'locks.json': checkLocks,
+  // Checked against strings.json, so it is read first.
+  'conditions.json': (json) => checkConditions(json, loaded['strings.json']),
 };
+
+/** Every file's parsed contents, for checks that compare two files. */
+const loaded = {};
 
 const files = (await readdir(DATA)).filter((f) => f.endsWith('.json')).sort();
 if (files.length === 0) problems.push('src/data/ has no JSON files');
 
+// Everything is parsed first, so a check can compare two files — conditions
+// against the strings that name them, for instance.
 for (const file of files) {
-  let json;
   try {
-    json = JSON.parse(await readFile(join(DATA, file), 'utf8'));
+    loaded[file] = JSON.parse(await readFile(join(DATA, file), 'utf8'));
   } catch (err) {
     problems.push(`${file} is not valid JSON: ${err.message}`);
-    continue;
   }
-  CHECKS[file]?.(json);
+}
+
+for (const file of files) {
+  if (!(file in loaded)) continue;
+  CHECKS[file]?.(loaded[file]);
   console.log(`  ${file}  ok`);
 }
 

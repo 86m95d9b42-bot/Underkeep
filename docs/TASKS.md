@@ -41,7 +41,7 @@ Work top to bottom. Check a box when the task is done and tested. Each phase end
 
 ## Phase 3 — Fight
 
-- [ ] `conditions.json`; condition engine with per-turn durations, stacking, control immunity, Grit (`01`, `06` section 10)
+- [x] `conditions.json`; condition engine with per-turn durations, stacking, control immunity, Grit (`01`, `06` section 10)
 - [ ] Event hook system (`06` section 16)
 - [ ] Round order and initiative bands (`06` section 3)
 - [ ] Hero turn and monster turn sequences (`06` sections 4–5)

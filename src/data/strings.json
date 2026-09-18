@@ -145,6 +145,82 @@
       "grave": "GRAVE"
     }
   },
+  "conditions": {
+    "poisoned": {
+      "name": "POISONED",
+      "effect": "1d4 damage each turn. Body save to shake it off."
+    },
+    "burning": {
+      "name": "BURNING",
+      "effect": "1d6 damage each turn. Reflex save to put it out."
+    },
+    "bleeding": {
+      "name": "BLEEDING",
+      "effect": "2 damage each turn until you are healed."
+    },
+    "stunned": {
+      "name": "STUNNED",
+      "effect": "You lose your next turn. Attacks on you have advantage."
+    },
+    "asleep": {
+      "name": "ASLEEP",
+      "effect": "Helpless. Attacks hit automatically until you are hurt."
+    },
+    "slowed": {
+      "name": "SLOWED",
+      "effect": "You act last, and −2 DEF."
+    },
+    "feared": {
+      "name": "FEARED",
+      "effect": "You cannot attack in melee. Mind save to steady yourself."
+    },
+    "blinded": {
+      "name": "BLINDED",
+      "effect": "Disadvantage on your attacks."
+    },
+    "paralyzed": {
+      "name": "PARALYZED",
+      "effect": "Helpless, and pain will not wake you. Body save."
+    },
+    "weakened": {
+      "name": "WEAKENED",
+      "effect": "Half weapon damage until you rest."
+    },
+    "drained": {
+      "name": "DRAINED",
+      "effect": "A level's worth of HP gone. The Temple can undo it."
+    },
+    "grabbed": {
+      "name": "GRABBED",
+      "effect": "You cannot flee. Hit what holds you."
+    },
+    "knockedDown": {
+      "name": "KNOCKED DOWN",
+      "effect": "−2 DEF, and your next attack is at disadvantage."
+    },
+    "webbed": {
+      "name": "WEBBED",
+      "effect": "You cannot attack or flee. Break free, or burn it away."
+    },
+    "sickened": {
+      "name": "SICKENED",
+      "effect": "Disadvantage on your attacks until the round ends."
+    },
+    "petrified": {
+      "name": "PETRIFIED",
+      "effect": "Helpless, but stone takes less: DR 5."
+    },
+    "hidden": {
+      "name": "HIDDEN",
+      "effect": "They attack you at disadvantage. Your next strike is a backstab."
+    }
+  },
+  "combat": {
+    "immune": "You shrug it off.",
+    "grit": "You tear yourself free and act.",
+    "saved": "You shake it off.",
+    "ends": "It passes."
+  },
   "common": {
     "back": "Back",
     "cancel": "CANCEL",

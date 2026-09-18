@@ -1,0 +1,112 @@
+{
+  "_source": "01 section 7 (Conditions, Solo Hero Protections) and 06 section 10. Player-facing names and effect lines live in strings.json under `conditions`.",
+
+  "controlConditions": ["stunned", "asleep", "paralyzed", "petrified", "webbed"],
+  "controlImmunityTurns": 2,
+  "gritLostTurns": 2,
+  "breakFreeTn": 12,
+
+  "_startOfTurnDamageOrder": "06 section 4 step 5. The entries after `bleeding` are monster and boss effects (Latch, Grip of Winter, Veyra's aura, Colossus heat), which arrive with their monsters.",
+  "startOfTurnDamageOrder": ["poisoned", "burning", "bleeding"],
+
+  "_endOfTurnSaveOrder": "06 section 4 step 13.",
+  "endOfTurnSaveOrder": ["poisoned", "burning", "feared", "paralyzed"],
+
+  "afterCombat": {
+    "_source": "06 section 10, After Combat.",
+    "keep": ["weakened", "drained"],
+    "becomesExploration": ["poisoned"],
+    "explorationPoison": { "damage": "1d4", "everySteps": 10, "save": "body" }
+  },
+
+  "conditions": {
+    "poisoned": {
+      "damagePerTurn": "1d4",
+      "save": "body",
+      "rounds": 3,
+      "afterCombat": "exploration"
+    },
+    "burning": {
+      "damagePerTurn": "1d6",
+      "save": "reflex"
+    },
+    "bleeding": {
+      "damagePerTurn": "2",
+      "endsOnHealing": true
+    },
+    "stunned": {
+      "control": true,
+      "losesTurn": true,
+      "rounds": 1,
+      "attackedWithAdvantage": true,
+      "endsWhenItCostsATurn": true
+    },
+    "asleep": {
+      "control": true,
+      "helpless": true,
+      "rounds": 3,
+      "endsOnDamage": true
+    },
+    "slowed": {
+      "rounds": 2,
+      "defMod": -2,
+      "actsLast": true
+    },
+    "feared": {
+      "save": "mind",
+      "blocks": ["melee"]
+    },
+    "blinded": {
+      "rounds": 2,
+      "attacksAtDisadvantage": true
+    },
+    "paralyzed": {
+      "control": true,
+      "helpless": true,
+      "save": "body"
+    },
+    "weakened": {
+      "halfWeaponDamage": true,
+      "endsOn": "rest",
+      "persists": true
+    },
+    "drained": {
+      "stacks": true,
+      "endsOn": "templeOrTownRest",
+      "persists": true
+    },
+    "grabbed": {
+      "blocks": ["flee", "swap"],
+      "endsOnHittingSource": true
+    },
+    "knockedDown": {
+      "rounds": 1,
+      "defMod": -2,
+      "nextAttackAtDisadvantage": true,
+      "endsAfterOwnAttack": true
+    },
+    "webbed": {
+      "control": true,
+      "blocks": ["attack", "flee", "swap"],
+      "breakFree": { "tn": 12, "attributes": ["might", "agility"] },
+      "freedByFire": { "damage": "1d4" }
+    },
+    "sickened": {
+      "attacksAtDisadvantage": true,
+      "endsAtRoundEnd": true
+    },
+    "petrified": {
+      "control": true,
+      "helpless": true,
+      "rounds": 2,
+      "dr": 5
+    },
+    "hidden": {
+      "buff": true,
+      "rounds": 2,
+      "attackedWithDisadvantage": true,
+      "countsForBackstab": true,
+      "endsOnAction": true
+    }
+  }
+}
