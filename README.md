@@ -31,7 +31,7 @@ underkeep/
       raycaster.js                Supplied: DDA raycaster renderer
 ```
 
-Those two files are working code from Depths of Dreadmoor. They're vendored as-is; Underkeep builds `floor-builder.js` and `view.js` around them.
+Those two files are working code from Depths of Dreadmoor. They're vendored essentially as-is; Underkeep builds `floor-builder.js` and `view.js` around them. Their logic is untouched — only `dungeon-generator.js`'s module wrapper changed, because its UMD form cannot load in an ES module project at all (see `docs/DECISIONS.md`).
 
 ## Getting started in VS Code
 

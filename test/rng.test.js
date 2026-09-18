@@ -323,7 +323,7 @@ describe('the rule that there is no other source of randomness', () => {
   // is the one exception, and it is lent the layout stream by withRng().
   const ALLOWED = ['src/dungeon/dungeon-generator.js', 'src/dungeon/raycaster.js'];
 
-  it('finds no Math.random anywhere in src/, outside the vendored modules', async () => {
+  it('finds no call to Math.random in src/, outside the vendored modules', async () => {
     const { readdir, readFile } = await import('node:fs/promises');
     const { join, relative } = await import('node:path');
     const root = new URL('../src', import.meta.url).pathname;
@@ -346,9 +346,10 @@ describe('the rule that there is no other source of randomness', () => {
       const where = `src/${relative(root, file)}`;
       if (ALLOWED.includes(where)) continue;
       const source = await readFile(file, 'utf8');
-      // The rng module names it in prose and in the test for standing in for it.
+      // Calls only. withRng() in the floor builder has to name Math.random to
+      // save and restore it, which is the mechanism, not a violation.
       const uses = source.split('\n').filter(
-        (line) => line.includes('Math.random') && !line.trimStart().startsWith('*'),
+        (line) => line.includes('Math.random(') && !line.trimStart().startsWith('*'),
       );
       if (uses.length) offenders.push(`${where}: ${uses.join(' / ').trim()}`);
     }

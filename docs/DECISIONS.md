@@ -4,6 +4,16 @@ Rulings here override the other documents. Add new entries at the top of each li
 
 ## Decisions
 
+- **2026-09-18 — The vendored generator's module wrapper had to change.** `07` allows a vendored module to change if it genuinely must, with the reason recorded. This is that case: `src/dungeon/dungeon-generator.js` could not be loaded **at all**.
+
+  Its UMD wrapper picks between `module.exports` and a global. `package.json` sets `"type": "module"`, so the file is an ES module everywhere it is used — Node, esbuild and Vite alike — and **both** branches fail there: top-level `this` is `undefined`, `self` does not exist in Node, and under Vite `module` is a read-only namespace object whose `default` cannot be assigned. Every load threw before the factory ran.
+
+  The wrapper is reduced to calling the factory, and ES module exports are appended. **The factory itself is untouched.** Verified byte-identical against the pristine file from git: 180 generations (3 grid sizes x 60 seeds) plus all four exported helpers and the TILE enum produce identical output for the same sequence of `Math.random` draws.
+
+  The alternatives were worse: a `src/dungeon/package.json` marking the directory CommonJS would force every new file there to be `.mjs`, against the filenames `07` itself specifies; and loading the file through a global side effect broke under bundling, where evaluation order is not guaranteed.
+
+  **`src/dungeon/raycaster.js` has the same wrapper and will need the same change** when `view.js` is built. It is left alone until then, so the change can be verified against something that renders.
+
 - **2026-09-18 — floors.json scope and two superseded numbers.** `floors.json` holds the floor table from `05` section 2 plus the per-floor counts from section 3 (steps 6-9), because the next Phase 2 tasks consume exactly those and CLAUDE.md forbids magic numbers in logic. Restocking (`05` section 8) is left out; Phase 6 owns it. Two numbers are kept for the record but cannot currently be honoured, because the vendored generator replaced `05` section 3 steps 1-4:
   - **Floor 3's twistier corridors** (80% newest cell in the growing-tree carve). The vendored generator takes only `roomDensity`, with no maze-bias knob, so floor 3 is stored as `corridorStyle: "twisty"` and gets its identity from goblin camps instead.
   - **The 70% room-to-corridor door rate and the 8% extra-connector rate.** The generator places its own doors and loops.

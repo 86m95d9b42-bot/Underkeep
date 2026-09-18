@@ -47,10 +47,9 @@
  * layouts. Wrap Math.random yourself before calling if you need to
  * capture/replay a specific seed.
  */
-(function(root, factory){
-  if(typeof module==='object'&&module.exports){module.exports=factory();}
-  else{root.DungeonGenerator=factory();}
-})(typeof self!=='undefined'?self:this, function(){
+const DungeonGenerator = (function(factory){
+  return factory();
+})(function(){
   'use strict';
 
   const TILE={FLOOR:0,WALL:1,STAIRS_DOWN:2,STAIRS_UP:3,DOOR:4,ILLUSION:5,PIT:6};
@@ -345,3 +344,16 @@
 
   return {generate,findDeadEnds,findNearestFloor,pickDeadEndNear,deadEndFacing,TILE};
 });
+
+// --- Added for Underkeep ---------------------------------------------------
+// The original UMD wrapper cannot load in this project: package.json sets
+// "type": "module", so this file is an ES module in Node, esbuild and Vite
+// alike, where top-level `this` is undefined and `module` is either missing or
+// a read-only namespace object. Both of its branches therefore threw before
+// the factory ever ran. The wrapper is reduced to calling the factory, and the
+// exports below replace it. The factory itself is untouched, and its output is
+// byte-identical for the same sequence of Math.random draws.
+// See docs/DECISIONS.md, 2026-09-18.
+export default DungeonGenerator;
+export const { generate, findDeadEnds, findNearestFloor, pickDeadEndNear, deadEndFacing, TILE } =
+  DungeonGenerator;
