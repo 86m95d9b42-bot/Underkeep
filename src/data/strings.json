@@ -1,0 +1,32 @@
+{
+  "app": {
+    "name": "UNDERKEEP",
+    "tagline": "A SINGLE-HERO DUNGEON CRAWL"
+  },
+  "title": {
+    "lastPlayed": "LAST PLAYED",
+    "noSave": "NO SAVED GAME",
+    "noSaveHint": "Start a new game to begin your descent.",
+    "continue": "CONTINUE",
+    "continueDisabled": "No saved game",
+    "newGame": "NEW GAME",
+    "hall": "HALL OF THE DEAD",
+    "settings": "SETTINGS"
+  },
+  "settings": {
+    "title": "SETTINGS",
+    "sub": "Shared by all save slots",
+    "difficulty": "DIFFICULTY",
+    "difficultyValue": "Normal · set when the game began",
+    "export": "EXPORT",
+    "import": "IMPORT",
+    "exportDisabled": "Needs a saved game",
+    "importDisabled": "Adventurer mode only"
+  },
+  "common": {
+    "back": "Back",
+    "cancel": "CANCEL",
+    "close": "Close",
+    "comingSoon": "Not built yet"
+  }
+}
