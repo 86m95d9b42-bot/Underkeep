@@ -287,6 +287,12 @@ describe('control immunity', () => {
     expect(immuneFor).toBe(CONTROL_IMMUNITY_TURNS);
     expect(applyCondition(unit, 'asleep')).toEqual({ applied: false, why: 'controlImmunity' });
 
+    // The condition ended on the hero's own turn, so the window skips that
+    // turn's tick — the same rule a condition applied on its own turn follows
+    // (`06` section 10). Two whole turns of protection follow.
+    tickControlImmunity(unit);
+    expect(unit.controlImmunity.asleep).toBe(CONTROL_IMMUNITY_TURNS);
+
     tickControlImmunity(unit);
     expect(blockedFrom(unit, 'asleep')).toBe('controlImmunity');
     expect(tickControlImmunity(unit)).toEqual(['asleep']);

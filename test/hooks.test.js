@@ -53,8 +53,12 @@ describe('the events themselves', () => {
     expect(ORDER.turnStart.slice(0, 3)).toEqual(['poisoned', 'burning', 'bleeding']);
     expect(orderOf('turnStart', 'poisoned')).toBe(0);
     expect(orderOf('turnStart', 'bleeding')).toBe(2);
-    // Anything the table does not list runs after the ones it does.
-    expect(orderOf('turnStart', 'somethingNew')).toBeGreaterThan(orderOf('turnStart', 'recharge'));
+    // Anything the list does not name runs after the ones it does — the
+    // recharge rolls among them, which `06` section 5 makes step 6 of a
+    // monster's turn rather than a start-of-turn hook.
+    expect(orderOf('turnStart', 'somethingNew')).toBeGreaterThan(
+      orderOf('turnStart', 'trollRegeneration'),
+    );
   });
 });
 

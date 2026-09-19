@@ -44,7 +44,7 @@ Work top to bottom. Check a box when the task is done and tested. Each phase end
 - [x] `conditions.json`; condition engine with per-turn durations, stacking, control immunity, Grit (`01`, `06` section 10)
 - [x] Event hook system (`06` section 16), with the condition engine registered on it
 - [x] Round order and initiative bands (`06` section 3)
-- [ ] Hero turn and monster turn sequences (`06` sections 4–5)
+- [x] Hero turn and monster turn sequences (`06` sections 4–5)
 - [ ] Attack resolution (`06` section 6) with tests for every step
 - [ ] Damage order of operations (`06` section 7) with tests for crits, resistances, DR, and minimums
 - [ ] Zero HP, morale, fleeing, combat end (`06` sections 9, 14, 15)

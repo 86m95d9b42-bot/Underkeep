@@ -219,7 +219,21 @@
     "immune": "You shrug it off.",
     "grit": "You tear yourself free and act.",
     "saved": "You shake it off.",
-    "ends": "It passes."
+    "ends": "It passes.",
+    "illegal": {
+      "notEnoughFp": "Not enough Focus.",
+      "notReady": "Not ready yet.",
+      "noTarget": "Nothing you can reach.",
+      "badTarget": "That one is out of reach.",
+      "antiMagic": "The air here swallows magic.",
+      "noEscape": "There is no way past them.",
+      "freeUsed": "One free action a turn.",
+      "notWebbed": "Nothing is holding you.",
+      "unknown": "You can't do that."
+    },
+    "defend": "You raise your guard.",
+    "hiddenEnds": "You step back into the light.",
+    "telegraph": "It winds up for something heavy."
   },
   "common": {
     "back": "Back",

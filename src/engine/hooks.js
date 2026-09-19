@@ -41,23 +41,15 @@ export const EVENTS = /** @type {const} */ ([
  * The hook names `06` section 16 lists under each event, in its order. A hook
  * registered with one of these names sorts itself; anything else runs after.
  *
- * `roundStart` and `roundEnd` come from `combat.json` rather than from this
- * table: `06` section 3 sets out those two rounds' steps in a finer order than
- * section 16's examples column, and the step list is the one that runs.
+ * `turnStart`, `roundStart` and `roundEnd` come from `combat.json` rather than
+ * from this table: sections 3, 4 and 5 set those moments out step by step, in a
+ * finer order than section 16's examples column, and the step list is the one
+ * that runs.
  */
 export const ORDER = /** @type {Record<string, string[]>} */ ({
   combatStart: ['sneak', 'ambush', 'ceilingDrop', 'pounce'],
   roundStart: combat.roundStartOrder.hooks,
-  turnStart: [
-    'poisoned',
-    'burning',
-    'bleeding',
-    'latch',
-    'regeneration',
-    'trollRegeneration',
-    'aura',
-    'recharge',
-  ],
+  turnStart: combat.turnStartOrder.hooks,
   beforeAction: ['legality', 'counterspell', 'guardian'],
   attackRoll: ['lucky', 'arcaneShield', 'shieldBlock', 'blink'],
   hit: ['rider', 'vampiric', 'crusader', 'divide', 'latch', 'pickpocket'],

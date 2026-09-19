@@ -52,7 +52,9 @@ export function registerConditionHooks(hooks, { rng, saveBonus = () => 0, hurt }
         'turnStart',
         (payload) => {
           const unit = payload.unit;
-          if (!unit) return;
+          // `06` section 5 fires turnStart twice: once for the clock (step 3)
+          // and once for the free traits (step 7). The clock runs on the first.
+          if (!unit || payload.phase === 'free') return;
           const rolls = startOfTurnDamage(unit, payload.rng ?? rng).filter((row) => row.id === id);
           for (const row of rolls) {
             payload.damage ??= [];
@@ -171,7 +173,12 @@ export function registerConditionHooks(hooks, { rng, saveBonus = () => 0, hurt }
       (payload) => {
         const unit = payload.unit;
         if (!unit || payload.free) return;
-        const ended = onOwnAction(unit, { attacked: payload.action === 'attack' });
+        // The turn engine puts the action's tags on the payload; without them
+        // every action counts as an active one, which is the old behaviour.
+        const tags = payload.tags ? new Set(payload.tags) : null;
+        const attacked = tags ? tags.has('attack') : payload.action === 'attack';
+        const active = tags ? attacked || tags.has('skill') : true;
+        const ended = onOwnAction(unit, { attacked, active });
         for (const id of ended) payload.say(`${id} ended`);
       },
       { name: 'legality', source },

@@ -184,7 +184,7 @@ function checkConditions(json, strings) {
  * itself, and `src/engine/hooks.js` reads them straight out of this file, so a
  * name that is not a hook anywhere would silently reorder a round.
  */
-function checkCombat(json) {
+function checkCombat(json, strings) {
   const field = json.field ?? {};
   if (!(field.rows?.length === 2)) problems.push('combat.json does not have two rows');
   if (!(field.rowCapacity >= 1)) problems.push('combat.json has no row capacity');
@@ -207,7 +207,28 @@ function checkCombat(json) {
     problems.push('combat.json initiative bands are not first, normal, last');
   }
 
-  for (const list of ['roundStartOrder', 'roundEndOrder']) {
+  const turn = json.turn ?? {};
+  if (!(turn.freeActionsPerTurn >= 1)) problems.push('combat.json allows no free action');
+  if (!(turn.defend?.def >= 1)) problems.push('combat.json Defend gives no DEF');
+  if (!(turn.hiddenTurns >= 1)) problems.push('combat.json Hidden lasts no turns');
+  if (!(turn.recharge?.readyFrom >= 2 && turn.recharge.readyFrom <= turn.recharge.die)) {
+    problems.push('combat.json recharge band is not on the die');
+  }
+
+  // Every action the engine offers needs tags, or nothing could block it; and
+  // every reason a button is dimmed for needs a line to show (CLAUDE.md: a
+  // disabled button always says why).
+  for (const [id, action] of Object.entries(json.actions ?? {})) {
+    if (id.startsWith('_')) continue;
+    if (!action.tags?.length) problems.push(`combat.json action "${id}" has no tags`);
+  }
+  for (const reason of json.legality?.reasons ?? []) {
+    if (!strings?.combat?.illegal?.[reason]) {
+      problems.push(`combat.json dims a button for "${reason}", which has no line in strings.json`);
+    }
+  }
+
+  for (const list of ['turnStartOrder', 'roundStartOrder', 'roundEndOrder']) {
     const hooks = json[list]?.hooks ?? [];
     if (hooks.length === 0) problems.push(`combat.json ${list} lists no hooks`);
     if (new Set(hooks).size !== hooks.length) problems.push(`combat.json ${list} repeats a hook`);
@@ -222,7 +243,8 @@ function checkCombat(json) {
  */
 const CHECKS = {
   'strings.json': checkStrings,
-  'combat.json': checkCombat,
+  // Checked against strings.json, so it is read first.
+  'combat.json': (json) => checkCombat(json, loaded['strings.json']),
   'floors.json': checkFloors,
   'locks.json': checkLocks,
   // Checked against strings.json, so it is read first.

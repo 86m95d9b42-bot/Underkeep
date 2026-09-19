@@ -23,6 +23,63 @@
     "_bands": "first = under Quicksilver; last = Slowed, plus the Zombie, which always acts last. Both are flags on the unit (actsFirst / actsLast), so a potion, a condition and a monster's own tactics all reach the same band."
   },
 
+  "turnStartOrder": {
+    "_source": "06 section 4 steps 5-6 and section 5 step 3, which order the start of a turn more finely than section 16's example column: every source of damage, then every source of healing.",
+    "hooks": [
+      "poisoned",
+      "burning",
+      "bleeding",
+      "latch",
+      "gripOfWinter",
+      "veyraAura",
+      "colossusHeat",
+      "regeneration",
+      "ringOfRegeneration",
+      "trollBlood",
+      "trollRegeneration",
+      "freeTraits"
+    ]
+  },
+
+  "turn": {
+    "_source": "06 section 4 (Defend, Hidden, Free Actions) and section 5 step 6 (recharge).",
+    "freeActionsPerTurn": 1,
+    "defend": { "def": 4, "fp": 1 },
+    "hiddenTurns": 2,
+    "recharge": { "die": 6, "readyFrom": 5 }
+  },
+
+  "actions": {
+    "_source": "06 section 4. `tags` are what the legality table blocks: a condition that blocks `melee` stops melee attacks and melee skills alike.",
+    "attack": { "tags": ["attack"], "needsTarget": true, "defaultKind": "melee" },
+    "skill": { "tags": ["skill"], "needsTarget": false, "costsFp": true },
+    "item": { "tags": ["item"], "needsTarget": false },
+    "defend": { "tags": ["defend"] },
+    "breakFree": { "tags": ["breakFree"] },
+    "flee": { "tags": ["flee"] },
+    "swap": { "tags": ["swap"] },
+    "wait": { "tags": ["wait"] }
+  },
+
+  "legality": {
+    "_source": "06 section 4, Action Legality. Conditions bring their own `blocks` lists from conditions.json; these are the situations that are not conditions.",
+    "antiMagicField": { "blocks": ["arcana", "spirit", "scroll"] },
+    "noEscape": { "blocks": ["flee"], "_note": "Boss fights, and any monster with preventsFlight (the Frozen Revenant). Smoke Bomb, Vanish and Teleport fail here too." },
+
+    "_reasons": "Every reason a button can be dimmed for that is not a condition. A condition dims a button under its own name from strings.json.",
+    "reasons": [
+      "notEnoughFp",
+      "notReady",
+      "noTarget",
+      "badTarget",
+      "antiMagic",
+      "noEscape",
+      "freeUsed",
+      "notWebbed",
+      "unknown"
+    ]
+  },
+
   "roundStartOrder": {
     "_source": "06 section 3 steps 3-5, which is a finer order than the example column of section 16.",
     "hooks": ["grimoirePage", "ghastStench", "basiliskGaze", "fallenTroll", "bossPhase"]

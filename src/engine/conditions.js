@@ -54,6 +54,7 @@ export function prepare(unit) {
   unit.conditions ??= {};
   unit.immunities ??= [];
   unit.controlImmunity ??= {};
+  unit.freshImmunity ??= [];
   unit.lostTurns ??= 0;
   return unit;
 }
@@ -166,6 +167,12 @@ export function endCondition(unit, id, { immunity } = {}) {
   if (wantsImmunity && isControl(id)) {
     unit.controlImmunity ??= {};
     unit.controlImmunity[id] = CONTROL_IMMUNITY_TURNS;
+    // A control condition always ends on the affected unit's own turn — at
+    // step 4, or on an end-of-turn save or tick — so the window would lose a
+    // turn to that same turn's step 15. It skips the first tick, exactly as a
+    // condition applied on its unit's own turn does (`06` section 10).
+    unit.freshImmunity ??= [];
+    if (!unit.freshImmunity.includes(id)) unit.freshImmunity.push(id);
     return { ended: true, immuneFor: CONTROL_IMMUNITY_TURNS };
   }
   return { ended: true };
@@ -188,6 +195,11 @@ export function isHelpless(unit) {
 /** True when this action is not allowed right now (`06` section 4, Legality). */
 export function blocks(unit, action) {
   return listed(unit).some((id) => (spec(id).blocks ?? []).includes(action));
+}
+
+/** Which condition forbids this action, or null (`06` section 4, Legality). */
+export function blockedBy(unit, action) {
+  return listed(unit).find((id) => (spec(id).blocks ?? []).includes(action)) ?? null;
 }
 
 /** Everything the unit cannot do. */
@@ -321,7 +333,10 @@ export function tickDurations(unit) {
 /** Ticks the control-immunity windows, which also count the unit's own turns. */
 export function tickControlImmunity(unit) {
   const over = [];
+  const fresh = unit.freshImmunity ?? [];
   for (const [id, left] of Object.entries(unit.controlImmunity ?? {})) {
+    // Opened this turn: it waits for the next one.
+    if (fresh.includes(id)) continue;
     const next = left - 1;
     if (next <= 0) {
       delete unit.controlImmunity[id];
@@ -330,6 +345,7 @@ export function tickControlImmunity(unit) {
       unit.controlImmunity[id] = next;
     }
   }
+  unit.freshImmunity = [];
   return over;
 }
 
@@ -345,37 +361,67 @@ export function endOfRound(unit) {
 /* -------------------------------------------------------------------------- */
 
 /**
- * What the start of a unit's turn does about conditions, before any action:
- * Grit first, then Stunned, then the helpless check (`06` section 4 steps 3–8).
- *
- * Nothing is rolled here; the caller handles start-of-turn damage between
- * steps. `acts` is false when the turn is lost.
+ * Grit: the hero never loses more than two turns in a row (`01`, Solo Hero
+ * Protections; `06` section 4 step 3). Returns the conditions it tore off, or
+ * null when Grit had nothing to do.
+ * @param {object} unit
+ * @returns {string[] | null}
+ */
+export function grit(unit) {
+  prepare(unit);
+  if (!unit.protected || unit.lostTurns < GRIT_LOST_TURNS) return null;
+  const freed = endMany(unit, CONTROL_CONDITIONS.filter((id) => has(unit, id)), { immunity: false });
+  if (!freed.length) return null;
+  // Grit ends them because the hero tore free, so no immunity window opens.
+  unit.lostTurns = 0;
+  return freed;
+}
+
+/**
+ * Stunned costs this turn and then goes, opening its immunity window
+ * (`06` section 4 step 4, section 5 step 2).
+ * @param {object} unit
+ * @returns {{ lost: 'stunned', immuneFor?: number } | null}
+ */
+export function stunnedStart(unit) {
+  prepare(unit);
+  if (!has(unit, 'stunned')) return null;
+  const { immuneFor } = endCondition(unit, 'stunned');
+  unit.lostTurns += 1;
+  return { lost: 'stunned', immuneFor };
+}
+
+/**
+ * Asleep, Paralyzed or Petrified: the turn is lost and the condition stays
+ * (`06` section 4 step 8, section 5 step 5).
+ * @param {object} unit
+ * @returns {{ lost: string } | null}
+ */
+export function helplessStart(unit) {
+  prepare(unit);
+  if (!isHelpless(unit)) return null;
+  unit.lostTurns += 1;
+  return { lost: listed(unit).find((id) => spec(id).helpless) };
+}
+
+/**
+ * The three checks above in the order `06` section 4 gives them, for a caller
+ * that has no start-of-turn damage to fit between them. The turn engine calls
+ * the parts, because the helpless check belongs after the damage and the death
+ * check; this is the same rules in one call.
  *
  * @param {object} unit
  * @returns {{ acts: boolean, grit?: string[], lost?: string, immuneFor?: number }}
  */
 export function startOfTurn(unit) {
-  prepare(unit);
+  const freed = grit(unit);
+  if (freed) return { acts: true, grit: freed };
 
-  // Grit: the hero never loses more than two turns in a row (`01`).
-  if (unit.protected && unit.lostTurns >= GRIT_LOST_TURNS) {
-    const freed = endMany(unit, CONTROL_CONDITIONS.filter((id) => has(unit, id)), { immunity: false });
-    unit.lostTurns = 0;
-    if (freed.length) return { acts: true, grit: freed };
-  }
+  const stunned = stunnedStart(unit);
+  if (stunned) return { acts: false, ...stunned };
 
-  // Stunned costs this turn and then goes, opening its immunity window.
-  if (has(unit, 'stunned')) {
-    const { immuneFor } = endCondition(unit, 'stunned');
-    unit.lostTurns += 1;
-    return { acts: false, lost: 'stunned', immuneFor };
-  }
-
-  // Helpless: the turn is lost, and the condition stays.
-  if (isHelpless(unit)) {
-    unit.lostTurns += 1;
-    return { acts: false, lost: listed(unit).find((id) => spec(id).helpless) };
-  }
+  const helpless = helplessStart(unit);
+  if (helpless) return { acts: false, ...helpless };
 
   unit.lostTurns = 0;
   return { acts: true };
@@ -420,14 +466,16 @@ export function onFireDamage(unit, rng) {
 }
 
 /**
- * Attacking or using an active skill ends Hidden, and so does a unit's own
- * attack ending Knocked Down (`01` section 7, `06` section 10).
+ * Attacking or using an active skill ends Hidden, and a unit's own attack ends
+ * Knocked Down (`01` section 7, `06` sections 4 and 10). Defending, waiting or
+ * drinking a potion is none of those, so a caller that knows what the action
+ * was passes `active: false` and stays Hidden.
  */
-export function onOwnAction(unit, { attacked = false } = {}) {
+export function onOwnAction(unit, { attacked = false, active = true } = {}) {
   const ended = [];
   for (const id of listed(unit)) {
     const rules = spec(id);
-    if (rules.endsOnAction || (attacked && rules.endsAfterOwnAttack)) {
+    if ((active && rules.endsOnAction) || (attacked && rules.endsAfterOwnAttack)) {
       if (endCondition(unit, id).ended) ended.push(id);
     }
   }
