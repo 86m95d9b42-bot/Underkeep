@@ -59,7 +59,7 @@ Work top to bottom. Check a box when the task is done and tested. Each phase end
 - [x] Character creation: Classic and Standard rolls, origins, name — New Game, Create: Attributes, Create: Origin screens
 - [x] Derived stats (`01` section 4) with tests
 - [x] `skills.json` for all four Paths and Crossroads, with hook effects
-- [ ] Skill learning rules (tier gates, attribute requirements, ranks)
+- [x] Skill learning rules (tier gates, attribute requirements, ranks)
 - [ ] XP curve, level-up gains, attribute points at 4/8/12/16/20
 - [ ] Hero: Stats and Hero: Skill Tree screens
 - [ ] Victory & Loot (XP and gold only for now) and Level Up screens

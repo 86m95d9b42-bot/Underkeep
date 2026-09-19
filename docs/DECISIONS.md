@@ -4,6 +4,15 @@ Rulings here override the other documents. Add new entries at the top of each li
 
 ## Decisions
 
+- **2026-09-19 — Learning a skill.** `src/systems/skill-tree.js` is `01` section 6's gates: a tier opens at 0, 3, 6 and 10 points spent in its own Path, a capstone also wants an attribute of 15, a Crossroads skill wants 4 in each of its two Paths, and a rank costs 1. Five rulings:
+  - **Only paid ranks count.** A hero's skills are `[{ id, rank, free }]`, where `free` is how many ranks an origin gave, and every count of "points spent in the Path" subtracts them. That is exactly what `01` section 3 promises — "it doesn't count against Path requirements" — and it means a Sellsword's free Weapon Training cannot be used to open Blade's tier II. A hero may still *pay* past a free rank, and the free one stays free.
+  - **The free skill is granted at creation.** `finish` now hands it over, so a hero walks out of Create: Origin already knowing it and already getting its effect: a Sellsword's melee is +1 from the first step. It was being carried as a promise and given to nobody.
+  - **A structural reason beats the purse.** A tier that is not open says `tierLocked` whether or not there is a point to spend, because that is the fact a player plans around; `noPoints` only ever appears on a skill they could otherwise take.
+  - **A Crossroads skill has no tier.** It answers to its two Paths' point counts and nothing else, so it can be taken with nothing above tier I in either — which is what makes the hybrids reachable early, as the example builds assume.
+  - **Forgetting keeps the gift.** A respec refunds every paid point and leaves the origin's free skill where it is, for 100 gp a level (`01` section 5).
+
+  The document's four example builds at level 20 are the test: three of them are built point by point, in order, and have to fit inside 21 points and every gate. They do — with one exception, below.
+
 - **2026-09-19 — `skills.json`, and what a skill's effect is made of.** `01` section 6's whole tree: four Paths of four tiers, six Crossroads hybrids, **51 skills and 68 skill points** — which is the document's own "about 68 available", and a good check on the transcription, since the ranks have to add up to it. Six rulings:
   - **An effect is one of four shapes.** A **sheet** effect is a number on the hero's own sheet, folded in when the skill is learned (+5 max HP a rank, +1 DEF a rank, a wider crit range). A **hook** effect names an event from `06` section 16 and the handler that runs on it. An **explore** effect is a bonus the dungeon systems read (`03`, `05`). An **action** block is what an active skill does when it is used. `npm run data` fails on an effect that is none of them, on a hook that names an event the engine does not fire, and on a handler nothing implements.
   - **A passive that is a number never touches the combat loop.** Toughness does not register anything: it raises `maxHp`, and the engine already reads `maxHp`. That is what keeps CLAUDE.md's "no special-case code paths" true — the loop never asks whether the hero has a skill.
@@ -295,6 +304,8 @@ Rulings here override the other documents. Add new entries at the top of each li
 - **2026-09-16 — Reaction mockup** shows a Shadow/Arcana hero's options (Lucky, Arcane Shield). The real prompt lists only reactions the hero owns.
 
 ## Open questions
+
+- **The Pure Warrior example build cannot buy its own Spirit 4.** `01` section 6's example reads "Spirit 4 (Resilience ×2, Mend, Cleanse)", but Resilience and Cleanse are Spirit tier II, which section 6 opens at **3 points already spent in that Path**, and Mend is the only tier I skill on that list. The first Resilience would be bought with 1 point in the Path. The tier gate is a rule and the example is a sketch, so the gate wins and `test/skill-tree.test.js` spends those four points on a legal Spirit 4 (Mend, Keen Senses ×2, Resilience) instead. If the example is meant to be exactly buyable, the fix is in the example rather than in the gate — or Resilience moves to tier I.
 
 - **Which RNG stream a hazard rolls on.** Settled for the two kinds that exist: wandering checks and noise draw from `encounter` (`05` section 11), and an action roll like a door bash draws from `combat`, with the other d20s. What is still open is the rest of the step-time rolls: a spinner's new facing, a fountain's d6, a pole breaking. (Default: follow the same split — a d20 the hero rolls goes to `combat`, anything that decides what the dungeon does goes to `encounter`.)
 - **Floors 1–3 cannot reach the critical-path pacing target.** `05` section 2 asks for 150–300 steps from arrival to the boss, and defines the critical path as the *shortest* walking route (section 3 step 5). The full sweep (10,000 seeds × 10 floors) measures what each grid size can actually produce:

@@ -638,5 +638,23 @@
       "name": "CROSSROADS",
       "blurb": "Where two Paths meet."
     }
+  },
+  "skillTree": {
+    "title": "SKILLS",
+    "points": "{n} SP",
+    "spent": "{n} spent in {path}",
+    "rank": "RANK {n} / {max}",
+    "free": "FROM YOUR ORIGIN",
+    "learn": "LEARN",
+    "respec": "FORGET ALL",
+    "respecCost": "{n} gp at the temple",
+    "locked": {
+      "unknown": "No such skill.",
+      "maxRank": "Already mastered.",
+      "noPoints": "No skill points left.",
+      "tierLocked": "Spend {n} in this Path first.",
+      "needsAttribute": "Needs {attribute} {score}.",
+      "needsPaths": "Needs {n} in each Path."
+    }
   }
 }

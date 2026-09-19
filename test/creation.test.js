@@ -299,8 +299,11 @@ describe('finishing a hero', () => {
     });
     // Sellsword raises MIG 15 to 16, which is a +2: melee and slots both move.
     expect(hero.attributes.might).toBe(16);
-    expect(hero.atk).toBe(2);
     expect(hero.slots).toBe(14);
+    // And their free Weapon Training is already theirs, which is another +1
+    // on the melee bonus (`01` section 3, Origins).
+    expect(hero.skills).toEqual([{ id: 'weapon_training', rank: 1, free: 1 }]);
+    expect(hero.atk).toBe(3);
     expect(hero.hp).toBe(hero.maxHp);
     expect(hero.fp).toBe(hero.maxFp);
     expect(hero.freeSkill).toEqual({ id: 'weapon_training', rank: 1 });

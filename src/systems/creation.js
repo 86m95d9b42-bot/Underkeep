@@ -18,6 +18,7 @@ import { ATTRIBUTE_ORDER, CREATION, MAX_AT_CREATION, modsFor } from '../data/att
 import { grantsOf, ORIGIN_ORDER } from '../data/origins.js';
 import { creationStream } from '../engine/rng.js';
 import { derivedFor } from './derived.js';
+import { grantFree } from './skill-tree.js';
 import { LEVELING } from '../data/attributes.js';
 
 /** The two modes, and the one the New Game screen starts on. */
@@ -206,9 +207,9 @@ export function whyNotReady(draft) {
 /**
  * Turns a finished draft into the hero the game carries.
  *
- * The origin's free skill and its kit come back as they are: the skill tree
- * learns the one (`01` section 6) and the pack takes the other (`04`), and
- * neither is this module's to grant.
+ * The origin's free skill is learned here — it costs nothing and counts
+ * towards nothing (`01` section 3) — and the kit comes back as it is, because
+ * the pack that would take it is `04` and Phase 5.
  *
  * @param {Draft} draft
  */
@@ -219,7 +220,7 @@ export function finish(draft) {
   const grants = grantsOf(draft.scores, draft.origin);
   const derived = derivedFor(grants.attributes);
 
-  return {
+  const hero = {
     name: draft.name.trim(),
     origin: draft.origin,
     level: 1,
@@ -257,4 +258,7 @@ export function finish(draft) {
     mode: draft.mode,
     difficulty: draft.difficulty,
   };
+
+  // The origin's skill is the hero's from the first step (`01` section 3).
+  return grantFree(hero, grants.freeSkill);
 }
