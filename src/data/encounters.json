@@ -1,0 +1,41 @@
+{
+  "_source": "02 section 16. Roll d12 when a wandering monster check succeeds. Floors 1-2 only; the rest arrive in Phase 7.",
+
+  "die": 12,
+
+  "special": {
+    "_source": "02 section 16: \"On a 12, roll d6: a 1 means a Coin Imp; otherwise, roll again on the table and make one monster Elite automatically.\"",
+    "on": 12,
+    "die": 6,
+    "wandererUpTo": 1,
+    "wanderer": "coin_imp",
+    "otherwise": "rerollWithElite"
+  },
+
+  "floors": {
+    "1": {
+      "_theme": "The Cellars",
+      "table": [
+        { "upTo": 3, "monsters": [{ "id": "giant_rat", "count": [2, 4] }] },
+        { "upTo": 5, "monsters": [{ "id": "kobold", "count": [2, 3] }] },
+        { "upTo": 7, "monsters": [{ "id": "kobold", "count": [2, 2] }, { "id": "goblin_archer", "count": [1, 1] }] },
+        { "upTo": 9, "monsters": [{ "id": "green_slime", "count": [1, 1] }] },
+        { "upTo": 10, "monsters": [{ "id": "giant_rat", "count": [2, 2] }, { "id": "green_slime", "count": [1, 1] }] },
+        { "upTo": 11, "monsters": [{ "id": "kobold", "count": [1, 1] }, { "id": "goblin_archer", "count": [2, 2] }] }
+      ]
+    },
+
+    "2": {
+      "_theme": "The Old Crypt",
+      "table": [
+        { "upTo": 3, "monsters": [{ "id": "skeleton", "count": [2, 3] }] },
+        { "upTo": 5, "monsters": [{ "id": "zombie", "count": [2, 3] }] },
+        { "upTo": 7, "monsters": [{ "id": "cave_bat_swarm", "count": [1, 1] }] },
+        { "upTo": 8, "monsters": [{ "id": "grave_robber", "count": [1, 2] }] },
+        { "upTo": 9, "monsters": [{ "id": "skeleton", "count": [2, 2] }, { "id": "zombie", "count": [1, 1] }] },
+        { "upTo": 10, "monsters": [{ "id": "grave_robber", "count": [1, 1] }, { "id": "cave_bat_swarm", "count": [1, 1] }] },
+        { "upTo": 11, "monsters": [{ "id": "ghoul", "count": [1, 1] }] }
+      ]
+    }
+  }
+}

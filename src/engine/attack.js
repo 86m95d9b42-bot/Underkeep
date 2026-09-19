@@ -240,7 +240,7 @@ function land(combat, attacker, target, attack, result, services) {
 
   // 13. ZERO HP? Section 9's ladder: the traits that catch it, then the fall.
   if (target.hp <= 0 && target.alive) {
-    const zero = zeroHp(combat, target, { attacker, attack, cause: 'attack' });
+    const zero = zeroHp(combat, target, { attacker, attack, result: out, cause: 'attack' });
     if (zero.died) out.killed = true;
     if (zero.fallen) out.fallen = true;
   }

@@ -9,6 +9,8 @@
  */
 import { readdir, readFile } from 'node:fs/promises';
 import { checkCondition } from '../src/engine/ai.js';
+import { parsePart } from '../src/engine/damage.js';
+import { PENDING, TRAITS } from '../src/engine/monster-traits.js';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -329,6 +331,111 @@ function checkAi(json) {
 }
 
 /**
+ * monsters.json: `02` sections 4, 5 and 19. A stat block is only useful if the
+ * engine can read every part of it, so the damage notation is parsed, the
+ * scripts go through the AI reader, and every trait has to be implemented or
+ * listed as waiting on another phase.
+ */
+function checkMonsters(json, ai, combat) {
+  const ids = Object.keys(json.monsters ?? {}).filter((id) => !id.startsWith('_'));
+  if (ids.length === 0) {
+    problems.push('monsters.json has no monsters');
+    return;
+  }
+
+  const damageTypes = combat?.damage?.types ?? [];
+  for (const id of ids) {
+    const block = json.monsters[id];
+    const where = `monsters.json ${id}`;
+    if (!block.name) problems.push(`${where} has no name`);
+    for (const stat of ['hd', 'hp', 'atk', 'def', 'init', 'xp']) {
+      if (block[stat] === undefined) problems.push(`${where} has no ${stat}`);
+    }
+    if (!['front', 'back'].includes(block.row)) problems.push(`${where} stands in no row`);
+    if (!(block.group?.[0] <= block.group?.[1])) problems.push(`${where} has a backwards group range`);
+    if (block.morale !== null && !(block.morale >= 2 && block.morale <= 12)) {
+      problems.push(`${where} has a morale of ${block.morale}`);
+    }
+    if (!ai?.archetypes?.[block.archetype]) problems.push(`${where} follows no archetype`);
+
+    for (const attack of block.attacks ?? []) {
+      try {
+        const part = parsePart(`${attack.dmg}${attack.dmgType ? ` ${attack.dmgType}` : ''}`);
+        if (part.type && !damageTypes.includes(part.type)) {
+          problems.push(`${where} deals "${part.type}", which is not a damage type`);
+        }
+      } catch (error) {
+        problems.push(`${where} attack "${attack.name}": ${error.message}`);
+      }
+      const rider = attack.onHit;
+      if (rider && !rider.condition) problems.push(`${where} has a rider with no condition`);
+      if (rider?.save && !['body', 'reflex', 'mind'].includes(rider.save)) {
+        problems.push(`${where} rider saves against "${rider.save}"`);
+      }
+    }
+
+    for (const rule of block.script ?? []) {
+      const why = checkCondition(rule.when);
+      if (why) problems.push(`${where}: ${why}`);
+      if (!rule.do) problems.push(`${where} has a script rule that does nothing`);
+    }
+
+    for (const entry of block.traits ?? []) {
+      const trait = typeof entry === 'string' ? entry : entry.id;
+      if (!trait) problems.push(`${where} has a trait with no id`);
+      else if (!TRAITS[trait] && !PENDING[trait]) {
+        problems.push(`${where} has trait "${trait}", which nothing implements`);
+      }
+    }
+
+    for (const list of ['resist', 'weak']) {
+      for (const type of block[list] ?? []) {
+        if (!damageTypes.includes(type)) problems.push(`${where} is ${list} to "${type}", which is not a damage type`);
+      }
+    }
+  }
+}
+
+/**
+ * encounters.json: `02` section 16. A table with a gap in it would roll an
+ * encounter that does not exist, which only shows up in play.
+ */
+function checkEncounters(json, monsters) {
+  const die = json.die ?? 12;
+  const special = json.special ?? {};
+  if (special.on !== die) problems.push('encounters.json special row is not the top of the die');
+  if (!monsters?.monsters?.[special.wanderer]) {
+    problems.push(`encounters.json sends a 12 to "${special.wanderer}", which has no stat block`);
+  }
+
+  for (const [floor, table] of Object.entries(json.floors ?? {})) {
+    const rows = table.table ?? [];
+    let previous = 0;
+    for (const row of rows) {
+      if (!(row.upTo > previous)) problems.push(`encounters.json floor ${floor} is out of order at ${row.upTo}`);
+      previous = row.upTo;
+      for (const entry of row.monsters ?? []) {
+        const block = monsters?.monsters?.[entry.id];
+        if (!block) {
+          problems.push(`encounters.json floor ${floor} rolls "${entry.id}", which has no stat block`);
+          continue;
+        }
+        if (!(block.floors ?? []).includes(Number(floor))) {
+          problems.push(`encounters.json floor ${floor} rolls "${entry.id}", which does not live there`);
+        }
+        if (!(entry.count?.[0] <= entry.count?.[1])) {
+          problems.push(`encounters.json floor ${floor} has a backwards count for "${entry.id}"`);
+        }
+      }
+    }
+    // Every roll under the special row has to land somewhere.
+    if (previous !== die - 1) {
+      problems.push(`encounters.json floor ${floor} covers up to ${previous}, not ${die - 1}`);
+    }
+  }
+}
+
+/**
  * file name -> checker. A file with no checker is only parsed, which still
  * catches the most common failure: a trailing comma in hand-edited JSON.
  * @type {Record<string, (json: any) => void>}
@@ -338,6 +445,8 @@ const CHECKS = {
   // Checked against strings.json, so it is read first.
   'combat.json': (json) => checkCombat(json, loaded['strings.json']),
   'ai.json': checkAi,
+  'monsters.json': (json) => checkMonsters(json, loaded['ai.json'], loaded['combat.json']),
+  'encounters.json': (json) => checkEncounters(json, loaded['monsters.json']),
   'floors.json': checkFloors,
   'locks.json': checkLocks,
   // Checked against strings.json, so it is read first.

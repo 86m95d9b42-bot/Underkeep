@@ -1,0 +1,317 @@
+{
+  "_source": "02 sections 4 and 5, in the JSON shape of section 19. Floors 1-2 only; floors 3-10 arrive in Phase 7, and the two bosses live in bosses.json. Scripts are 06 section 12, written in the vocabulary of section 11.",
+
+  "monsters": {
+    "giant_rat": {
+      "name": "Giant Rat",
+      "hd": 1,
+      "hp": 4,
+      "atk": 2,
+      "def": 11,
+      "init": 2,
+      "saves": { "body": 0, "reflex": 1, "mind": 0 },
+      "row": "front",
+      "group": [2, 5],
+      "type": "beast",
+      "morale": 6,
+      "archetype": "brute",
+      "attacks": [
+        {
+          "name": "bite",
+          "dmg": "1d4",
+          "dmgType": "pierce",
+          "onHit": {
+            "_trait": "Filthy Bite",
+            "natural": [18, 20],
+            "save": "body",
+            "dc": 10,
+            "condition": "weakened"
+          }
+        }
+      ],
+      "traits": [],
+      "xp": 10,
+      "gold": "0",
+      "drops": [{ "item": "rat_tail", "chance": 0.25 }],
+      "floors": [1]
+    },
+
+    "kobold": {
+      "name": "Kobold",
+      "hd": 1,
+      "hp": 5,
+      "atk": 2,
+      "def": 12,
+      "init": 1,
+      "saves": { "body": 0, "reflex": 1, "mind": 0 },
+      "row": "front",
+      "group": [2, 4],
+      "type": "humanoid",
+      "morale": 7,
+      "archetype": "brute",
+      "attacks": [{ "name": "spear", "dmg": "1d4", "dmgType": "pierce" }],
+      "traits": [{ "id": "pack_tactics", "bonus": 1, "max": 2 }, "last_one_standing"],
+      "xp": 10,
+      "gold": "1d6",
+      "drops": [{ "item": "dagger", "chance": 0.15 }],
+      "floors": [1]
+    },
+
+    "goblin_archer": {
+      "name": "Goblin Archer",
+      "hd": 1,
+      "hp": 5,
+      "atk": 3,
+      "def": 12,
+      "init": 1,
+      "saves": { "body": 0, "reflex": 1, "mind": 0 },
+      "row": "back",
+      "group": [1, 3],
+      "type": "humanoid",
+      "morale": 7,
+      "archetype": "archer",
+      "attacks": [{ "name": "shortbow", "dmg": "1d4+1", "dmgType": "pierce", "kind": "ranged" }],
+      "abilities": [
+        {
+          "id": "volley",
+          "name": "Volley",
+          "role": "ranged",
+          "kind": "ranged",
+          "oncePerCombat": true,
+          "bonus": 2,
+          "sharedTurn": true,
+          "dmg": "1d4+1",
+          "dmgType": "pierce"
+        },
+        {
+          "id": "knife",
+          "name": "Knife",
+          "role": "melee",
+          "kind": "melee",
+          "bonus": -2,
+          "dmg": "1d4",
+          "dmgType": "slash"
+        },
+        {
+          "id": "shoot",
+          "name": "Shoot",
+          "role": "ranged",
+          "kind": "ranged",
+          "dmg": "1d4+1",
+          "dmgType": "pierce"
+        }
+      ],
+      "script": [
+        { "when": "unused(volley) and count(Goblin Archer) >= 2", "do": "volley" },
+        { "when": "in front row", "do": "knife" },
+        { "when": "always", "do": "shoot" }
+      ],
+      "traits": [],
+      "xp": 10,
+      "gold": "1d8",
+      "drops": [{ "item": "shortbow", "chance": 0.1 }],
+      "floors": [1]
+    },
+
+    "green_slime": {
+      "name": "Green Slime",
+      "hd": 1,
+      "hp": 10,
+      "atk": 1,
+      "def": 8,
+      "init": -2,
+      "saves": { "body": 1, "reflex": 0, "mind": 0 },
+      "row": "front",
+      "group": [1, 1],
+      "type": "ooze",
+      "morale": null,
+      "archetype": "brute",
+      "attacks": [{ "name": "pseudopod", "dmg": "1d4", "dmgType": "acid" }],
+      "traits": [
+        { "id": "divide", "slashAtLeast": 5, "maxSlimes": 4 },
+        { "id": "corrode", "oneIn": 6, "penalty": -1, "repair": 10 }
+      ],
+      "weak": ["fire", "cold"],
+      "immune": ["poison", "asleep", "feared"],
+      "xp": 15,
+      "gold": "0",
+      "swallowedGold": { "chance": 0.3, "gold": "2d10" },
+      "drops": [],
+      "floors": [1]
+    },
+
+    "skeleton": {
+      "name": "Skeleton",
+      "hd": 2,
+      "hp": 10,
+      "atk": 3,
+      "def": 13,
+      "init": 0,
+      "saves": { "body": 1, "reflex": 1, "mind": 1 },
+      "row": "front",
+      "group": [2, 4],
+      "type": "undead",
+      "morale": null,
+      "archetype": "brute",
+      "attacks": [{ "name": "sword", "dmg": "1d6+1", "dmgType": "slash" }],
+      "traits": [{ "id": "reassemble", "oneIn": 6, "share": 0.5, "notBy": ["crush", "holy"] }],
+      "resist": ["slash", "pierce"],
+      "weak": ["crush", "holy"],
+      "immune": ["poison", "asleep", "feared"],
+      "xp": 20,
+      "gold": "1d6",
+      "drops": [
+        { "item": "short_sword", "chance": 0.1 },
+        { "item": "shield", "chance": 0.05 }
+      ],
+      "floors": [2]
+    },
+
+    "zombie": {
+      "name": "Zombie",
+      "hd": 2,
+      "hp": 16,
+      "atk": 2,
+      "def": 10,
+      "init": -3,
+      "saves": { "body": 2, "reflex": 0, "mind": 1 },
+      "row": "front",
+      "group": [1, 4],
+      "type": "undead",
+      "morale": null,
+      "archetype": "brute",
+      "actsLast": true,
+      "attacks": [
+        {
+          "name": "slam",
+          "dmg": "1d6+1",
+          "dmgType": "crush",
+          "onHit": { "_trait": "Grab", "save": "body", "dc": 11, "condition": "grabbed" }
+        }
+      ],
+      "traits": [
+        { "id": "relentless", "oneIn": 3, "hp": 1, "notBy": ["fire", "holy"], "notOnCrit": true }
+      ],
+      "weak": ["fire", "holy"],
+      "immune": ["poison", "asleep", "feared"],
+      "xp": 20,
+      "gold": "1d4",
+      "drops": [],
+      "floors": [2]
+    },
+
+    "cave_bat_swarm": {
+      "name": "Cave Bat Swarm",
+      "hd": 2,
+      "hp": 10,
+      "atk": 3,
+      "def": 14,
+      "init": 3,
+      "saves": { "body": 0, "reflex": 3, "mind": 0 },
+      "row": "front",
+      "group": [1, 2],
+      "type": "swarm",
+      "morale": 6,
+      "archetype": "brute",
+      "attacks": [{ "name": "flurry", "dmg": "1d4", "dmgType": "pierce" }],
+      "traits": [
+        "swarm_body",
+        { "id": "snuff", "oneIn": 6 },
+        "blinding_flurry",
+        "echolocation"
+      ],
+      "xp": 30,
+      "gold": "0",
+      "drops": [],
+      "floors": [2]
+    },
+
+    "grave_robber": {
+      "name": "Grave Robber",
+      "hd": 2,
+      "hp": 12,
+      "atk": 3,
+      "def": 13,
+      "init": 2,
+      "saves": { "body": 1, "reflex": 3, "mind": 1 },
+      "row": "front",
+      "group": [1, 3],
+      "type": "human",
+      "morale": 7,
+      "archetype": "thief",
+      "attacks": [{ "name": "knife", "dmg": "1d6", "dmgType": "slash" }],
+      "traits": [{ "id": "pickpocket", "gold": "2d10" }, "slippery"],
+      "xp": 20,
+      "gold": "3d6",
+      "drops": [
+        { "item": "lockpicks", "chance": 0.2 },
+        { "item": "healing_potion", "chance": 0.1 }
+      ],
+      "floors": [2]
+    },
+
+    "ghoul": {
+      "name": "Ghoul",
+      "hd": 3,
+      "hp": 15,
+      "atk": 4,
+      "def": 13,
+      "init": 1,
+      "saves": { "body": 2, "reflex": 2, "mind": 1 },
+      "row": "front",
+      "group": [1, 3],
+      "type": "undead",
+      "morale": null,
+      "archetype": "controller",
+      "attacks": [
+        {
+          "name": "claw",
+          "dmg": "1d6+1",
+          "dmgType": "slash",
+          "onHit": {
+            "_trait": "Paralyzing Claw",
+            "save": "body",
+            "dc": 11,
+            "condition": "paralyzed"
+          }
+        }
+      ],
+      "traits": [{ "id": "feast", "dice": "1d6", "vs": "paralyzed" }],
+      "weak": ["holy", "fire"],
+      "immune": ["poison", "asleep", "feared"],
+      "xp": 45,
+      "gold": "2d6",
+      "drops": [],
+      "floors": [2, 5],
+      "rareOn": [2]
+    },
+
+    "coin_imp": {
+      "_source": "02 section 14, Rare Wanderers. Its numbers are per floor, which `scale` resolves.",
+      "name": "Coin Imp",
+      "wanderer": true,
+      "hd": "floor",
+      "hp": "floor * 4",
+      "atk": 0,
+      "def": "14 + floor / 2",
+      "init": 5,
+      "saves": { "body": "floor", "reflex": "floor", "mind": "floor" },
+      "row": "front",
+      "group": [1, 1],
+      "type": "fiend",
+      "morale": null,
+      "archetype": "thief",
+      "attacks": [],
+      "script": [
+        { "when": "every(2)", "do": "flee" },
+        { "when": "always", "do": "wait" }
+      ],
+      "traits": [],
+      "immune": ["asleep"],
+      "xp": "floor * 10",
+      "gold": "floor * 50",
+      "drops": [{ "item": "uncommon", "chance": 0.25 }],
+      "floors": []
+    }
+  }
+}

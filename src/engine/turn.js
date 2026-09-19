@@ -145,6 +145,12 @@ export function takeMonsterTurn(combat, unit, services = {}) {
     return endTurn(combat, unit, record, { lost: 'fleeing' });
   }
 
+  // A Volley spends the turns of every archer in the group (`06` section 12).
+  if (unit.actedInRound === combat.round) {
+    step(record, { type: 'turnSpent', unit: unit.id });
+    return endTurn(combat, unit, record, { lost: 'spent' });
+  }
+
   // 2. Stunned. Monsters have no Grit.
   const stunned = stunnedStart(unit);
   if (stunned) {

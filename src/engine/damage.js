@@ -192,8 +192,10 @@ export function calcDamage(combat, { attacker, target, attack = {}, result = {} 
     // 5. WEAKENED: every part of a weapon attack.
     if (payload.halved && payload.weapon) amount = Math.floor(amount * DAMAGE.weakened);
 
-    // 6. TARGET TYPE.
-    part.multiplier = typeMultiplier(target, part, attack);
+    // 6. TARGET TYPE. A trait may multiply every part as well — the Cave Bat
+    //    Swarm's body, which turns a single-target weapon aside and comes
+    //    apart under an area effect.
+    part.multiplier = typeMultiplier(target, part, attack) * (payload.allPartsMultiplier ?? 1);
     amount = Math.floor(amount * part.multiplier);
 
     // 7. TELEGRAPH: a wind-up landing on a hero who is Defending.

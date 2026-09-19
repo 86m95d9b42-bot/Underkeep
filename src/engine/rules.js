@@ -11,7 +11,9 @@
  */
 import { registerConditionHooks } from './condition-hooks.js';
 import { registerDefeatHooks } from './defeat.js';
+import { registerMonsterTraits } from './monster-traits.js';
 import { registerMoraleHooks } from './morale.js';
+import { registerRiders } from './riders.js';
 import { conditionHurt } from './damage.js';
 
 /**
@@ -36,6 +38,10 @@ export function registerRules(combat, services = {}) {
     }),
     registerDefeatHooks(hooks),
     registerMoraleHooks(hooks),
+    // `06` section 8's on-hit riders, and then the traits of whatever is
+    // standing on the field.
+    registerRiders(hooks),
+    registerMonsterTraits(combat),
   ];
 
   return () => {

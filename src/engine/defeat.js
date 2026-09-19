@@ -41,6 +41,7 @@ export function zeroHp(combat, unit, context = {}) {
     target: unit,
     attacker: context.attacker,
     attack: context.attack,
+    result: context.result,
     cause: context.cause,
     saved: false,
     fallen: false,
@@ -161,6 +162,8 @@ export function registerDefeatHooks(hooks) {
       (payload) => {
         const types = payload.source?.types ?? [];
         if (!types.length) return;
+        // What put it down, for Reassemble and Relentless to read.
+        payload.target.lastDamageTypes = types;
         // Remembered until the unit's own turn end, for Troll regeneration.
         if (types.some((type) => FALLEN.burnedBy.includes(type))) payload.target.burnedSinceTurn = true;
         if (burn(payload.target, types)) payload.say(`${payload.target.id} burns`);
