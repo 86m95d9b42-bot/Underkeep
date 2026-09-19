@@ -34,6 +34,8 @@ const SCREENS = [
   'explore',
   'pause',
   'map',
+  'hero',
+  'skillTree',
   'combat',
   'combatSkills',
 ];

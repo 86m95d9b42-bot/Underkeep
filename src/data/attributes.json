@@ -99,8 +99,10 @@
   "leveling": {
     "cap": 20,
     "xpFactor": 50,
-    "skillPointsAtLevel1": 1,
+    "_skillPoints": "01 section 5 gives 1 a level-up and says the hero starts with 1; section 6 and the example builds both count 21 by level 20. Nineteen level-ups make those differ by one, and the totals win, because the builds are written against them (see DECISIONS, Open questions).",
+    "skillPointsAtLevel1": 2,
     "skillPointsPerLevel": 1,
+    "skillPointsAtCap": 21,
     "attributePointLevels": [4, 8, 12, 16, 20],
     "attributePointMax": 20,
     "respecCostPerLevel": 100,

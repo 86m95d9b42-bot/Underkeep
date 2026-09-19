@@ -4,6 +4,13 @@ Rulings here override the other documents. Add new entries at the top of each li
 
 ## Decisions
 
+- **2026-09-19 — The Hero screens, and the 21st skill point.** `src/ui/screens/hero.js` and `src/ui/screens/skill-tree.js` are the outline's "Hero and Items" tables, with `src/ui/parts/hero-header.js` holding the rows the three Hero screens share. Five rulings:
+  - **The header is declared once.** `heroHeaderRegions()` returns rows 1–2 and 3–4 for whichever screen asks, so Stats, the Skill Tree and — when `04` arrives — the Pack cannot drift apart. When the frame is wide the tabs sit *beside* the bar rather than under it: nine rows is not enough to spend two on a header and still fit the tiers.
+  - **Stats reads, it does not compute.** Every number on the screen is one the hero already carries (`attacks`, `saves`, `def`, `init`, `slots`, `critFrom`). If a formula changes, it changes in `attributes.json` and the screen follows; a number that appears here and nowhere in the hero is a bug in the sheet, not in the screen.
+  - **A skill tile says where it stands without colour.** The outline gives learned, available and locked an outline colour each; the tiles also carry rank pips, and a locked one says what it is missing on the LEARN button when it is picked (`00`, "Color is never the only signal").
+  - **The Skill Tree repaints in place.** Learning a rank spends a point that the top bar's chip, the Path chips and the tier headers all show, so one `paint()` redraws the whole screen from the hero rather than five listeners patching their own corner.
+  - **A hero starts with 2 SP, not 1.** `01` section 6 promises **21 SP by level 20** and writes its four example builds against that total, but nineteen level-ups after a 1-point start give 20. The totals win, because the example builds are the part that has to be buyable: `attributes.json` now says `skillPointsAtLevel1: 2` and `skillPointsAtCap: 21`, and a data check confirms that what is handed out over twenty levels equals what is promised. Recorded under Open questions in case the intent was 20.
+
 - **2026-09-19 — Gaining a level, and the bug it uncovered.** `src/systems/levelling.js` is `01` section 5: the curve, the 1d6 + VIG hit points, the Focus that re-derives itself, the skill point, and the attribute point at 4, 8, 12, 16 and 20. Five rulings:
   - **The level-up roll comes from the `loot` stream.** `05` section 11 names five streams and none of them is levelling, but `06` section 15 awards XP and loot in the same breath at the end of a fight: both are that fight's reward. It is a carried stream, so a reload cannot re-roll a level — which is the point of section 11.
   - **Levelling happens the moment the XP lands.** `06` section 15 step 5 says so, and `05` section 11 wants the outcome committed before it is shown, so the *fight* awards the XP and levels the hero as it ends. The Victory & Loot screen will read what already happened rather than cause it; a single award can be worth several levels, and each rolls its own hit points.
@@ -313,6 +320,8 @@ Rulings here override the other documents. Add new entries at the top of each li
 - **2026-09-16 — Reaction mockup** shows a Shadow/Arcana hero's options (Lucky, Arcane Shield). The real prompt lists only reactions the hero owns.
 
 ## Open questions
+
+- **Does a hero start with 1 skill point or 2?** `01` section 6 says both: line 110 gives "1 SP at level 1" on top of 1 per level, and lines 137 and 221 promise "21 SP by level 20" and write the example builds at 21. Nineteen level-ups make those differ by one. The totals win for now (start with 2, reach 21), because the example builds have to be buyable. If the intent was 20, the fix is `skillPointsAtLevel1: 1` in `attributes.json` and one point out of each example build.
 
 - **The Pure Warrior example build cannot buy its own Spirit 4.** `01` section 6's example reads "Spirit 4 (Resilience ×2, Mend, Cleanse)", but Resilience and Cleanse are Spirit tier II, which section 6 opens at **3 points already spent in that Path**, and Mend is the only tier I skill on that list. The first Resilience would be bought with 1 point in the Path. The tier gate is a rule and the example is a sketch, so the gate wins and `test/skill-tree.test.js` spends those four points on a legal Spirit 4 (Mend, Keen Senses ×2, Resilience) instead. If the example is meant to be exactly buyable, the fix is in the example rather than in the gate — or Resilience moves to tier I.
 

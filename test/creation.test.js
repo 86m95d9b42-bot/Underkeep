@@ -39,7 +39,7 @@ import {
   slotsFor,
   startingHp,
 } from '../src/systems/derived.js';
-import { ATTRIBUTE_ORDER, MAX_AT_CREATION } from '../src/data/attributes.js';
+import { ATTRIBUTE_ORDER, LEVELING, MAX_AT_CREATION } from '../src/data/attributes.js';
 import { carriedStreams, createStream } from '../src/engine/rng.js';
 import { createFight, standInHero } from '../src/systems/fight.js';
 import { effectDcOf, makeMonster } from '../src/data/monsters.js';
@@ -273,7 +273,7 @@ describe('the derived statistics (01 section 4)', () => {
     const sheet = derivedFor(MOCKUP);
     expect(sheet).toMatchObject({ level: 1, maxHp: 24, maxFp: 6, def: 10, ba: 0, slots: 12 });
     expect(sheet.saves).toEqual({ body: 1, reflex: 0, mind: 1 });
-    expect(sheet.skillPoints).toBe(1);
+    expect(sheet.skillPoints).toBe(LEVELING.skillPointsAtLevel1);
     // A hero past level 1 brings the HP they rolled for.
     expect(derivedFor(MOCKUP, { level: 3, maxHp: 31 }).maxHp).toBe(31);
   });
@@ -292,7 +292,7 @@ describe('finishing a hero', () => {
       xp: 0,
       protected: true,
       gold: 10,
-      skillPoints: 1,
+      skillPoints: 2,
       seed: SEED,
       mode: 'adventurer',
       difficulty: 'normal',

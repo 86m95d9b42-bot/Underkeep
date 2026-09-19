@@ -25,11 +25,12 @@ import {
   whyNot,
 } from '../src/systems/skill-tree.js';
 import { CROSSROADS, gateFor, skill, skillIds } from '../src/data/skills.js';
+import { LEVELING } from '../src/data/attributes.js';
 import { finish, setName, chooseOrigin, createDraft } from '../src/systems/creation.js';
 import { t } from '../src/data/strings.js';
 
 /** A hero with the attributes and points a test asks for. */
-function hero({ scores, origin = 'sellsword', points = 1 } = {}) {
+function hero({ scores, origin = 'sellsword', points } = {}) {
   const made = finish(
     setName(
       chooseOrigin(
@@ -42,7 +43,7 @@ function hero({ scores, origin = 'sellsword', points = 1 } = {}) {
       'Harrow',
     ),
   );
-  made.skillPoints = points;
+  if (points !== undefined) made.skillPoints = points;
   return made;
 }
 
@@ -57,10 +58,9 @@ function spend(unit, ids) {
 }
 
 describe('the points a hero has', () => {
-  it('starts with one, which is the point level 1 gives', () => {
-    const harrow = hero();
-    expect(harrow.skillPoints).toBe(1);
-    expect(unspent(harrow)).toBe(1);
+  it('starts with what level 1 gives', () => {
+    const harrow = hero({ points: undefined });
+    expect(harrow.skillPoints).toBe(LEVELING.skillPointsAtLevel1);
     expect(spentTotal(harrow)).toBe(0);
   });
 
@@ -81,13 +81,13 @@ describe('the points a hero has', () => {
   });
 
   it('refuses a skill that does not exist', () => {
-    expect(whyNot(hero(), 'sword_dancing')).toBe('unknown');
+    expect(whyNot(hero({ points: 1 }), 'sword_dancing')).toBe('unknown');
   });
 });
 
 describe('an origin’s free skill (01 section 3)', () => {
   it('is learned from the first step, and cost nothing', () => {
-    const harrow = hero();
+    const harrow = hero({ points: 1 });
     expect(rankOf(harrow, 'weapon_training')).toBe(1);
     expect(freeRanksOf(harrow, 'weapon_training')).toBe(1);
     expect(spentTotal(harrow)).toBe(0);

@@ -107,7 +107,7 @@ describe('a level-up (01 section 5)', () => {
     expect(harrow.skillPoints).toBe(LEVELING.skillPointsAtLevel1);
     levelUp(harrow, die(3));
     levelUp(harrow, die(3));
-    expect(harrow.skillPoints).toBe(3);
+    expect(harrow.skillPoints).toBe(LEVELING.skillPointsAtLevel1 + 2);
   });
 
   it('owes an attribute point at 4, 8, 12, 16 and 20, and at no other level', () => {
@@ -141,7 +141,7 @@ describe('awarding experience', () => {
     const gained = awardXp(harrow, xpForLevel(5), carriedStreams(4).loot);
     expect(gained.levels.map((row) => row.level)).toEqual([2, 3, 4, 5]);
     expect(harrow.level).toBe(5);
-    expect(harrow.skillPoints).toBe(5);
+    expect(harrow.skillPoints).toBe(LEVELING.skillPointsAtLevel1 + 4);
     expect(attributePointsOwed(harrow)).toBe(1);
   });
 
@@ -149,7 +149,9 @@ describe('awarding experience', () => {
     const harrow = hero();
     awardXp(harrow, 1_000_000, carriedStreams(4).loot);
     expect(harrow.level).toBe(LEVEL_CAP);
-    expect(harrow.skillPoints).toBe(LEVEL_CAP);
+    // `01` section 6 promises 21 by level 20, and that is what arrives.
+    expect(harrow.skillPoints).toBe(LEVELING.skillPointsAtCap);
+    expect(harrow.skillPoints).toBe(21);
     expect(attributePointsOwed(harrow)).toBe(LEVELING.attributePointLevels.length);
   });
 

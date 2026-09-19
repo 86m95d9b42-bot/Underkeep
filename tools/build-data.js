@@ -508,6 +508,15 @@ function checkAttributes(json, strings) {
 
   const leveling = json.leveling ?? {};
   if (!(leveling.cap >= 2)) problems.push('attributes.json has no level cap');
+  // The points a hero ends with have to be the points they were promised
+  // (`01` section 6, and the example builds it prints).
+  const earned =
+    (leveling.skillPointsAtLevel1 ?? 0) + (leveling.cap - 1) * (leveling.skillPointsPerLevel ?? 0);
+  if (leveling.skillPointsAtCap !== earned) {
+    problems.push(
+      `attributes.json promises ${leveling.skillPointsAtCap} skill points by the cap and hands out ${earned}`,
+    );
+  }
   if (!(leveling.xpFactor > 0)) problems.push('attributes.json has no XP factor');
   for (const level of leveling.attributePointLevels ?? []) {
     if (!(level >= 2 && level <= leveling.cap)) problems.push(`attributes.json gives a point at level ${level}`);

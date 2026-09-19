@@ -26,6 +26,8 @@ const SCREENS = [
   'explore',
   'pause',
   'map',
+  'hero',
+  'skillTree',
   'combat',
   'combatSkills',
 ];
@@ -36,6 +38,10 @@ const SCREENS = [
  * the state it wants first — here, a walked floor for the Automap.
  */
 const PREPARE = {
+  // A level 7 hero with points spent, so the tiles and the tiers have
+  // something to show — the state the mockups are drawn in.
+  hero: `(() => globalThis.underkeep.showHero('hero'))()`,
+  skillTree: `(() => globalThis.underkeep.showHero('skillTree'))()`,
   // The creation screens are worth looking at with a hero half-made.
   createStats: `(() => {
     globalThis.underkeep.router.go('createStats', { seed: 20260918, rollMode: 'standard' });

@@ -279,7 +279,9 @@
       "none": "You have learned no skills yet.",
       "noItems": "Your pack is empty.",
       "cancel": "CANCEL",
-      "use": "USE"
+      "use": "USE",
+      "passive": "Always on.",
+      "notYet": "Not usable yet."
     },
     "log": {
       "youHit": "You hit the {target} for {n}.",
@@ -656,7 +658,26 @@
       "tierLocked": "Spend {n} in this Path first.",
       "needsAttribute": "Needs {attribute} {score}.",
       "needsPaths": "Needs {n} in each Path."
-    }
+    },
+    "sub": "{n} points by level 20",
+    "tier": "TIER {n}",
+    "capstone": "CAPSTONE",
+    "tierOpen": "Open",
+    "tierMet": "{n} points · met",
+    "tierMore": "{n} points · {m} more",
+    "tierCapstone": "{n} points · {attribute} {score}",
+    "crossroadsTitle": "CROSSROADS",
+    "crossroadsNeeds": "{a} · {b}",
+    "pathProgress": "{name} {have}/{want}",
+    "learnOne": "LEARN {skill}",
+    "cost": "Costs 1 skill point",
+    "types": {
+      "passive": "PASSIVE",
+      "active": "ACTIVE",
+      "reaction": "REACTION"
+    },
+    "pick": "Pick a skill",
+    "fp": "{n} FP"
   },
   "level": {
     "title": "LEVEL {n}",
@@ -674,5 +695,36 @@
       "unknown": "No such attribute.",
       "atMaximum": "Already at 20."
     }
+  },
+  "hero": {
+    "title": "HERO",
+    "sub": "Level {level} · {origin}",
+    "points": "{n} SP",
+    "tabs": {
+      "stats": "STATS",
+      "skills": "SKILLS",
+      "pack": "PACK"
+    },
+    "derived": {
+      "melee": "Melee attack",
+      "ranged": "Ranged attack",
+      "spell": "Spell attack",
+      "def": "Defense",
+      "init": "Initiative",
+      "body": "Body save",
+      "reflex": "Reflex save",
+      "mind": "Mind save",
+      "slots": "Inventory slots",
+      "crit": "Critical range",
+      "origin": "Origin",
+      "paths": "Paths"
+    },
+    "critRange": "{n}",
+    "critRangeWide": "{n}–20",
+    "nextLevel": "NEXT LEVEL",
+    "xp": "{into} / {needed}",
+    "atCap": "The last level.",
+    "noPaths": "Nothing spent yet",
+    "xpLabel": "XP"
   }
 }

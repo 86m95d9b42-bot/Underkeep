@@ -226,7 +226,7 @@ describe('taking a turn', () => {
 
   it('opens the Skills sheet rather than acting', () => {
     const fight = makeFight();
-    fight.hero.skills = [{ id: 'powerStrike', name: 'Power Strike', effect: '+2 dice', fp: 2 }];
+    fight.hero.skills = [{ id: 'power_strike', rank: 1 }];
     const { built, router } = mount({ fight });
     buttons(built).get(t('combat.actions.skill')).click();
     expect(router.openSheet).toHaveBeenCalledWith('combatSkills', { mode: 'skill' });
@@ -275,11 +275,12 @@ describe('the Skills sheet', () => {
     expect(built.sheet.textContent).toContain(t('combat.skills.none'));
   });
 
-  it('lists the hero skills, with their cost', () => {
+  it('lists the hero skills, with their cost, from the tree', () => {
     const fight = makeFight();
-    fight.hero.skills = [{ id: 'powerStrike', name: 'Power Strike', effect: '+2 dice', fp: 2 }];
+    // The hero carries `{ id, rank }`; the words and the cost are the tree's.
+    fight.hero.skills = [{ id: 'power_strike', rank: 1 }];
     const { built } = mountSheet({ fight });
-    expect(built.sheet.textContent).toContain('Power Strike');
+    expect(built.sheet.textContent).toContain(t('skills.power_strike.name'));
     expect(built.sheet.textContent).toContain(t('combat.hints.fp', { n: 2 }));
   });
 

@@ -15,6 +15,7 @@ import { listRow, sheet } from '../parts/parts.js';
 import { button } from '../parts/button.js';
 import { el } from '../parts/el.js';
 import { t } from '../../data/strings.js';
+import { skillFor } from '../../data/skills.js';
 
 /** @type {import('../../shell/router.js').Screen} */
 export const combatSkills = {
@@ -30,7 +31,26 @@ export const combatSkills = {
   build({ router, fight, params = {} }) {
     const mode = params.mode === 'item' ? 'item' : 'skill';
     const hero = fight?.hero ?? {};
-    const entries = (mode === 'item' ? hero.items : hero.skills) ?? [];
+
+    // The hero's skills are `{ id, rank }`; the words and the cost come from
+    // the tree (`01` section 6). A passive is always on, and an active waits
+    // for the resolver that will use it.
+    const entries =
+      mode === 'item'
+        ? hero.items ?? []
+        : (hero.skills ?? []).map((row) => {
+            const entry = skillFor(row.id);
+            return {
+              id: row.id,
+              name: entry.name,
+              effect: entry.effect,
+              fp: entry.fp,
+              reason:
+                entry.type === 'passive'
+                  ? t('combat.skills.passive')
+                  : t('combat.skills.notYet'),
+            };
+          });
 
     let chosen = entries.find((entry) => !entry.reason)?.id ?? null;
 

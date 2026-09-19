@@ -16,11 +16,15 @@ import { map } from './ui/screens/map.js';
 import { newGame } from './ui/screens/newgame.js';
 import { createStats } from './ui/screens/create-stats.js';
 import { createOrigin } from './ui/screens/create-origin.js';
+import { hero as heroScreen } from './ui/screens/hero.js';
+import { skillTree } from './ui/screens/skill-tree.js';
 import { combat } from './ui/screens/combat.js';
 import { combatSkills } from './ui/screens/combat-skills.js';
 import { createRun, PLACEHOLDER_HERO } from './systems/run.js';
 import { createFight, standInHero } from './systems/fight.js';
-import { createDraft } from './systems/creation.js';
+import { chooseOrigin, createDraft, finish, setName } from './systems/creation.js';
+import { awardXp } from './systems/levelling.js';
+import { learn } from './systems/skill-tree.js';
 
 const app = /** @type {HTMLElement} */ (document.getElementById('app'));
 const isBuild = document.documentElement.dataset.build === '1';
@@ -37,11 +41,18 @@ applySettings(settings.all);
 
 /**
  * Until the save layer arrives (Phase 8) a session holds one run in memory.
- * Creation makes one from the hero it rolled; opening Exploration without
- * having made a hero — the tools do, through the URL fragment — falls back to
- * the demonstration seed and the stand-in of Phase 2.
+ * Creation makes one from the hero it rolled; opening a screen without having
+ * made a hero — the tools do, through the URL fragment — rolls one from the
+ * demonstration seed, so every screen has a real hero to draw.
  */
 const DEMO_SEED = 20260918;
+
+/** The hero a session falls back on: rolled the way a player would roll one. */
+function demoHero() {
+  return finish(
+    setName(chooseOrigin(createDraft({ seed: DEMO_SEED, rollMode: 'standard' }), 'sellsword'), 'Harrow'),
+  );
+}
 
 /** @type {ReturnType<typeof createRun> | null} */
 let run = null;
@@ -54,7 +65,7 @@ let hero = null;
  * @param {object} [newHero] the hero creation finished, if there is one
  */
 function startRun(newHero) {
-  hero = newHero ?? hero;
+  hero = newHero ?? hero ?? demoHero();
   run = createRun({
     masterSeed: hero?.seed ?? DEMO_SEED,
     floor: 1,
@@ -88,6 +99,8 @@ const screens = {
   explore,
   pause,
   map,
+  hero: heroScreen,
+  skillTree,
   combat,
   combatSkills,
 };
@@ -159,6 +172,21 @@ globalThis.underkeep = {
   settings,
   // `npm run shots` opens Create: Origin, which needs a hero half-made.
   newDraft: (options) => createDraft({ seed: DEMO_SEED, rollMode: 'standard', ...options }),
+
+  /**
+   * And the Hero screens want a hero who has been somewhere: this levels the
+   * stand-in and spends a few points before opening one of them.
+   */
+  showHero(screen) {
+    const current = run ?? startRun();
+    if (current.hero.level < 5 && current.hero.attributes) {
+      awardXp(current.hero, 2400, current.rng.loot);
+      for (const id of ['weapon_training', 'toughness', 'toughness', 'brute_force', 'mend', 'keen_senses']) {
+        learn(current.hero, id);
+      }
+    }
+    router.go(screen);
+  },
   startFight,
   get fight() {
     return fight;
