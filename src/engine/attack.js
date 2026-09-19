@@ -30,6 +30,7 @@ import data from '../data/combat.json' with { type: 'json' };
 import { attackMods, defMod, defenceMods, isHelpless } from './conditions.js';
 import { ROWS, countedEnemies, onField, unitById } from './field.js';
 import { targetsFor } from './actions.js';
+import { resolveDamage } from './damage.js';
 import { defendBonus } from './turn.js';
 
 export const ATTACK = data.attack;
@@ -110,7 +111,8 @@ export function critFrom(unit, attack = {}) {
  * @param {object} attacker
  * @param {Attack} attack
  * @param {object} [services]
- * @param {(combat: object, hit: object) => any} [services.damage] section 7
+ * @param {(combat: object, hit: object) => any} [services.damage] section 7,
+ *   which is `resolveDamage` unless the caller has its own
  * @returns {AttackResult}
  */
 export function resolveAttack(combat, attacker, attack = {}, services = {}) {
@@ -231,8 +233,9 @@ function land(combat, attacker, target, attack, result, services) {
     return out;
   }
 
-  // 9. HIT: section 7 does the arithmetic; this only asks for it.
-  out.damage = services.damage?.(combat, { attacker, target, attack, result: out }) ?? null;
+  // 9. HIT: section 7 does the arithmetic.
+  const damage = services.damage ?? resolveDamage;
+  out.damage = damage(combat, { attacker, target, attack, result: out }) ?? null;
 
   if (target.hp <= 0 && target.alive) {
     const zero = combat.hooks?.fire('zeroHP', { combat, unit: target, target, attacker, attack });

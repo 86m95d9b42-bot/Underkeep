@@ -41,6 +41,22 @@
     ]
   },
 
+  "damage": {
+    "_source": "06 section 7, with the Res / Weak / Imm line of 02. Every multiplier rounds down where it lands, as 06 section 1 rule 4 says.",
+    "types": ["slash", "pierce", "crush", "fire", "cold", "poison", "holy", "necrotic", "force", "acid", "dark"],
+    "physical": ["slash", "pierce", "crush"],
+    "immune": 0,
+    "resistant": 0.5,
+    "weak": 1.5,
+    "critDice": 2,
+    "critDiceWithMastery": 3,
+    "weakened": 0.5,
+    "telegraphVsDefending": 0.5,
+    "minimum": 1,
+    "_overTime": "Damage over time and auras (Poisoned, Burning, Bleeding, auras, Molten Shell, Heat Aura, Thorned) skip these steps. Types still matter, so a fire-immune unit ignores Burning.",
+    "overTimeSkips": ["critical", "telegraph", "damageReduction"]
+  },
+
   "attack": {
     "_source": "06 section 6, and its Attack Modifiers table. Critical range is 01 section 4: a natural 20, or 19-20 with a Luck modifier of +2 or better, which a unit carries as its own critFrom.",
     "die": 20,

@@ -126,7 +126,7 @@ function checkLocks(json) {
  * engine can apply but that the player has no words for, or an order naming a
  * condition that does not exist, would only show up mid-fight.
  */
-function checkConditions(json, strings) {
+function checkConditions(json, strings, damageTypes = []) {
   const ids = Object.keys(json.conditions ?? {});
   if (ids.length === 0) {
     problems.push('conditions.json has no conditions');
@@ -158,6 +158,10 @@ function checkConditions(json, strings) {
     if (!ends) problems.push(`${where} has no way to end`);
     // And a name to show for it (CLAUDE.md: player-facing text lives in strings).
     if (!strings?.conditions?.[id]?.name) problems.push(`${where} has no name in strings.json`);
+    // A typed condition has to use a type the damage rules know (`06` §7).
+    if (rules.damageType && !damageTypes.includes(rules.damageType)) {
+      problems.push(`${where} deals "${rules.damageType}", which is not a damage type`);
+    }
   }
 
   for (const list of ['controlConditions', 'startOfTurnDamageOrder', 'endOfTurnSaveOrder']) {
@@ -206,6 +210,19 @@ function checkCombat(json, strings) {
   if (initiative.bands?.join() !== 'first,normal,last') {
     problems.push('combat.json initiative bands are not first, normal, last');
   }
+
+  const damage = json.damage ?? {};
+  if (!(damage.types?.length >= 3)) problems.push('combat.json lists no damage types');
+  for (const type of damage.physical ?? []) {
+    if (!damage.types?.includes(type)) problems.push(`combat.json calls "${type}" physical, but it is not a damage type`);
+  }
+  if (damage.immune !== 0) problems.push('combat.json lets an immune target take damage');
+  if (!(damage.resistant > 0 && damage.resistant < 1)) problems.push('combat.json resistance is not a reduction');
+  if (!(damage.weak > 1)) problems.push('combat.json weakness is not an increase');
+  if (!(damage.critDice >= 2 && damage.critDiceWithMastery > damage.critDice)) {
+    problems.push('combat.json crit dice do not rise with Weapon Mastery');
+  }
+  if (!(damage.minimum >= 1)) problems.push('combat.json lets a hit deal nothing');
 
   const attack = json.attack ?? {};
   if (!(attack.die >= 2)) problems.push('combat.json attack has no die');
@@ -259,7 +276,8 @@ const CHECKS = {
   'floors.json': checkFloors,
   'locks.json': checkLocks,
   // Checked against strings.json, so it is read first.
-  'conditions.json': (json) => checkConditions(json, loaded['strings.json']),
+  'conditions.json': (json) =>
+    checkConditions(json, loaded['strings.json'], loaded['combat.json']?.damage?.types ?? []),
 };
 
 /** Every file's parsed contents, for checks that compare two files. */

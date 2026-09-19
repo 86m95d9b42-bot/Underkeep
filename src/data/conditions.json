@@ -22,12 +22,14 @@
   "conditions": {
     "poisoned": {
       "damagePerTurn": "1d4",
+      "damageType": "poison",
       "save": "body",
       "rounds": 3,
       "afterCombat": "exploration"
     },
     "burning": {
       "damagePerTurn": "1d6",
+      "damageType": "fire",
       "save": "reflex"
     },
     "bleeding": {

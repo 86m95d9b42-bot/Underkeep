@@ -17,6 +17,7 @@ import {
   endOfRound,
   onDamageTaken,
   onHealed,
+  onHitting,
   onOwnAction,
   attackMods,
   defenceMods,
@@ -125,6 +126,20 @@ export function registerConditionHooks(hooks, { rng, saveBonus = () => 0, hurt }
         for (const id of [...woken, ...healed]) payload.say(`${id} ended`);
       },
       { name: 'wake', source },
+    ),
+  );
+
+  // `06` section 8, on-hit step 5: hitting the monster that grabbed you frees
+  // you. It hangs off `damageTaken`, which is where section 16 puts it.
+  off.push(
+    hooks.on(
+      'damageTaken',
+      (payload) => {
+        const attacker = payload.attacker;
+        if (!attacker || !payload.target) return;
+        for (const id of onHitting(attacker, payload.target.id)) payload.say(`${id} ended`);
+      },
+      { name: 'grabRelease', source },
     ),
   );
 
