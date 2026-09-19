@@ -301,7 +301,8 @@
       "fleeFails": "They cut you off.",
       "freed": "You tear free of the web.",
       "stillHeld": "The web holds you.",
-      "start": "The fight begins."
+      "start": "The fight begins.",
+      "levelUp": "You reach level {n}."
     },
     "end": {
       "victory": "Nothing else is standing.",
@@ -655,6 +656,23 @@
       "tierLocked": "Spend {n} in this Path first.",
       "needsAttribute": "Needs {attribute} {score}.",
       "needsPaths": "Needs {n} in each Path."
+    }
+  },
+  "level": {
+    "title": "LEVEL {n}",
+    "sub": "You are stronger for it.",
+    "hp": "+{n} MAX HP",
+    "fp": "+{n} MAX FOCUS",
+    "sp": "+{n} SKILL POINT",
+    "attribute": "+1 ATTRIBUTE",
+    "choose": "CHOOSE ONE",
+    "xp": "{into} / {needed} XP",
+    "atCap": "The deepest you can go.",
+    "continue": "CONTINUE",
+    "locked": {
+      "noPoints": "No attribute points.",
+      "unknown": "No such attribute.",
+      "atMaximum": "Already at 20."
     }
   }
 }

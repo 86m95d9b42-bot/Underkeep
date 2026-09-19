@@ -59,8 +59,13 @@ function hero(skills = []) {
       'Harrow',
     ),
   );
+  // A hero who already knows these, the way a loaded save arrives: the sheet
+  // is recomputed and nothing is healed by it, so the hero starts full.
   made.skills = skills;
-  return applySkillSheet(made);
+  applySkillSheet(made);
+  made.hp = made.maxHp;
+  made.fp = made.maxFp;
+  return made;
 }
 
 describe('the shape of the tree (01 section 6)', () => {

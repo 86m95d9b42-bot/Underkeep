@@ -26,6 +26,7 @@ import { defenceOf } from '../engine/attack.js';
 import { listed, spec } from '../engine/conditions.js';
 import { rollEncounter } from '../data/encounters.js';
 import { carriedStreams } from '../engine/rng.js';
+import { awardXp } from './levelling.js';
 import { t } from '../data/strings.js';
 
 /** How many log lines are kept, as on the Exploration screen. */
@@ -239,6 +240,19 @@ export function createFight({
   function finish() {
     if (!summary) {
       summary = endCombat(combat, {});
+
+      // `06` section 15 step 5: levelling happens immediately, and `05`
+      // section 11 wants it committed before it is shown. The Victory screen
+      // reads what already happened rather than causing it.
+      if (summary.xp > 0) {
+        const gained = awardXp(combat.hero, summary.xp, rng.loot);
+        summary.levels = gained.levels;
+        summary.totalXp = gained.total;
+        for (const level of gained.levels) {
+          say({ text: t('combat.log.levelUp', { n: level.level }), tone: 'accent' });
+        }
+      }
+
       say({ text: t(`combat.end.${summary.outcome}`), tone: summary.outcome === 'victory' ? 'accent' : 'danger' });
     }
     return 'over';

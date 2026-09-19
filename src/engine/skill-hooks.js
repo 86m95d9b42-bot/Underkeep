@@ -54,8 +54,13 @@ export const PENDING = {
 
 /**
  * Folds every `sheet` effect of the skills a hero has learned into their own
- * numbers. Called when a skill is learned and when a hero is loaded, so the
- * sheet the engine reads is always the whole truth.
+ * numbers. Called when a skill is learned, when a level moves the base, and
+ * when a hero is loaded, so the sheet the engine reads is always the whole
+ * truth — and so that running it twice changes nothing.
+ *
+ * `baseSheet` is the hero without any skill at all: the maxima a rebuild
+ * starts from. Hit points are the one number carried rather than recomputed,
+ * because every level rolled for them (`01` section 4).
  *
  * @param {object} hero the hero, with `skills: [{ id, rank }]`
  * @returns {object} the same hero, changed in place
@@ -66,7 +71,10 @@ export function applySkillSheet(hero) {
   const base = hero.baseSheet ?? snapshot(hero);
   hero.baseSheet = base;
 
-  const sheet = { ...base };
+  // The nested parts are copied too: a shallow spread would leave `attacks`
+  // and `saves` pointing at the base's own objects, and every rebuild would
+  // add the skill's bonus to the base it was measuring from.
+  const sheet = { ...base, attacks: { ...base.attacks }, saves: { ...base.saves } };
   for (const { id, rank = 1 } of learned) {
     for (const effect of sheetEffects(id, rank)) applySheetEffect(sheet, effect, rank, hero);
   }
@@ -92,10 +100,12 @@ export function applySkillSheet(hero) {
     hero[key] = value;
   }
 
-  // Hit points and Focus never sit above their new maximum, and a raised
-  // maximum hands the difference over at once.
-  hero.hp = Math.min(hero.hp + Math.max(0, sheet.maxHp - base.maxHp), sheet.maxHp);
-  hero.fp = Math.min(hero.fp + Math.max(0, sheet.maxFp - base.maxFp), sheet.maxFp);
+  // Nothing is healed here: this only recomputes the maxima, and it runs
+  // again every time the sheet is rebuilt. Handing over what a *new* rank or
+  // a level added is the job of whoever added it, or a rebuild would heal the
+  // hero every time it ran.
+  hero.hp = Math.min(hero.hp, sheet.maxHp);
+  hero.fp = Math.min(hero.fp, sheet.maxFp);
   return hero;
 }
 

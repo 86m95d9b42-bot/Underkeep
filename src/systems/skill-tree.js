@@ -37,6 +37,19 @@ export const REASONS = /** @type {const} */ ([
   'needsPaths',
 ]);
 
+/**
+ * Runs a change that may raise a maximum, and gives the hero what it raised.
+ * A skill that adds hit points adds them to the hero's own, not only to the
+ * ceiling above them.
+ */
+function grow(hero, change) {
+  const before = { hp: hero.maxHp ?? 0, fp: hero.maxFp ?? 0 };
+  change();
+  hero.hp = Math.min(hero.maxHp, (hero.hp ?? 0) + Math.max(0, hero.maxHp - before.hp));
+  hero.fp = Math.min(hero.maxFp, (hero.fp ?? 0) + Math.max(0, hero.maxFp - before.fp));
+  return hero;
+}
+
 /** The hero's skill list, whatever shape they arrived in. */
 function learned(hero) {
   return hero?.skills ?? [];
@@ -148,7 +161,9 @@ export function learn(hero, id) {
   if (entry) entry.rank += 1;
   else hero.skills.push({ id, rank: 1 });
 
-  applySkillSheet(hero);
+  // A rank that raises a maximum hands the difference over at once: learning
+  // Toughness makes the hero tougher, not more wounded.
+  grow(hero, () => applySkillSheet(hero));
   return { learned: true, rank: rankOf(hero, id) };
 }
 
@@ -171,7 +186,8 @@ export function grantFree(hero, grant) {
   } else {
     hero.skills.push({ id: grant.id, rank: ranks, free: ranks });
   }
-  return applySkillSheet(hero);
+  grow(hero, () => applySkillSheet(hero));
+  return hero;
 }
 
 /**
