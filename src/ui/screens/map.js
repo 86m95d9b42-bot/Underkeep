@@ -281,7 +281,9 @@ export const map = {
 
     const legend = el(
       'div',
-      { class: 'region legend scroll-x', 'aria-label': t('map.legend') },
+      // Sideways in portrait, and down the panel in landscape where it wraps:
+      // both are marked, because only a marked panel is allowed to scroll.
+      { class: 'region legend scroll-x scroll', 'aria-label': t('map.legend') },
       LEGEND.map((kind) => {
         const swatch = svg('svg', { viewBox: '0 0 1 1', 'aria-hidden': 'true' });
         const shape = markShape({ kind, at: [0, 0], facing: 0 });

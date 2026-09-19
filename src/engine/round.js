@@ -76,7 +76,9 @@ export function startRound(combat, { surprise = false } = {}) {
   //      the boss phase changes queued last round. All of them are hooks.
   const payload = combat.hooks?.fire('roundStart', { combat, round: combat.round }) ?? { log: [] };
 
-  // 6. Initiative, over whoever is allowed to act this round.
+  // 6. Initiative, over whoever is allowed to act this round. The index is
+  //    where the turn order has got to, for a caller taking one turn at a time.
+  combat.turnIndex = 0;
   const acting = surprise && combat.surprise?.side ? sideOf(combat, combat.surprise.side) : combat.units;
   combat.order = rollInitiative(combat, { units: acting });
 
@@ -96,6 +98,45 @@ export function startRound(combat, { surprise = false } = {}) {
 }
 
 /**
+ * The next unit due to act this round, or null when the order is spent. Units
+ * that died, fled or had their turn taken by a Volley are stepped over.
+ */
+export function peekTurn(combat) {
+  const order = combat.order ?? [];
+  for (let i = combat.turnIndex ?? 0; i < order.length; i += 1) {
+    if (takesTurns(order[i].unit)) return order[i];
+  }
+  return null;
+}
+
+/**
+ * Takes one turn and stops — the step-wise half of step 7, for a screen that
+ * has to wait for a tap between turns. `runTurns` is this in a loop.
+ *
+ * @param {object} combat
+ * @param {object} services the same ones `runTurns` takes
+ * @returns {{ done: boolean, entry?: object, unit?: object, result?: any }}
+ */
+export function takeNextTurn(combat, { takeTurn, save, isOver = combatOver } = {}) {
+  const order = combat.order ?? [];
+  if (isOver(combat)) return { done: true, over: true };
+
+  while ((combat.turnIndex ?? 0) < order.length) {
+    const entry = order[combat.turnIndex];
+    combat.turnIndex += 1;
+    if (!takesTurns(entry.unit)) {
+      record(combat, { type: 'turnSkipped', unit: entry.unit.id });
+      continue;
+    }
+    const result = takeTurn?.(combat, entry.unit, entry);
+    // Resolved, then saved, then shown.
+    save?.(combat);
+    return { done: false, entry, unit: entry.unit, result };
+  }
+  return { done: true };
+}
+
+/**
  * Step 7: every unit takes its turn in the order rolled at step 6.
  *
  * New arrivals join at the start of the next round (`06` section 3 step 5), so
@@ -109,20 +150,14 @@ export function startRound(combat, { surprise = false } = {}) {
  * @param {(combat: object) => void} [services.save] called after every turn
  * @param {(combat: object) => boolean} [services.isOver]
  */
-export function runTurns(combat, { takeTurn, save, isOver = combatOver } = {}) {
+export function runTurns(combat, services = {}) {
   const turns = [];
-  for (const entry of combat.order) {
+  for (;;) {
     // After every action: check combat end (morale and row movement are hooks
     // on `kill` and `damageTaken`, fired inside the turn).
-    if (isOver(combat)) break;
-    if (!takesTurns(entry.unit)) {
-      record(combat, { type: 'turnSkipped', unit: entry.unit.id });
-      continue;
-    }
-    const result = takeTurn?.(combat, entry.unit, entry);
-    turns.push({ unit: entry.unit, entry, result });
-    // Resolved, then saved, then shown.
-    save?.(combat);
+    const step = takeNextTurn(combat, services);
+    if (step.done) break;
+    turns.push({ unit: step.unit, entry: step.entry, result: step.result });
   }
   return turns;
 }

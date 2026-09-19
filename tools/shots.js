@@ -17,7 +17,7 @@ const PAGE = process.env.URL ?? `file://${join(ROOT, 'dist', 'index.html')}`;
 const OUT = join(ROOT, 'dist', 'shots');
 
 /** Every screen the shell can open, by its router id. Grows with each phase. */
-const SCREENS = ['title', 'settings', 'explore', 'pause', 'map'];
+const SCREENS = ['title', 'settings', 'explore', 'pause', 'map', 'combat', 'combatSkills'];
 
 /**
  * Some screens are only worth looking at with something on them. The page
@@ -25,6 +25,17 @@ const SCREENS = ['title', 'settings', 'explore', 'pause', 'map'];
  * the state it wants first — here, a walked floor for the Automap.
  */
 const PREPARE = {
+  // A fight is worth looking at with a fight in it, and the Skills sheet with
+  // the Combat screen dimmed behind it.
+  combat: `(() => {
+    const { router } = globalThis.underkeep;
+    router.go('combat');
+  })()`,
+  combatSkills: `(() => {
+    const { router } = globalThis.underkeep;
+    router.go('combat');
+    router.openSheet('combatSkills', { mode: 'skill' });
+  })()`,
   map: `(() => {
     const { run, router } = globalThis.underkeep;
     const step = () => run.press('forward').outcome.moved;

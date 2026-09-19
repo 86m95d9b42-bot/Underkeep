@@ -229,11 +229,85 @@
       "noEscape": "There is no way past them.",
       "freeUsed": "One free action a turn.",
       "notWebbed": "Nothing is holding you.",
-      "unknown": "You can't do that."
+      "unknown": "You can't do that.",
+      "notYourTurn": "Not your turn.",
+      "noSkills": "No skills yet.",
+      "noItems": "No items yet."
     },
     "defend": "You raise your guard.",
     "hiddenEnds": "You step back into the light.",
-    "telegraph": "It winds up for something heavy."
+    "telegraph": "It winds up for something heavy.",
+    "title": "COMBAT",
+    "round": "ROUND {n}",
+    "backRow": "BACK ROW",
+    "frontRow": "FRONT ROW",
+    "empty": "—",
+    "notYourTurn": "Not your turn.",
+    "targetLabel": "{name}, {hp} of {max} hit points",
+    "cover": "−2 COVER",
+    "boss": "BOSS",
+    "elite": "ELITE",
+    "fallen": "FALLEN",
+    "telegraphBanner": "{ability} NEXT TURN",
+    "telegraphHint": "Halves the blow",
+    "chips": {
+      "def": "DEF {n}",
+      "shield": "SHIELD {n}",
+      "hit": "HIT {n}%"
+    },
+    "actions": {
+      "attack": "ATTACK",
+      "skill": "SKILL",
+      "item": "ITEM",
+      "defend": "DEFEND",
+      "swap": "SWAP",
+      "flee": "FLEE"
+    },
+    "hints": {
+      "attack": "{target} · {odds}%",
+      "fp": "FP {n}",
+      "defend": "+4 DEF, +1 FP",
+      "flee": "TN {n}",
+      "swap": "Free once"
+    },
+    "quickSlots": "QUICK SLOTS",
+    "emptySlot": "EMPTY",
+    "skills": {
+      "title": "SKILLS",
+      "items": "ITEMS",
+      "fp": "FP {n}/{max}",
+      "none": "You have learned no skills yet.",
+      "noItems": "Your pack is empty.",
+      "cancel": "CANCEL",
+      "use": "USE"
+    },
+    "log": {
+      "youHit": "You hit the {target} for {n}.",
+      "youCrit": "A critical hit on the {target} for {n}!",
+      "youMiss": "You miss the {target}.",
+      "theyHit": "The {who} hits you for {n}.",
+      "theyCrit": "The {who} lands a critical hit for {n}!",
+      "theyMiss": "The {who} misses you.",
+      "hurt": "The {who} takes {n}.",
+      "hurtYou": "You take {n}.",
+      "dies": "The {who} falls.",
+      "youLose": "You cannot act.",
+      "theyLose": "The {who} cannot act.",
+      "telegraph": "The {who} winds up!",
+      "telegraphLands": "The {who} strikes!",
+      "telegraphGone": "The {who} loses its swing.",
+      "monsterFlees": "The {who} runs.",
+      "youFlee": "You break away.",
+      "fleeFails": "They cut you off.",
+      "freed": "You tear free of the web.",
+      "stillHeld": "The web holds you.",
+      "start": "The fight begins."
+    },
+    "end": {
+      "victory": "Nothing else is standing.",
+      "defeat": "You fall.",
+      "fled": "You get away."
+    }
   },
   "common": {
     "back": "Back",

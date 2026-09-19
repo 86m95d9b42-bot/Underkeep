@@ -44,6 +44,23 @@
   align-self: center;
 }
 
+/* Combat stacks the same corner instead: the round chip is a whole word, and
+   two columns are not wide enough to put it beside the button (the Combat
+   mockup stacks them too). */
+.menucorner--stack {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+.menucorner--stack > .btn {
+  flex: 0 1 auto;
+  width: 100%;
+  min-height: 0;
+}
+.menucorner--stack > .chip {
+  max-width: 100%;
+}
+
 /* The dungeon view: a bordered box the canvas fills exactly, with the status
    chips floating over its top corners. */
 .viewport {
@@ -200,6 +217,7 @@
   align-items: flex-start;
   overflow-x: hidden;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: calc(var(--u) * 0.05);
 }
 
@@ -214,4 +232,158 @@
 }
 #app.wide .maskeys {
   flex-direction: column;
+}
+
+/* --- Combat (00-build-outline.md, "Combat") --------------------------- */
+
+/* The two enemy rows. The back row holds four slots across; the front row is
+   two per line, which is what the outline's table asks for. */
+.row {
+  display: grid;
+  gap: var(--gap);
+  min-width: 0;
+}
+.row--back {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.row--front {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+#app.wide .row--front {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* An enemy card: name, tag chips, HP bar. The selected target takes the amber
+   outline; a pending telegraph takes the red one and a red banner. */
+.card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: calc(var(--u) * 0.05);
+  box-sizing: border-box;
+  min-width: 0;
+  margin: 0;
+  padding: calc(var(--u) * 0.1) calc(var(--u) * 0.14);
+  background: var(--panel);
+  color: var(--bone);
+  border: var(--line) solid var(--bone);
+  border-radius: var(--radius);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.card--selected {
+  border-color: var(--accent);
+  background: var(--panel-raised);
+}
+.card--telegraph {
+  border-color: var(--danger);
+}
+.card--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border-style: dashed;
+  border-color: var(--rule);
+  color: var(--muted);
+  cursor: default;
+  font-family: var(--font-label);
+  font-size: var(--fs-micro);
+}
+.card__name {
+  font-family: var(--font-label);
+  font-size: var(--fs-micro);
+  line-height: 1.05;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--u) * 0.06);
+  overflow: hidden;
+}
+.card__banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--u) * 0.03) calc(var(--u) * 0.06);
+  background: var(--danger);
+  color: var(--ground);
+  border-radius: calc(var(--radius) * 0.4);
+  font-family: var(--font-label);
+  font-size: var(--fs-micro);
+  line-height: 1.1;
+}
+/* Inside a card the bar is just the track and the numbers: the card's own
+   name is the label, so the bar's is for screen readers only. */
+.card .bar {
+  gap: calc(var(--u) * 0.08);
+}
+.card .bar__name {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The hero's chips: conditions, immunity shields, DEF, and the odds. */
+.chipstrip {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 0.08);
+}
+
+/* Four quick slots, and the six actions in a 3 x 2 grid (2 x 3 in landscape,
+   where the controls column is narrow and tall). */
+.quick {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--gap);
+}
+/* Four across in both frames: two rows of two would need more height than the
+   two grid rows the controls column gives them. */
+#app.wide .quick {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.quickslot .label {
+  font-size: var(--fs-micro);
+}
+.actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: var(--gap);
+}
+#app.wide .actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+}
+
+/* The Skills sheet: a scrolling list with the two buttons under it. */
+.sheet__body--list {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) calc(var(--u) * 1.5);
+  gap: var(--gap);
+}
+.sheet__list {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 0.08);
+  min-height: 0;
+}
+.sheet__footer {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gap);
+}
+.sheet__empty {
+  margin: 0;
+  padding: calc(var(--u) * 0.2);
+  color: var(--muted);
+  font-size: var(--fs-body);
 }

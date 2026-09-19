@@ -92,6 +92,15 @@ body { position: fixed; inset: 0; }
   pointer-events: none;
 }
 
+/* Dimming a region gives it a stacking context, which paints it above the
+   in-flow background of anything after it — so the sheet needs one of its own
+   or the screen it covers shows straight through it. */
+#app.has-sheet > .sheet,
+#app.has-sheet > .sheet-scrim {
+  position: relative;
+  z-index: 1;
+}
+
 .sheet-scrim {
   grid-column: 1 / -1;
   grid-row: 1 / -1;

@@ -13,7 +13,10 @@ import { settings as settingsScreen } from './ui/screens/settings.js';
 import { explore } from './ui/screens/explore.js';
 import { pause } from './ui/screens/pause.js';
 import { map } from './ui/screens/map.js';
+import { combat } from './ui/screens/combat.js';
+import { combatSkills } from './ui/screens/combat-skills.js';
 import { createRun, PLACEHOLDER_HERO } from './systems/run.js';
+import { createFight } from './systems/fight.js';
 
 const app = /** @type {HTMLElement} */ (document.getElementById('app'));
 const isBuild = document.documentElement.dataset.build === '1';
@@ -54,7 +57,36 @@ const screens = {
   explore,
   pause,
   map,
+  combat,
+  combatSkills,
 };
+
+/**
+ * Phase 3 has no encounter trigger on the map yet: the step clock reports a
+ * wandering monster and the Exploration screen only logs it. So the fight the
+ * Combat screen shows is rolled here, once, from floor 1's table — enough to
+ * play a fight through on a phone. Phase 4 hands it the real hero, and the
+ * exploration loop starts it when the clock says so.
+ */
+let fight = null;
+function startFight() {
+  fight = createFight({
+    hero: {
+      ...run.hero,
+      // A stand-in's numbers, until Phase 4 derives them (`01` section 4).
+      atk: 2,
+      def: 12,
+      init: 0,
+      saves: { body: 1, reflex: 1, mind: 1 },
+      attack: { name: 'sword', kind: 'melee', damage: '1d6+1 slash' },
+      protected: true,
+    },
+    floor: run.floor.floor,
+    masterSeed: DEMO_SEED,
+    difficulty: settings.all.difficulty ?? 'normal',
+  });
+  return fight;
+}
 
 /** @type {ReturnType<typeof createRouter>} */
 let router;
@@ -66,7 +98,17 @@ router = createRouter({
   app,
   screens,
   frame: () => watcher.frame,
-  ctx: { settings, haptics, save, run },
+  ctx: {
+    settings,
+    haptics,
+    save,
+    run,
+    // The screen reads the fight in progress, and starting one is what
+    // opening the screen means until the exploration loop does it.
+    get fight() {
+      return fight ?? startFight();
+    },
+  },
 });
 
 // A settings change repaints whatever screen is open.
@@ -78,7 +120,15 @@ settings.subscribe((values) => {
 // The tools drive the game from outside the page: `npm run shots` walks a
 // floor before shooting the Automap, and `npm run check` opens each screen.
 // It is one object on the global, and nothing in the game reads it.
-globalThis.underkeep = { run, router, settings };
+globalThis.underkeep = {
+  run,
+  router,
+  settings,
+  startFight,
+  get fight() {
+    return fight;
+  },
+};
 
 // The URL fragment may name a screen, which is how tools/shots.js opens each
 // one for a frame check. Anything unknown just starts at the Title screen.

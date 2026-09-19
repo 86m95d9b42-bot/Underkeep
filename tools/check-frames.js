@@ -9,7 +9,7 @@
  *   - the frame fits inside the viewport, so any leftover space is letterbox
  *   - --u is the expected size and never passes the 72 px cap
  *   - the right frame is chosen for the viewport's shape
- *   - nothing overflows sideways outside a .scroll panel
+ *   - nothing overflows sideways or downwards outside a .scroll panel
  *   - every tap target is at least 2 rows tall
  *   - every button has a label or an aria-label, and every disabled one a reason
  *
@@ -25,7 +25,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PAGE = join(ROOT, 'dist', 'index.html');
 
 /** Every screen the shell can open, by its router id. Grows with each phase. */
-const SCREENS = ['title', 'settings', 'explore', 'pause', 'map'];
+const SCREENS = ['title', 'settings', 'explore', 'pause', 'map', 'combat', 'combatSkills'];
 
 if (!existsSync(PAGE)) {
   console.error('  no dist/index.html — run `npm run build` first');
@@ -67,6 +67,12 @@ const PROBE = `(() => {
     overflowing: regions
       .filter((r) => !r.closest('.scroll, .scroll-x') && r.scrollWidth > r.clientWidth + 1)
       .map((r) => r.dataset.region),
+    // The same downwards: content taller than its region overlaps whatever is
+    // under it, which is a layout bug however good it looks in one frame.
+    spilling: regions
+      .filter((r) => !r.classList.contains('scroll') && !r.closest('.scroll'))
+      .filter((r) => r.scrollHeight > r.clientHeight + 1)
+      .map((r) => r.dataset.region),
     twoRows: Math.round(twoRows * 100) / 100,
     shortTargets: tapTargets
       .filter((r) => r.getBoundingClientRect().height < twoRows - 1)
@@ -103,6 +109,7 @@ for (const screen of SCREENS) {
     if (r.pageScrollY !== 0 || r.pageScrollX !== 0) problems.push('the page scrolls');
     if (!r.fits) problems.push('the frame is bigger than the viewport');
     if (r.overflowing.length) problems.push(`overflows sideways: ${r.overflowing.join(', ')}`);
+    if (r.spilling.length) problems.push(`spills over what is under it: ${r.spilling.join(', ')}`);
     if (r.shortTargets.length) problems.push(`tap targets under 2 rows: ${r.shortTargets.join(', ')}`);
     if (r.namelessButtons) problems.push(`${r.namelessButtons} button(s) with no label`);
     if (r.unexplainedDisabled) problems.push(`${r.unexplainedDisabled} disabled button(s) with no reason`);
