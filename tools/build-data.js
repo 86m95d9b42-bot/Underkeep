@@ -211,6 +211,30 @@ function checkCombat(json, strings) {
     problems.push('combat.json initiative bands are not first, normal, last');
   }
 
+  const zero = json.zeroHp ?? {};
+  if (!(zero.heroRecoveryShare > 0 && zero.heroRecoveryShare < 1)) {
+    problems.push('combat.json does not bring the hero back at a share of their HP');
+  }
+  if (!(zero.fallen?.rounds >= 1 && zero.fallen?.hp >= 1)) {
+    problems.push('combat.json has no Fallen countdown');
+  }
+  if (!zero.fallen?.burnedBy?.length) problems.push('combat.json gives no way to burn a Fallen troll');
+
+  const morale = json.morale ?? {};
+  if (!/^\d*d\d+/.test(String(morale.dice))) problems.push('combat.json morale has no dice');
+  if (!(morale.fearless >= 2)) problems.push('combat.json has no fearless morale');
+  if (!(morale.groupShare > 0 && morale.groupShare < 1)) problems.push('combat.json group share is not a share');
+  if (!(morale.hurtBelow > 0 && morale.hurtBelow < 1)) problems.push('combat.json hurt threshold is not a share');
+  if (!morale.triggers?.length) problems.push('combat.json lists no morale triggers');
+
+  const fleeing = json.fleeing ?? {};
+  if (!(fleeing.tn >= 1)) problems.push('combat.json fleeing has no TN');
+  if (!(fleeing.freeAttackers >= 0)) problems.push('combat.json fleeing has no free attackers');
+  if (!(fleeing.goldDroppedShare > 0 && fleeing.goldDroppedShare <= 1)) {
+    problems.push('combat.json dropped gold is not a share');
+  }
+  if (!(json.victory?.summonsWorthXp >= 0)) problems.push('combat.json does not cap the XP from summons');
+
   const damage = json.damage ?? {};
   if (!(damage.types?.length >= 3)) problems.push('combat.json lists no damage types');
   for (const type of damage.physical ?? []) {

@@ -84,6 +84,16 @@ export function stillFighting(unit) {
   return Boolean(unit.alive) || Boolean(unit.fallen && !unit.burned);
 }
 
+/**
+ * True when an attack may be aimed at this unit. A Fallen troll is not alive
+ * and is still a target, because burning it is the only way to finish it
+ * (`06` section 9).
+ */
+export function isTargetable(unit) {
+  if (!onField(unit) || unit.untargetable) return false;
+  return Boolean(unit.alive) || Boolean(unit.fallen && !unit.burned);
+}
+
 /** True when this unit gets a place in the turn order. */
 export function takesTurns(unit) {
   return onField(unit) && Boolean(unit.alive) && (!unit.object || unit.acts === true);
@@ -92,11 +102,15 @@ export function takesTurns(unit) {
 /**
  * The leftmost free slot in one side's row, or −1 when the row is full. Rows
  * are per side: the hero's front row is not the monsters' front row.
+ *
+ * A corpse holds nothing: only units still in the fight take up a place, so
+ * the back row can step forward over the dead and a summon can arrive into a
+ * row that has been cleared (`06` section 13).
  */
 export function freeSlot(combat, row, side = 'monsters') {
   const taken = new Set(
     combat.units
-      .filter((unit) => onField(unit) && unit.side === side && unit.row === row)
+      .filter((unit) => stillFighting(unit) && unit.side === side && unit.row === row)
       .map((unit) => unit.slot),
   );
   for (let slot = 0; slot < ROW_CAPACITY; slot += 1) if (!taken.has(slot)) return slot;

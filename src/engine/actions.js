@@ -16,7 +16,7 @@
  */
 import data from '../data/combat.json' with { type: 'json' };
 import { blocked, blockedBy, has } from './conditions.js';
-import { ROWS, countedEnemies } from './field.js';
+import { ROWS, countedEnemies, isTargetable } from './field.js';
 
 export const ACTIONS = data.actions;
 export const LEGALITY = data.legality;
@@ -55,7 +55,7 @@ export function tagsOf(action) {
  */
 export function targetsFor(combat, unit, action) {
   const tags = tagsOf(action);
-  const enemies = countedEnemies(combat).filter((enemy) => enemy.alive);
+  const enemies = countedEnemies(combat).filter(isTargetable);
   if (unit.side === 'monsters') return [combat.hero].filter((hero) => hero?.alive);
   if (!tags.has('attack')) return enemies;
 

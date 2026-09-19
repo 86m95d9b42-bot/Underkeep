@@ -284,6 +284,9 @@ export function resolveDamage(combat, hit, options = {}) {
       attacker: hit.attacker,
       attack: hit.attack,
       kind: 'attack',
+      // What the blow was made of: a Fallen troll burns on fire or holy, and
+      // a standing one skips its regeneration for the same reason.
+      types: calculated.parts.filter((part) => part.amount > 0).map((part) => part.type),
     });
   }
 
@@ -309,6 +312,7 @@ export function resolveDamage(combat, hit, options = {}) {
  */
 export function overTimeDamage(combat, unit, amount, type, source = {}) {
   const part = { count: 0, sides: 0, flat: amount, type, main: true };
+  source = { ...source, types: type ? [type] : [] };
   const multiplier = typeMultiplier(unit, part, { magic: true });
   const dealt = multiplier === DAMAGE.immune ? 0 : Math.max(DAMAGE.minimum, Math.floor(amount * multiplier));
   if (dealt === 0) return { dealt: 0, immune: true, hp: unit.hp };

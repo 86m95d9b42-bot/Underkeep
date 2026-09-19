@@ -41,6 +41,7 @@ import {
   stunnedStart,
 } from './conditions.js';
 import { legalityOf, tagsOf } from './actions.js';
+import { monsterFlees, zeroHp } from './defeat.js';
 import { onField } from './field.js';
 
 export const DEFEND = data.turn.defend;
@@ -139,11 +140,7 @@ export function takeMonsterTurn(combat, unit, services = {}) {
 
   // 1. A monster that failed its morale check leaves, dropping half its gold.
   if (unit.fleeing) {
-    const dropped = Math.floor((unit.gold ?? 0) / 2);
-    unit.fled = true;
-    unit.gold = (unit.gold ?? 0) - dropped;
-    combat.droppedGold = (combat.droppedGold ?? 0) + dropped;
-    step(record, { type: 'fled', unit: unit.id, gold: dropped });
+    step(record, { type: 'fled', ...monsterFlees(combat, unit) });
     return endTurn(combat, unit, record, { lost: 'fleeing' });
   }
 
@@ -236,13 +233,16 @@ function fireTurnStart(combat, unit, record) {
 export function deathCheck(combat, unit, record, services = {}) {
   if (unit.hp > 0 || !unit.alive) return !unit.alive;
 
-  const payload = combat.hooks?.fire('zeroHP', { combat, unit, target: unit, cause: 'turnStart' });
-  if (payload?.saved) {
-    step(record, { type: 'saved', by: payload.savedBy });
+  const outcome = zeroHp(combat, unit, { cause: 'turnStart' });
+  if (outcome.saved) {
+    step(record, { type: 'saved', by: outcome.savedBy });
     return false;
   }
+  if (outcome.fallen) {
+    step(record, { type: 'fallen', unit: unit.id });
+    return true;
+  }
 
-  unit.alive = false;
   step(record, { type: 'died', unit: unit.id });
   combat.hooks?.fire('kill', { combat, target: unit, unit });
   services.onDeath?.(combat, unit);
@@ -255,6 +255,8 @@ export function deathCheck(combat, unit, record, services = {}) {
  */
 function endTurn(combat, unit, record, { lost } = {}) {
   if (lost) record.lost = lost;
+  // "Since its last turn" ends here, for a troll deciding whether to heal.
+  delete unit.burnedSinceTurn;
   const payload = combat.hooks?.fire('turnEnd', { combat, unit, rng: combat.rng });
   if (payload?.saves?.length) step(record, { type: 'saves', saves: payload.saves });
   if (payload?.ended?.length) step(record, { type: 'conditionsEnded', conditions: payload.ended });

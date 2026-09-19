@@ -28,9 +28,10 @@
  */
 import data from '../data/combat.json' with { type: 'json' };
 import { attackMods, defMod, defenceMods, isHelpless } from './conditions.js';
-import { ROWS, countedEnemies, onField, unitById } from './field.js';
+import { ROWS, countedEnemies, isTargetable, onField, unitById } from './field.js';
 import { targetsFor } from './actions.js';
 import { resolveDamage } from './damage.js';
+import { zeroHp } from './defeat.js';
 import { defendBonus } from './turn.js';
 
 export const ATTACK = data.attack;
@@ -237,12 +238,11 @@ function land(combat, attacker, target, attack, result, services) {
   const damage = services.damage ?? resolveDamage;
   out.damage = damage(combat, { attacker, target, attack, result: out }) ?? null;
 
+  // 13. ZERO HP? Section 9's ladder: the traits that catch it, then the fall.
   if (target.hp <= 0 && target.alive) {
-    const zero = combat.hooks?.fire('zeroHP', { combat, unit: target, target, attacker, attack });
-    if (!zero?.saved) {
-      target.alive = false;
-      out.killed = true;
-    }
+    const zero = zeroHp(combat, target, { attacker, attack, cause: 'attack' });
+    if (zero.died) out.killed = true;
+    if (zero.fallen) out.fallen = true;
   }
 
   const payload = { combat, attacker, unit: attacker, target, attack, result: out, damage: out.damage };
@@ -317,8 +317,10 @@ export function gatherModifiers(combat, attacker, target, attack = {}) {
  * that is Reforming — is no target.
  */
 export function canReach(combat, attacker, target, attack = {}) {
-  if (!target || !onField(target) || !target.alive) return { legal: false, why: 'gone' };
+  if (!target || !onField(target)) return { legal: false, why: 'gone' };
   if (target.untargetable) return { legal: false, why: 'untargetable' };
+  // A Fallen troll is not alive and is still a target, until it is burned.
+  if (!isTargetable(target)) return { legal: false, why: 'gone' };
   if (target.side === attacker.side) return { legal: false, why: 'ownSide' };
   const reachable = targetsFor(combat, attacker, { id: 'attack', tags: ['attack'], ...attack });
   if (!reachable.some((unit) => unit.id === target.id)) return { legal: false, why: 'badTarget' };
@@ -328,7 +330,7 @@ export function canReach(combat, attacker, target, attack = {}) {
 /** The first target this attack could legally take, or null. */
 function firstTarget(combat, attacker, attack) {
   const reachable = targetsFor(combat, attacker, { id: 'attack', tags: ['attack'], ...attack });
-  return reachable.find((unit) => unit.alive && onField(unit) && !unit.untargetable) ?? null;
+  return reachable.find(isTargetable) ?? null;
 }
 
 /** A unit, from a unit or an id. */
@@ -350,9 +352,7 @@ export function resolveAction(combat, unit, action, services = {}) {
 
 /** Every enemy an attack could reach, for the target picker. */
 export function reachableTargets(combat, attacker, attack = {}) {
-  return targetsFor(combat, attacker, { id: 'attack', tags: ['attack'], ...attack }).filter(
-    (unit) => unit.alive && !unit.untargetable,
-  );
+  return targetsFor(combat, attacker, { id: 'attack', tags: ['attack'], ...attack }).filter(isTargetable);
 }
 
 /** Whether any enemy at all is standing, which the round's end check wants. */

@@ -47,7 +47,7 @@ Work top to bottom. Check a box when the task is done and tested. Each phase end
 - [x] Hero turn and monster turn sequences (`06` sections 4–5)
 - [x] Attack resolution (`06` section 6) with tests for every step
 - [x] Damage order of operations (`06` section 7) with tests for crits, resistances, DR, and minimums
-- [ ] Zero HP, morale, fleeing, combat end (`06` sections 9, 14, 15)
+- [x] Zero HP, morale, fleeing, combat end (`06` sections 9, 14, 15)
 - [ ] AI script runner and archetypes (`06` section 11)
 - [ ] `monsters.json` for floors 1–2 and `encounters.json` for floors 1–2
 - [ ] Combat screen and Combat: Skills sheet (wide layout: enemies and log left, actions right; sheets become a right-hand panel)

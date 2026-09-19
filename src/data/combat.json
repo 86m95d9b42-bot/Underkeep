@@ -57,6 +57,39 @@
     "overTimeSkips": ["critical", "telegraph", "damageReduction"]
   },
 
+  "zeroHp": {
+    "_source": "06 section 9. The traits that catch a unit at 0 HP are hooks; these are the numbers they use.",
+    "heroRecoveryShare": 0.5,
+    "fallen": {
+      "_source": "Troll, Won't Stay Down. The combat does not end while an unburned troll is Fallen.",
+      "rounds": 3,
+      "hp": 10,
+      "burnedBy": ["fire", "holy"]
+    }
+  },
+
+  "morale": {
+    "_source": "06 section 9, Morale Triggers. Each trigger fires at most once per monster.",
+    "dice": "2d6",
+    "triggers": ["groupHalved", "hurt", "leaderDead"],
+    "groupShare": 0.5,
+    "hurtBelow": 0.25,
+    "fearless": 12
+  },
+
+  "fleeing": {
+    "_source": "06 section 14.",
+    "tn": 10,
+    "perLivingEnemy": 1,
+    "freeAttackers": 2,
+    "goldDroppedShare": 0.5
+  },
+
+  "victory": {
+    "_source": "06 section 15, After a Victory.",
+    "summonsWorthXp": 4
+  },
+
   "attack": {
     "_source": "06 section 6, and its Attack Modifiers table. Critical range is 01 section 4: a natural 20, or 19-20 with a Luck modifier of +2 or better, which a unit carries as its own critFrom.",
     "die": 20,
