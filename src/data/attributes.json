@@ -1,0 +1,114 @@
+{
+  "_source": "01 sections 3, 4 and 5: the six attributes, the modifier table, character creation, every derived statistic, and the XP curve. The formulas are written as data so `attributes.js` resolves them and nothing else does arithmetic on a rule.",
+
+  "_attributes": "01 section 3. The abbreviation is the identity the rules are written in (\"MIG mod\"); the name and the line about what each governs are player-facing, so they live in strings.json.",
+  "order": ["might", "agility", "vigor", "intellect", "wits", "luck"],
+  "attributes": {
+    "might": { "abbr": "MIG" },
+    "agility": { "abbr": "AGI" },
+    "vigor": { "abbr": "VIG" },
+    "intellect": { "abbr": "INT" },
+    "wits": { "abbr": "WIT" },
+    "luck": { "abbr": "LCK" }
+  },
+
+  "_range": "01 section 3: scored 3-20, and 18 is the natural maximum at creation.",
+  "min": 3,
+  "max": 20,
+  "maxAtCreation": 18,
+
+  "_modifiers": "01 section 3, the Attribute Modifier Table. Each band is the highest score it covers.",
+  "modifiers": [
+    { "upTo": 3, "mod": -3 },
+    { "upTo": 5, "mod": -2 },
+    { "upTo": 8, "mod": -1 },
+    { "upTo": 12, "mod": 0 },
+    { "upTo": 15, "mod": 1 },
+    { "upTo": 17, "mod": 2 },
+    { "upTo": 19, "mod": 3 },
+    { "upTo": 20, "mod": 4 }
+  ],
+
+  "_creation": "01 section 3, Character Creation. Classic rolls in order and may reroll the whole set; Standard rolls six results and assigns them freely.",
+  "creation": {
+    "modes": {
+      "classic": {
+        "roll": "3d6",
+        "inOrder": true,
+        "rerollWholeSet": true,
+        "rearrange": false
+      },
+      "standard": {
+        "roll": "4d6",
+        "dropLowest": 1,
+        "inOrder": false,
+        "rerollWholeSet": true,
+        "rearrange": true
+      }
+    },
+    "default": "standard"
+  },
+
+  "_derived": "01 section 4. Every formula names the attributes it reads, so the resolver never hard-codes one.",
+  "derived": {
+    "hp": {
+      "_source": "Level 1: 10 + VIG score. Each level after: +1d6 + VIG mod (minimum +2).",
+      "base": 10,
+      "baseScore": "vigor",
+      "perLevel": { "dice": "1d6", "mod": "vigor", "minimum": 2 }
+    },
+    "fp": {
+      "_source": "4 + level + INT mod + WIT mod (minimum 2).",
+      "base": 4,
+      "perLevel": 1,
+      "mods": ["intellect", "wits"],
+      "minimum": 2
+    },
+    "baseAttack": { "_source": "floor(level / 2).", "perLevels": 2 },
+    "attack": {
+      "_source": "d20 + BA + the attribute the attack uses, plus weapon and skill bonuses.",
+      "melee": "might",
+      "ranged": "agility",
+      "spell": "intellect"
+    },
+    "defense": { "_source": "10 + AGI mod + armor + shield + bonuses.", "base": 10, "mod": "agility" },
+    "initiative": { "_source": "d6 + AGI mod, rolled each round.", "die": "1d6", "mod": "agility" },
+    "saves": {
+      "_source": "d20 + attribute mod + floor(level / 3) vs the effect's DC.",
+      "die": "1d20",
+      "perLevels": 3,
+      "types": { "body": "vigor", "reflex": "agility", "mind": "wits" }
+    },
+    "inventorySlots": { "_source": "10 + (MIG mod x 2).", "base": 10, "mod": "might", "perMod": 2 },
+    "critRange": {
+      "_source": "Natural 20, or 19-20 when the LCK mod is +2 or better.",
+      "natural": 20,
+      "mod": "luck",
+      "wideFromMod": 2,
+      "wideNatural": 19
+    },
+    "effectDc": {
+      "_source": "Player abilities use DC 10 + floor(level / 2) + the governing attribute mod.",
+      "base": 10,
+      "perLevels": 2
+    }
+  },
+
+  "_leveling": "01 section 5. XP to reach level L = 50 x L x (L - 1).",
+  "leveling": {
+    "cap": 20,
+    "xpFactor": 50,
+    "skillPointsAtLevel1": 1,
+    "skillPointsPerLevel": 1,
+    "attributePointLevels": [4, 8, 12, 16, 20],
+    "attributePointMax": 20,
+    "respecCostPerLevel": 100,
+    "_xpSources": "01 section 5. Each is multiplied by the floor number; monsters carry their own XP in monsters.json.",
+    "xpSources": {
+      "disarmTrap": 10,
+      "pickLock": 5,
+      "findSecretDoor": 10,
+      "findStairs": 25
+    }
+  }
+}

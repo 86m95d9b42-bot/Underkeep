@@ -55,7 +55,7 @@ Work top to bottom. Check a box when the task is done and tested. Each phase end
 
 ## Phase 4 — Hero
 
-- [ ] `attributes.json`, `origins.json`
+- [x] `attributes.json`, `origins.json`
 - [ ] Character creation: Classic and Standard rolls, origins, name — New Game, Create: Attributes, Create: Origin screens
 - [ ] Derived stats (`01` section 4) with tests
 - [ ] `skills.json` for all four Paths and Crossroads, with hook effects

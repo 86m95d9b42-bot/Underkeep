@@ -1,0 +1,56 @@
+{
+  "_source": "01 section 3, Origins. Each grants +1 to one attribute, one free skill that does not count against Path requirements, and a starting kit. The kit's item ids are `04`'s, and items.json arrives in Phase 5. The names a player reads are in strings.json.",
+
+  "order": ["sellsword", "cutpurse", "apprentice", "pilgrim"],
+
+  "origins": {
+    "sellsword": {
+      "attribute": "might",
+      "bonus": 1,
+      "freeSkill": { "id": "weapon_training", "rank": 1 },
+      "kit": [
+        { "item": "long_sword", "count": 1, "equip": "weapon" },
+        { "item": "leather_armor", "count": 1, "equip": "armor" },
+        { "item": "ration", "count": 2 }
+      ],
+      "gold": 10
+    },
+
+    "cutpurse": {
+      "attribute": "agility",
+      "bonus": 1,
+      "freeSkill": { "id": "lockpicking", "rank": 1 },
+      "kit": [
+        { "item": "short_sword", "count": 1, "equip": "weapon" },
+        { "item": "dagger", "count": 3 },
+        { "item": "lockpicks", "count": 1 },
+        { "item": "ten_foot_pole", "count": 1 }
+      ],
+      "gold": 25
+    },
+
+    "apprentice": {
+      "attribute": "intellect",
+      "bonus": 1,
+      "freeSkill": { "id": "magic_missile" },
+      "kit": [
+        { "item": "staff", "count": 1, "equip": "weapon" },
+        { "item": "robe", "count": 1, "equip": "armor" },
+        { "item": "scroll_of_sleep", "count": 1 }
+      ],
+      "gold": 15
+    },
+
+    "pilgrim": {
+      "attribute": "wits",
+      "bonus": 1,
+      "freeSkill": { "id": "mend" },
+      "kit": [
+        { "item": "mace", "count": 1, "equip": "weapon" },
+        { "item": "leather_armor", "count": 1, "equip": "armor" },
+        { "item": "healing_herb", "count": 2 }
+      ],
+      "gold": 10
+    }
+  }
+}

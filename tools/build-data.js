@@ -436,6 +436,132 @@ function checkEncounters(json, monsters) {
 }
 
 /**
+ * attributes.json: `01` sections 3, 4 and 5. The modifier table is the one
+ * table every other rule reads, so a gap or an overlap in it would quietly
+ * change every attack in the game.
+ */
+function checkAttributes(json, strings) {
+  const order = json.order ?? [];
+  if (order.length !== 6) problems.push(`attributes.json lists ${order.length} attributes, expected 6`);
+  const abbrs = new Set();
+  for (const id of order) {
+    const entry = json.attributes?.[id];
+    if (!entry) {
+      problems.push(`attributes.json lists "${id}" with no entry`);
+      continue;
+    }
+    if (!entry.abbr) problems.push(`attributes.json ${id} has no abbreviation`);
+    if (abbrs.has(entry.abbr)) problems.push(`attributes.json repeats the abbreviation ${entry.abbr}`);
+    abbrs.add(entry.abbr);
+    // The words a player reads live in strings.json, as a condition's do.
+    if (!strings?.attributes?.[id]?.name) problems.push(`attributes.json ${id} has no name in strings.json`);
+    if (!strings?.attributes?.[id]?.governs) {
+      problems.push(`attributes.json ${id} says nothing about what it governs in strings.json`);
+    }
+  }
+  for (const id of Object.keys(json.attributes ?? {})) {
+    if (!id.startsWith('_') && !order.includes(id)) problems.push(`attributes.json has "${id}" outside its order`);
+  }
+
+  // The bands have to rise, and cover every score from the minimum to the max.
+  const bands = json.modifiers ?? [];
+  let previous = (json.min ?? 3) - 1;
+  for (const band of bands) {
+    if (!(band.upTo > previous)) problems.push(`attributes.json modifier bands are out of order at ${band.upTo}`);
+    previous = band.upTo;
+  }
+  if (previous !== json.max) problems.push(`attributes.json modifiers stop at ${previous}, not ${json.max}`);
+  if (!(json.min >= 1 && json.maxAtCreation < json.max)) {
+    problems.push('attributes.json has an impossible score range');
+  }
+  for (let i = 1; i < bands.length; i += 1) {
+    if (!(bands[i].mod > bands[i - 1].mod)) problems.push('attributes.json modifiers do not rise with the score');
+  }
+
+  for (const mode of Object.values(json.creation?.modes ?? {})) {
+    if (!/^\d*d\d+$/.test(String(mode.roll))) problems.push(`attributes.json creation rolls "${mode.roll}"`);
+  }
+  if (!json.creation?.modes?.[json.creation?.default]) {
+    problems.push('attributes.json default creation mode is not one of its modes');
+  }
+
+  // Every formula that names an attribute has to name a real one.
+  const named = [];
+  const walk = (node) => {
+    if (typeof node === 'string') named.push(node);
+    else if (Array.isArray(node)) node.forEach(walk);
+    else if (node && typeof node === 'object') {
+      for (const [key, value] of Object.entries(node)) {
+        if (key.startsWith('_')) continue;
+        if (['mod', 'mods', 'baseScore', 'melee', 'ranged', 'spell'].includes(key)) walk(value);
+        else if (key === 'types') walk(Object.values(value));
+        else if (typeof value === 'object') walk(value);
+      }
+    }
+  };
+  walk(json.derived ?? {});
+  for (const name of named) {
+    if (!order.includes(name)) problems.push(`attributes.json derived stats name "${name}", which is not an attribute`);
+  }
+
+  const leveling = json.leveling ?? {};
+  if (!(leveling.cap >= 2)) problems.push('attributes.json has no level cap');
+  if (!(leveling.xpFactor > 0)) problems.push('attributes.json has no XP factor');
+  for (const level of leveling.attributePointLevels ?? []) {
+    if (!(level >= 2 && level <= leveling.cap)) problems.push(`attributes.json gives a point at level ${level}`);
+  }
+  for (const [deed, rate] of Object.entries(leveling.xpSources ?? {})) {
+    if (!(rate > 0)) problems.push(`attributes.json pays ${rate} XP for "${deed}"`);
+  }
+}
+
+/**
+ * origins.json: `01` section 3, Origins. Four of them, each naming a real
+ * attribute; the kit's items and the free skills are checked against
+ * items.json and skills.json once those exist.
+ */
+function checkOrigins(json, attributes, strings, items, skills) {
+  const order = json.order ?? [];
+  if (order.length !== 4) problems.push(`origins.json lists ${order.length} origins, expected 4`);
+
+  const bonuses = new Set();
+  for (const id of order) {
+    const entry = json.origins?.[id];
+    const where = `origins.json ${id}`;
+    if (!entry) {
+      problems.push(`${where} is listed with no entry`);
+      continue;
+    }
+    if (!strings?.origins?.[id]?.name) problems.push(`${where} has no name in strings.json`);
+    if (!attributes?.order?.includes(entry.attribute)) {
+      problems.push(`${where} raises "${entry.attribute}", which is not an attribute`);
+    }
+    if (!(entry.bonus >= 1)) problems.push(`${where} grants no attribute bonus`);
+    // Each origin points at a different attribute, which is what makes the
+    // four a choice rather than a flavour.
+    if (bonuses.has(entry.attribute)) problems.push(`${where} raises the same attribute as another origin`);
+    bonuses.add(entry.attribute);
+
+    if (!entry.freeSkill?.id) problems.push(`${where} has no free skill`);
+    else if (skills && !skills.skills?.[entry.freeSkill.id]) {
+      problems.push(`${where} grants "${entry.freeSkill.id}", which has no skill entry`);
+    }
+    if (!(entry.gold >= 0)) problems.push(`${where} has no starting gold`);
+    if (!entry.kit?.length) problems.push(`${where} has no kit`);
+    for (const line of entry.kit ?? []) {
+      if (!line.item) problems.push(`${where} has a kit line with no item`);
+      if (!(line.count >= 1)) problems.push(`${where} carries ${line.count} of "${line.item}"`);
+      if (items && !items.items?.[line.item]) {
+        problems.push(`${where} carries "${line.item}", which has no item entry`);
+      }
+    }
+  }
+  for (const id of Object.keys(json.origins ?? {})) {
+    if (!id.startsWith('_') && !order.includes(id)) problems.push(`origins.json has "${id}" outside its order`);
+  }
+}
+
+/**
  * file name -> checker. A file with no checker is only parsed, which still
  * catches the most common failure: a trailing comma in hand-edited JSON.
  * @type {Record<string, (json: any) => void>}
@@ -445,6 +571,17 @@ const CHECKS = {
   // Checked against strings.json, so it is read first.
   'combat.json': (json) => checkCombat(json, loaded['strings.json']),
   'ai.json': checkAi,
+  'attributes.json': (json) => checkAttributes(json, loaded['strings.json']),
+  // items.json and skills.json arrive in Phases 5 and 4; until then the kit
+  // and the free skills are checked for shape alone.
+  'origins.json': (json) =>
+    checkOrigins(
+      json,
+      loaded['attributes.json'],
+      loaded['strings.json'],
+      loaded['items.json'],
+      loaded['skills.json'],
+    ),
   'monsters.json': (json) => checkMonsters(json, loaded['ai.json'], loaded['combat.json']),
   'encounters.json': (json) => checkEncounters(json, loaded['monsters.json']),
   'floors.json': checkFloors,

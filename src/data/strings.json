@@ -314,5 +314,49 @@
     "cancel": "CANCEL",
     "close": "Close",
     "comingSoon": "Not built yet"
+  },
+  "attributes": {
+    "might": {
+      "name": "MIGHT",
+      "governs": "Melee hit and damage, carrying, bashing doors"
+    },
+    "agility": {
+      "name": "AGILITY",
+      "governs": "Defense, ranged attacks, initiative, locks and traps"
+    },
+    "vigor": {
+      "name": "VIGOR",
+      "governs": "Hit points, Body saves, poison and disease"
+    },
+    "intellect": {
+      "name": "INTELLECT",
+      "governs": "Spell power, Focus, identifying, scrolls"
+    },
+    "wits": {
+      "name": "WITS",
+      "governs": "Perception, secret doors, healing, Mind saves"
+    },
+    "luck": {
+      "name": "LUCK",
+      "governs": "Critical range, loot, fleeing, shop prices"
+    }
+  },
+  "origins": {
+    "sellsword": {
+      "name": "SELLSWORD",
+      "blurb": "Paid to fight, and good at it."
+    },
+    "cutpurse": {
+      "name": "CUTPURSE",
+      "blurb": "Quick hands, quicker feet."
+    },
+    "apprentice": {
+      "name": "APPRENTICE",
+      "blurb": "Sent down to fetch something."
+    },
+    "pilgrim": {
+      "name": "PILGRIM",
+      "blurb": "Walks towards what others run from."
+    }
   }
 }
