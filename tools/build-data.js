@@ -11,6 +11,8 @@ import { readdir, readFile } from 'node:fs/promises';
 import { checkCondition } from '../src/engine/ai.js';
 import { parsePart } from '../src/engine/damage.js';
 import { PENDING, TRAITS } from '../src/engine/monster-traits.js';
+import { HANDLERS, PENDING as SKILLS_PENDING } from '../src/engine/skill-hooks.js';
+import { EVENTS } from '../src/engine/hooks.js';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -562,6 +564,83 @@ function checkOrigins(json, attributes, strings, items, skills) {
 }
 
 /**
+ * skills.json: `01` section 6. The tree is 51 skills and 68 points; a skill
+ * that names an event the engine does not fire, or a handler nothing
+ * implements, would be a passive that quietly does nothing.
+ */
+function checkSkills(json, strings, attributes) {
+  const ids = Object.keys(json.skills ?? {}).filter((id) => !id.startsWith('_'));
+  if (ids.length === 0) {
+    problems.push('skills.json has no skills');
+    return;
+  }
+
+  const paths = Object.keys(json.paths ?? {});
+  const tiers = (json.tiers ?? []).map((row) => row.tier);
+  let points = 0;
+
+  for (const id of ids) {
+    const entry = json.skills[id];
+    const where = `skills.json ${id}`;
+    points += entry.ranks ?? 0;
+
+    if (!paths.includes(entry.path) && entry.path !== 'crossroads') {
+      problems.push(`${where} is on the "${entry.path}" path, which does not exist`);
+    }
+    if (entry.path === 'crossroads') {
+      if (entry.paths?.length !== 2) problems.push(`${where} is a Crossroads skill without two paths`);
+      for (const path of entry.paths ?? []) {
+        if (!paths.includes(path)) problems.push(`${where} joins "${path}", which is not a path`);
+      }
+    } else if (!tiers.includes(entry.tier)) {
+      problems.push(`${where} is tier ${entry.tier}, which is not a tier`);
+    }
+    if (!json.types?.includes(entry.type)) problems.push(`${where} is a "${entry.type}"`);
+    if (!(entry.ranks >= 1)) problems.push(`${where} has ${entry.ranks} ranks`);
+    if (entry.type === 'active' && entry.fp === undefined) problems.push(`${where} is active but costs nothing`);
+    if (entry.type === 'active' && !entry.action) problems.push(`${where} is active but does nothing`);
+
+    // A capstone asks for an attribute, and it has to be a real one.
+    if (entry.requires?.attribute && !attributes?.order?.includes(entry.requires.attribute)) {
+      problems.push(`${where} requires "${entry.requires.attribute}", which is not an attribute`);
+    }
+    if (entry.tier === 4 && !entry.requires?.attribute) {
+      problems.push(`${where} is a capstone with no attribute requirement (01 section 6)`);
+    }
+
+    for (const effect of entry.effects ?? []) {
+      const kinds = ['sheet', 'hook', 'explore'].filter((kind) => effect[kind]);
+      if (kinds.length !== 1) problems.push(`${where} has an effect that is neither a sheet, a hook nor an explore bonus`);
+      if (effect.hook) {
+        if (!EVENTS.includes(effect.hook)) {
+          problems.push(`${where} hangs on "${effect.hook}", which is not an event 06 section 16 fires`);
+        }
+        if (!effect.handler) problems.push(`${where} hangs on an event with no handler`);
+        else if (!HANDLERS[effect.handler] && !SKILLS_PENDING[effect.handler]) {
+          problems.push(`${where} names handler "${effect.handler}", which nothing implements`);
+        }
+      }
+      if (effect.fromRank && !(effect.fromRank <= entry.ranks)) {
+        problems.push(`${where} has an effect from rank ${effect.fromRank}, past its ${entry.ranks}`);
+      }
+    }
+
+    // And the words a player reads (CLAUDE.md, and the conditions ruling).
+    if (!strings?.skills?.[id]?.name) problems.push(`${where} has no name in strings.json`);
+    if (!strings?.skills?.[id]?.effect) problems.push(`${where} has no effect line in strings.json`);
+  }
+
+  // 01 section 6: "about 68 available" against a hero's 21 by level 20.
+  if (points !== 68) problems.push(`skills.json holds ${points} skill points, and 01 section 6 counts 68`);
+
+  const gates = json.tiers ?? [];
+  for (let i = 1; i < gates.length; i += 1) {
+    if (!(gates[i].spent > gates[i - 1].spent)) problems.push('skills.json tier gates do not rise');
+  }
+  if (!(json.crossroads?.pointsInEachPath >= 1)) problems.push('skills.json Crossroads asks for no points');
+}
+
+/**
  * file name -> checker. A file with no checker is only parsed, which still
  * catches the most common failure: a trailing comma in hand-edited JSON.
  * @type {Record<string, (json: any) => void>}
@@ -572,6 +651,7 @@ const CHECKS = {
   'combat.json': (json) => checkCombat(json, loaded['strings.json']),
   'ai.json': checkAi,
   'attributes.json': (json) => checkAttributes(json, loaded['strings.json']),
+  'skills.json': (json) => checkSkills(json, loaded['strings.json'], loaded['attributes.json']),
   // items.json and skills.json arrive in Phases 5 and 4; until then the kit
   // and the free skills are checked for shape alone.
   'origins.json': (json) =>

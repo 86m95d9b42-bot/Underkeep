@@ -1,0 +1,942 @@
+{
+  "_source": "01 section 6, the Skill Tree: four Paths of four tiers, plus the Crossroads hybrids. Player-facing names and effect lines live in strings.json, as a condition's do. 51 skills and 68 skill points, which is the document's own count.",
+  "_tiers": "01 section 6: a tier unlocks once enough points are spent in that Path. Tier IV also needs an attribute of 15 or higher, which the skill itself names.",
+  "tiers": [
+    {
+      "tier": 1,
+      "spent": 0
+    },
+    {
+      "tier": 2,
+      "spent": 3
+    },
+    {
+      "tier": 3,
+      "spent": 6
+    },
+    {
+      "tier": 4,
+      "spent": 10
+    }
+  ],
+  "types": [
+    "passive",
+    "active",
+    "reaction"
+  ],
+  "_paths": "The two attributes each Path is built on (01 section 6's headings).",
+  "paths": {
+    "blade": {
+      "attributes": [
+        "might",
+        "vigor"
+      ]
+    },
+    "shadow": {
+      "attributes": [
+        "agility",
+        "luck"
+      ]
+    },
+    "arcana": {
+      "attributes": [
+        "intellect"
+      ]
+    },
+    "spirit": {
+      "attributes": [
+        "wits",
+        "vigor"
+      ]
+    }
+  },
+  "crossroads": {
+    "cost": 1,
+    "pointsInEachPath": 4
+  },
+  "_effects": "Two kinds. A `sheet` effect is a number on the hero's own sheet, applied when the skill is learned. A `hook` effect names an event from 06 section 16 and the handler that runs on it. An `explore` effect is a bonus the dungeon systems read (03 and 05). An `action` block is what an active skill does when it is used.",
+  "skills": {
+    "weapon_training": {
+      "path": "blade",
+      "tier": 1,
+      "type": "passive",
+      "ranks": 3,
+      "effects": [
+        {
+          "sheet": "attack",
+          "attack": "melee",
+          "perRank": 1
+        }
+      ]
+    },
+    "power_strike": {
+      "path": "blade",
+      "tier": 1,
+      "type": "active",
+      "ranks": 1,
+      "fp": 2,
+      "action": {
+        "kind": "melee",
+        "toHit": -2,
+        "extraWeaponDice": 1
+      }
+    },
+    "toughness": {
+      "path": "blade",
+      "tier": 1,
+      "type": "passive",
+      "ranks": 3,
+      "effects": [
+        {
+          "sheet": "maxHp",
+          "perRank": 5
+        }
+      ]
+    },
+    "brute_force": {
+      "path": "blade",
+      "tier": 1,
+      "type": "passive",
+      "ranks": 2,
+      "effects": [
+        {
+          "explore": "bash",
+          "perRank": 3
+        },
+        {
+          "explore": "chestNeverBreaks",
+          "fromRank": 2
+        },
+        {
+          "explore": "bashNoiseOneIn",
+          "value": 6,
+          "fromRank": 2
+        }
+      ]
+    },
+    "cleave": {
+      "path": "blade",
+      "tier": 2,
+      "type": "passive",
+      "ranks": 1,
+      "effects": [
+        {
+          "hook": "kill",
+          "handler": "cleave",
+          "limit": {
+            "uses": 1,
+            "per": "turn"
+          }
+        }
+      ]
+    },
+    "armor_training": {
+      "path": "blade",
+      "tier": 2,
+      "type": "passive",
+      "ranks": 2,
+      "effects": [
+        {
+          "sheet": "noHeavyArmorPenalty"
+        },
+        {
+          "sheet": "dr",
+          "value": 1,
+          "while": "heavyArmor",
+          "fromRank": 2
+        }
+      ]
+    },
+    "shield_bash": {
+      "path": "blade",
+      "tier": 2,
+      "type": "active",
+      "ranks": 1,
+      "fp": 2,
+      "requires": {
+        "equipped": "shield"
+      },
+      "action": {
+        "kind": "melee",
+        "damage": "1d4 crush",
+        "addMod": "might",
+        "onHit": {
+          "save": "body",
+          "condition": "stunned",
+          "rounds": 1
+        }
+      }
+    },
+    "riposte": {
+      "path": "blade",
+      "tier": 3,
+      "type": "reaction",
+      "ranks": 1,
+      "fp": 2,
+      "effects": [
+        {
+          "hook": "miss",
+          "handler": "riposte",
+          "meleeOnly": true,
+          "limit": {
+            "uses": 1,
+            "per": "round"
+          }
+        }
+      ]
+    },
+    "second_wind": {
+      "path": "blade",
+      "tier": 3,
+      "type": "active",
+      "ranks": 1,
+      "fp": 0,
+      "free": true,
+      "action": {
+        "heal": {
+          "shareOfMaxHp": 0.25
+        },
+        "limit": {
+          "uses": 1,
+          "per": "combat"
+        }
+      }
+    },
+    "weapon_mastery": {
+      "path": "blade",
+      "tier": 3,
+      "type": "passive",
+      "ranks": 1,
+      "choose": "weaponGroup",
+      "effects": [
+        {
+          "sheet": "critFrom",
+          "widen": 1
+        },
+        {
+          "sheet": "critDice",
+          "value": 3
+        }
+      ]
+    },
+    "juggernaut": {
+      "path": "blade",
+      "tier": 4,
+      "type": "passive",
+      "ranks": 1,
+      "requires": {
+        "attribute": "might",
+        "score": 15
+      },
+      "effects": [
+        {
+          "sheet": "attacks",
+          "value": 2
+        }
+      ]
+    },
+    "marksman": {
+      "path": "shadow",
+      "tier": 1,
+      "type": "passive",
+      "ranks": 3,
+      "effects": [
+        {
+          "sheet": "attack",
+          "attack": "ranged",
+          "perRank": 1
+        }
+      ]
+    },
+    "sneak": {
+      "path": "shadow",
+      "tier": 1,
+      "type": "passive",
+      "ranks": 1,
+      "effects": [
+        {
+          "sheet": "surpriseOn",
+          "value": 2
+        }
+      ]
+    },
+    "lockpicking": {
+      "path": "shadow",
+      "tier": 1,
+      "type": "passive",
+      "ranks": 3,
+      "effects": [
+        {
+          "explore": "pick",
+          "perRank": 2
+        },
+        {
+          "explore": "picksNeverBreak",
+          "fromRank": 2
+        },
+        {
+          "explore": "pickSteps",
+          "value": 1,
+          "fromRank": 3
+        }
+      ]
+    },
+    "trapfinding": {
+      "path": "shadow",
+      "tier": 1,
+      "type": "passive",
+      "ranks": 3,
+      "effects": [
+        {
+          "explore": "trap",
+          "perRank": 2
+        },
+        {
+          "explore": "noPassiveNoticePenalty",
+          "fromRank": 2
+        },
+        {
+          "explore": "salvageFrom",
+          "value": 5,
+          "fromRank": 3
+        }
+      ]
+    },
+    "backstab": {
+      "path": "shadow",
+      "tier": 2,
+      "type": "passive",
+      "ranks": 1,
+      "effects": [
+        {
+          "hook": "damageCalc",
+          "handler": "backstab",
+          "weaponDice": 2,
+          "vs": [
+            "surprised",
+            "stunned",
+            "asleep",
+            "blinded"
+          ]
+        }
+      ]
+    },
+    "evasion": {
+      "path": "shadow",
+      "tier": 2,
+      "type": "passive",
+      "ranks": 2,
+      "effects": [
+        {
+          "sheet": "def",
+          "perRank": 1
+        },
+        {
+          "hook": "damageCalc",
+          "handler": "evasion",
+          "fromRank": 2
+        }
+      ]
+    },
+    "envenom": {
+      "path": "shadow",
+      "tier": 2,
+      "type": "active",
+      "ranks": 1,
+      "fp": 2,
+      "action": {
+        "buff": "envenom",
+        "limit": {
+          "uses": 1,
+          "per": "combat"
+        }
+      },
+      "effects": [
+        {
+          "hook": "hit",
+          "handler": "envenom"
+        }
+      ]
+    },
+    "nimble_fingers": {
+      "path": "shadow",
+      "tier": 2,
+      "type": "passive",
+      "ranks": 1,
+      "effects": [
+        {
+          "explore": "disarmSteps",
+          "value": 1
+        },
+        {
+          "explore": "disarmNearMiss",
+          "by": 5
+        }
+      ]
+    },
+    "twin_shot": {
+      "path": "shadow",
+      "tier": 3,
+      "type": "active",
+      "ranks": 1,
+      "fp": 3,
+      "action": {
+        "kind": "ranged",
+        "attacks": 2,
+        "toHit": -2
+      }
+    },
+    "vanish": {
+      "path": "shadow",
+      "tier": 3,
+      "type": "active",
+      "ranks": 1,
+      "fp": 3,
+      "action": {
+        "choose": [
+          "flee",
+          "hide"
+        ],
+        "condition": "hidden",
+        "limit": {
+          "uses": 1,
+          "per": "combat"
+        }
+      }
+    },
+    "lucky": {
+      "path": "shadow",
+      "tier": 3,
+      "type": "passive",
+      "ranks": 1,
+      "effects": [
+        {
+          "hook": "attackRoll",
+          "handler": "lucky",
+          "limit": {
+            "uses": 1,
+            "per": "combat"
+          }
+        }
+      ]
+    },
+    "death_strike": {
+      "path": "shadow",
+      "tier": 4,
+      "type": "active",
+      "ranks": 1,
+      "fp": 5,
+      "requires": {
+        "attribute": "agility",
+        "score": 15
+      },
+      "action": {
+        "kind": "melee",
+        "vs": [
+          "surprised",
+          "stunned",
+          "asleep",
+          "hidden"
+        ],
+        "onHit": {
+          "save": "body",
+          "orDies": true,
+          "bossTripleDamage": true
+        }
+      }
+    },
+    "magic_missile": {
+      "path": "arcana",
+      "tier": 1,
+      "type": "active",
+      "ranks": 1,
+      "fp": 1,
+      "action": {
+        "kind": "spell",
+        "autoHit": true,
+        "anyRow": true,
+        "damage": "1d4+1 force",
+        "missiles": {
+          "base": 1,
+          "perLevels": 4,
+          "max": 5
+        }
+      }
+    },
+    "arcane_well": {
+      "path": "arcana",
+      "tier": 1,
+      "type": "passive",
+      "ranks": 3,
+      "effects": [
+        {
+          "sheet": "maxFp",
+          "perRank": 3
+        }
+      ]
+    },
+    "lore": {
+      "path": "arcana",
+      "tier": 1,
+      "type": "passive",
+      "ranks": 1,
+      "effects": [
+        {
+          "explore": "identify"
+        },
+        {
+          "explore": "seeEnemyDetail"
+        },
+        {
+          "explore": "magicTrap",
+          "value": 3
+        }
+      ]
+    },
+    "knock": {
+      "path": "arcana",
+      "tier": 1,
+      "type": "active",
+      "ranks": 1,
+      "fp": 2,
+      "outOfCombat": true,
+      "action": {
+        "opens": [
+          "simple",
+          "good"
+        ],
+        "checkAbove": "good",
+        "attribute": "intellect"
+      }
+    },
+    "sleep": {
+      "path": "arcana",
+      "tier": 2,
+      "type": "active",
+      "ranks": 1,
+      "fp": 3,
+      "action": {
+        "kind": "spell",
+        "target": "row",
+        "save": "mind",
+        "condition": "asleep",
+        "maxHd": {
+          "perLevel": 1,
+          "plus": 2
+        },
+        "immune": [
+          "undead"
+        ]
+      }
+    },
+    "frost_shard": {
+      "path": "arcana",
+      "tier": 2,
+      "type": "active",
+      "ranks": 1,
+      "fp": 2,
+      "action": {
+        "kind": "spell",
+        "damage": "2d6 cold",
+        "addMod": "intellect",
+        "onHit": {
+          "save": "reflex",
+          "condition": "slowed"
+        }
+      }
+    },
+    "dispel_ward": {
+      "path": "arcana",
+      "tier": 2,
+      "type": "active",
+      "ranks": 1,
+      "fp": 3,
+      "outOfCombat": true,
+      "action": {
+        "opens": [
+          "sealed"
+        ],
+        "disarms": [
+          "arcane"
+        ],
+        "attribute": "intellect",
+        "bonus": 4
+      }
+    },
+    "arcane_shield": {
+      "path": "arcana",
+      "tier": 2,
+      "type": "reaction",
+      "ranks": 1,
+      "fp": 2,
+      "effects": [
+        {
+          "hook": "attackRoll",
+          "handler": "arcaneShield",
+          "def": 4,
+          "limit": {
+            "uses": 1,
+            "per": "round"
+          }
+        }
+      ]
+    },
+    "fireball": {
+      "path": "arcana",
+      "tier": 3,
+      "type": "active",
+      "ranks": 1,
+      "fp": 5,
+      "action": {
+        "kind": "spell",
+        "target": "row",
+        "area": true,
+        "damage": {
+          "perLevel": "1d6",
+          "maxDice": 10
+        },
+        "save": "reflex",
+        "onSave": "half"
+      }
+    },
+    "blink": {
+      "path": "arcana",
+      "tier": 3,
+      "type": "active",
+      "ranks": 1,
+      "fp": 3,
+      "action": {
+        "buff": "blink",
+        "rounds": 3
+      },
+      "effects": [
+        {
+          "hook": "attackRoll",
+          "handler": "blink",
+          "chance": 0.5
+        }
+      ]
+    },
+    "mana_siphon": {
+      "path": "arcana",
+      "tier": 3,
+      "type": "passive",
+      "ranks": 1,
+      "effects": [
+        {
+          "hook": "kill",
+          "handler": "manaSiphon",
+          "fp": 1
+        }
+      ]
+    },
+    "archmage": {
+      "path": "arcana",
+      "tier": 4,
+      "type": "passive",
+      "ranks": 1,
+      "requires": {
+        "attribute": "intellect",
+        "score": 15
+      },
+      "effects": [
+        {
+          "sheet": "spellCost",
+          "value": -1,
+          "minimum": 1
+        },
+        {
+          "hook": "beforeAction",
+          "handler": "archmage",
+          "limit": {
+            "uses": 1,
+            "per": "combat"
+          }
+        }
+      ]
+    },
+    "mend": {
+      "path": "spirit",
+      "tier": 1,
+      "type": "active",
+      "ranks": 1,
+      "fp": 2,
+      "outOfCombat": true,
+      "action": {
+        "heal": {
+          "dice": "2d6",
+          "addMod": "wits"
+        }
+      }
+    },
+    "keen_senses": {
+      "path": "spirit",
+      "tier": 1,
+      "type": "passive",
+      "ranks": 2,
+      "effects": [
+        {
+          "explore": "search",
+          "perRank": 3
+        },
+        {
+          "sheet": "cannotBeSurprised",
+          "fromRank": 2
+        },
+        {
+          "explore": "warnWithin",
+          "value": 1,
+          "fromRank": 2
+        }
+      ]
+    },
+    "forager": {
+      "path": "spirit",
+      "tier": 1,
+      "type": "passive",
+      "ranks": 1,
+      "effects": [
+        {
+          "explore": "rationsLastTwiceAsLong"
+        },
+        {
+          "hook": "combatEnd",
+          "handler": "forager",
+          "oneIn": 6,
+          "item": "healing_herb"
+        }
+      ]
+    },
+    "turn_undead": {
+      "path": "spirit",
+      "tier": 2,
+      "type": "active",
+      "ranks": 1,
+      "fp": 3,
+      "action": {
+        "kind": "spell",
+        "target": "row",
+        "save": "mind",
+        "only": [
+          "undead"
+        ],
+        "fleesAtHd": {
+          "perLevel": 1
+        },
+        "destroysAtHd": {
+          "perLevel": 0.5
+        }
+      }
+    },
+    "resilience": {
+      "path": "spirit",
+      "tier": 2,
+      "type": "passive",
+      "ranks": 2,
+      "effects": [
+        {
+          "sheet": "saves",
+          "perRank": 2
+        }
+      ]
+    },
+    "cleanse": {
+      "path": "spirit",
+      "tier": 2,
+      "type": "active",
+      "ranks": 1,
+      "fp": 2,
+      "action": {
+        "removes": 1
+      }
+    },
+    "regeneration": {
+      "path": "spirit",
+      "tier": 3,
+      "type": "passive",
+      "ranks": 1,
+      "effects": [
+        {
+          "hook": "turnStart",
+          "handler": "regeneration",
+          "hp": 1
+        },
+        {
+          "explore": "healPerSteps",
+          "hp": 1,
+          "steps": 10
+        }
+      ]
+    },
+    "spirit_ward": {
+      "path": "spirit",
+      "tier": 3,
+      "type": "active",
+      "ranks": 1,
+      "fp": 4,
+      "action": {
+        "buff": "spiritWard",
+        "rounds": null
+      },
+      "effects": [
+        {
+          "hook": "damageCalc",
+          "handler": "spiritWard",
+          "dr": 3
+        }
+      ]
+    },
+    "smite": {
+      "path": "spirit",
+      "tier": 3,
+      "type": "active",
+      "ranks": 1,
+      "fp": 3,
+      "action": {
+        "kind": "melee",
+        "addModToHit": "wits",
+        "extraDice": "2d6",
+        "doubleVs": [
+          "undead",
+          "demon"
+        ]
+      }
+    },
+    "undying": {
+      "path": "spirit",
+      "tier": 4,
+      "type": "passive",
+      "ranks": 1,
+      "requires": {
+        "attribute": "wits",
+        "score": 15
+      },
+      "effects": [
+        {
+          "hook": "zeroHP",
+          "handler": "undying",
+          "shareOfMaxHp": 0.5,
+          "limit": {
+            "uses": 1,
+            "per": "rest"
+          }
+        }
+      ]
+    },
+    "duelist": {
+      "path": "crossroads",
+      "paths": [
+        "blade",
+        "shadow"
+      ],
+      "tier": 0,
+      "type": "passive",
+      "ranks": 1,
+      "effects": [
+        {
+          "sheet": "lightWeaponAttribute",
+          "value": "agility"
+        },
+        {
+          "sheet": "def",
+          "value": 1,
+          "while": "noShield"
+        }
+      ]
+    },
+    "spellblade": {
+      "path": "crossroads",
+      "paths": [
+        "blade",
+        "arcana"
+      ],
+      "tier": 0,
+      "type": "passive",
+      "ranks": 1,
+      "effects": [
+        {
+          "hook": "hit",
+          "handler": "spellblade",
+          "maxFp": 3,
+          "dicePerFp": "1d6"
+        }
+      ]
+    },
+    "crusader": {
+      "path": "crossroads",
+      "paths": [
+        "blade",
+        "spirit"
+      ],
+      "tier": 0,
+      "type": "passive",
+      "ranks": 1,
+      "effects": [
+        {
+          "hook": "hit",
+          "handler": "crusader",
+          "hp": 2,
+          "meleeOnly": true
+        }
+      ]
+    },
+    "arcane_trickster": {
+      "path": "crossroads",
+      "paths": [
+        "shadow",
+        "arcana"
+      ],
+      "tier": 0,
+      "type": "passive",
+      "ranks": 1,
+      "effects": [
+        {
+          "hook": "damageCalc",
+          "handler": "arcaneTrickster"
+        }
+      ]
+    },
+    "ranger": {
+      "path": "crossroads",
+      "paths": [
+        "shadow",
+        "spirit"
+      ],
+      "tier": 0,
+      "type": "passive",
+      "ranks": 1,
+      "fp": 1,
+      "action": {
+        "buff": "huntersMark",
+        "toHit": 2,
+        "extraDice": "1d6"
+      },
+      "effects": [
+        {
+          "sheet": "ignoresHalfCover"
+        }
+      ]
+    },
+    "mystic": {
+      "path": "crossroads",
+      "paths": [
+        "arcana",
+        "spirit"
+      ],
+      "tier": 0,
+      "type": "passive",
+      "ranks": 1,
+      "effects": [
+        {
+          "hook": "damageTaken",
+          "handler": "mystic"
+        },
+        {
+          "hook": "damageCalc",
+          "handler": "mysticDrain",
+          "shareOfDamage": 0.25
+        }
+      ]
+    }
+  }
+}

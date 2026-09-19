@@ -410,5 +410,233 @@
     "enter": "ENTER THE UNDERKEEP",
     "noOrigin": "Choose an origin.",
     "noName": "Your hero needs a name."
+  },
+  "skills": {
+    "weapon_training": {
+      "name": "WEAPON TRAINING",
+      "effect": "+1 melee attack per rank."
+    },
+    "power_strike": {
+      "name": "POWER STRIKE",
+      "effect": "Melee attack at −2 to hit; one extra weapon die of damage."
+    },
+    "toughness": {
+      "name": "TOUGHNESS",
+      "effect": "+5 max HP per rank."
+    },
+    "brute_force": {
+      "name": "BRUTE FORCE",
+      "effect": "+3 per rank to bash. R2: a chest never breaks, and the noise check drops to 1-in-6."
+    },
+    "cleave": {
+      "name": "CLEAVE",
+      "effect": "Drop a front-row enemy and attack another for free, once a turn."
+    },
+    "armor_training": {
+      "name": "ARMOR TRAINING",
+      "effect": "R1: no penalty in heavy armor. R2: DR 1 in heavy armor."
+    },
+    "shield_bash": {
+      "name": "SHIELD BASH",
+      "effect": "1d4 + MIG with a shield; Body save or Stunned for 1 round."
+    },
+    "riposte": {
+      "name": "RIPOSTE",
+      "effect": "When a melee attack misses you, counterattack at once."
+    },
+    "second_wind": {
+      "name": "SECOND WIND",
+      "effect": "Heal a quarter of your hit points. Once per combat."
+    },
+    "weapon_mastery": {
+      "name": "WEAPON MASTERY",
+      "effect": "One weapon group: +1 critical range, and criticals deal triple."
+    },
+    "juggernaut": {
+      "name": "JUGGERNAUT",
+      "effect": "The Attack action makes two attacks."
+    },
+    "marksman": {
+      "name": "MARKSMAN",
+      "effect": "+1 ranged attack per rank."
+    },
+    "sneak": {
+      "name": "SNEAK",
+      "effect": "Surprise enemies on a 1 or 2, not just a 1."
+    },
+    "lockpicking": {
+      "name": "LOCKPICKING",
+      "effect": "+2 per rank to pick. R2: picks never break. R3: picking takes 1 step."
+    },
+    "trapfinding": {
+      "name": "TRAPFINDING",
+      "effect": "+2 per rank to find and disarm traps. R2: no passive penalty. R3: salvage by 5."
+    },
+    "backstab": {
+      "name": "BACKSTAB",
+      "effect": "+2 weapon dice against a Surprised, Stunned, Asleep or Blinded target."
+    },
+    "evasion": {
+      "name": "EVASION",
+      "effect": "+1 DEF per rank. R2: a made Reflex save against an area effect takes nothing."
+    },
+    "envenom": {
+      "name": "ENVENOM",
+      "effect": "Your next hit this combat Poisons."
+    },
+    "nimble_fingers": {
+      "name": "NIMBLE FINGERS",
+      "effect": "Disarming takes 1 step, and a near miss is only a failure."
+    },
+    "twin_shot": {
+      "name": "TWIN SHOT",
+      "effect": "Two ranged attacks at −2 each."
+    },
+    "vanish": {
+      "name": "VANISH",
+      "effect": "Flee, or slip away Hidden. Once per combat."
+    },
+    "lucky": {
+      "name": "LUCKY",
+      "effect": "Once per combat, force one d20 to be rolled again."
+    },
+    "death_strike": {
+      "name": "DEATH STRIKE",
+      "effect": "A helpless target makes a Body save or dies. A boss takes triple damage."
+    },
+    "magic_missile": {
+      "name": "MAGIC MISSILE",
+      "effect": "Never misses. 1d4+1 a missile, one more every four levels."
+    },
+    "arcane_well": {
+      "name": "ARCANE WELL",
+      "effect": "+3 max Focus per rank."
+    },
+    "lore": {
+      "name": "LORE",
+      "effect": "Identify what you find, read a monster, and see magical traps for what they are."
+    },
+    "knock": {
+      "name": "KNOCK",
+      "effect": "Opens a Simple or Good lock. Out of combat."
+    },
+    "sleep": {
+      "name": "SLEEP",
+      "effect": "One row: Mind save or Asleep. Undead are immune."
+    },
+    "frost_shard": {
+      "name": "FROST SHARD",
+      "effect": "2d6 + INT cold; Reflex save or Slowed."
+    },
+    "dispel_ward": {
+      "name": "DISPEL WARD",
+      "effect": "Opens a Sealed lock or disarms an Arcane trap, at +4."
+    },
+    "arcane_shield": {
+      "name": "ARCANE SHIELD",
+      "effect": "+4 DEF against a hit that has just landed."
+    },
+    "fireball": {
+      "name": "FIREBALL",
+      "effect": "1d6 a level to one whole row; Reflex save for half."
+    },
+    "blink": {
+      "name": "BLINK",
+      "effect": "For 3 rounds, every attack on you may simply miss."
+    },
+    "mana_siphon": {
+      "name": "MANA SIPHON",
+      "effect": "Regain 1 Focus whenever you kill."
+    },
+    "archmage": {
+      "name": "ARCHMAGE",
+      "effect": "Spells cost 1 less. Once per combat, cast one free."
+    },
+    "mend": {
+      "name": "MEND",
+      "effect": "Heal 2d6 + WIT. Usable outside combat."
+    },
+    "keen_senses": {
+      "name": "KEEN SENSES",
+      "effect": "+3 per rank to find things. R2: you cannot be surprised, and you are warned."
+    },
+    "forager": {
+      "name": "FORAGER",
+      "effect": "Rations last twice as long, and a fight may leave a healing herb."
+    },
+    "turn_undead": {
+      "name": "TURN UNDEAD",
+      "effect": "Undead make a Mind save or flee; the weakest are destroyed."
+    },
+    "resilience": {
+      "name": "RESILIENCE",
+      "effect": "+2 to every save per rank."
+    },
+    "cleanse": {
+      "name": "CLEANSE",
+      "effect": "Remove one condition."
+    },
+    "regeneration": {
+      "name": "REGENERATION",
+      "effect": "Heal 1 HP at the start of your turn, and as you walk."
+    },
+    "spirit_ward": {
+      "name": "SPIRIT WARD",
+      "effect": "Damage reduction 3 for the rest of the fight."
+    },
+    "smite": {
+      "name": "SMITE",
+      "effect": "+WIT to hit and +2d6 damage; double against undead and demons."
+    },
+    "undying": {
+      "name": "UNDYING",
+      "effect": "Once per rest, a killing blow leaves you at half your hit points."
+    },
+    "duelist": {
+      "name": "DUELIST",
+      "effect": "Light weapons use AGI. +1 DEF with no shield."
+    },
+    "spellblade": {
+      "name": "SPELLBLADE",
+      "effect": "On a melee hit, spend up to 3 Focus for 1d6 damage each."
+    },
+    "crusader": {
+      "name": "CRUSADER",
+      "effect": "Heal 2 HP whenever your melee attack hits."
+    },
+    "arcane_trickster": {
+      "name": "ARCANE TRICKSTER",
+      "effect": "Damage spells get Backstab dice while you are Hidden."
+    },
+    "ranger": {
+      "name": "RANGER",
+      "effect": "Hunter’s Mark: +2 to hit and +1d6. Your arrows ignore cover."
+    },
+    "mystic": {
+      "name": "MYSTIC",
+      "effect": "Overhealing becomes temporary HP. Damage spells heal you a quarter."
+    }
+  },
+  "paths": {
+    "blade": {
+      "name": "PATH OF THE BLADE",
+      "blurb": "The warrior."
+    },
+    "shadow": {
+      "name": "PATH OF SHADOW",
+      "blurb": "The rogue and the archer."
+    },
+    "arcana": {
+      "name": "PATH OF ARCANA",
+      "blurb": "The mage."
+    },
+    "spirit": {
+      "name": "PATH OF SPIRIT",
+      "blurb": "The healer and the survivor."
+    },
+    "crossroads": {
+      "name": "CROSSROADS",
+      "blurb": "Where two Paths meet."
+    }
   }
 }
