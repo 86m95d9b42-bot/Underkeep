@@ -88,9 +88,10 @@
       "wideNatural": 19
     },
     "effectDc": {
-      "_source": "Player abilities use DC 10 + floor(level / 2) + the governing attribute mod.",
+      "_source": "01 section 4, Effect DCs. Player abilities use DC 10 + floor(level / 2) + the governing attribute mod; a monster's use DC 10 + floor(HD / 2).",
       "base": 10,
-      "perLevels": 2
+      "perLevels": 2,
+      "monster": { "base": 10, "perHd": 2 }
     }
   },
 

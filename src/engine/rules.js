@@ -13,7 +13,7 @@ import { registerConditionHooks } from './condition-hooks.js';
 import { registerDefeatHooks } from './defeat.js';
 import { registerMonsterTraits } from './monster-traits.js';
 import { registerMoraleHooks } from './morale.js';
-import { registerRiders } from './riders.js';
+import { registerRiders, saveBonus } from './riders.js';
 import { conditionHurt } from './damage.js';
 
 /**
@@ -21,7 +21,9 @@ import { conditionHurt } from './damage.js';
  *
  * @param {object} combat
  * @param {object} [services]
- * @param {(unit: object, save: string) => number} [services.saveBonus]
+ * @param {(unit: object, save: string) => number} [services.saveBonus] how a
+ *   unit's Body, Reflex and Mind bonuses are read; by default off the unit,
+ *   which is where `01` section 4 leaves them
  * @returns {() => void} removes them all again
  */
 export function registerRules(combat, services = {}) {
@@ -31,7 +33,9 @@ export function registerRules(combat, services = {}) {
   const off = [
     registerConditionHooks(hooks, {
       rng: combat.rng,
-      saveBonus: services.saveBonus,
+      // Without this the hero's Vigor does nothing against poison: the
+      // end-of-turn saves of `06` section 4 step 13 would all roll flat.
+      saveBonus: services.saveBonus ?? saveBonus,
       // Condition damage goes through the damage rules, so a fire-immune unit
       // ignores Burning (`06` section 7).
       hurt: conditionHurt(combat),

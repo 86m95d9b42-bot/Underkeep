@@ -78,7 +78,8 @@
   },
 
   "fleeing": {
-    "_source": "06 section 14.",
+    "_source": "06 section 14: d20 + AGI mod + LCK mod vs 10 + the number of living enemies.",
+    "mods": ["agility", "luck"],
     "tn": 10,
     "perLivingEnemy": 1,
     "freeAttackers": 2,

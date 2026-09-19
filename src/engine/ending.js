@@ -29,6 +29,15 @@ export const VICTORY = data.victory;
 /* Fleeing                                                                    */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * What the hero adds to a flee roll: their AGI and LCK modifiers
+ * (`06` section 14). A unit that carries no modifiers adds nothing.
+ * @param {object} unit
+ */
+export function fleeBonusOf(unit) {
+  return (FLEEING.mods ?? []).reduce((total, id) => total + (unit?.mods?.[id] ?? 0), 0);
+}
+
 /** What the hero has to beat to get away: 10 + the living enemies. */
 export function fleeTn(combat) {
   const standing = countedEnemies(combat).filter((unit) => unit.alive).length;
@@ -46,7 +55,9 @@ export function fleeTn(combat) {
  * @returns {{ fled: boolean, why?: string, roll?: number, total?: number,
  *   tn?: number, freeAttacks?: object[] }}
  */
-export function heroFlees(combat, { bonus = 0, automatic = false } = {}, services = {}) {
+export function heroFlees(combat, { bonus, automatic = false } = {}, services = {}) {
+  // The roll is d20 + AGI mod + LCK mod unless the caller says otherwise.
+  const total = bonus ?? fleeBonusOf(combat.hero);
   // There is no running from a boss or a Frozen Revenant, and the automatic
   // escapes fail there too.
   if (cannotEscape(combat)) return { fled: false, why: 'noEscape' };
@@ -55,8 +66,8 @@ export function heroFlees(combat, { bonus = 0, automatic = false } = {}, service
   if (automatic) return escape(combat, { automatic: true, tn });
 
   const roll = combat.rng.d20();
-  const total = roll + bonus;
-  if (total >= tn) return escape(combat, { roll, total, tn });
+  const score = roll + total;
+  if (score >= tn) return escape(combat, { roll, total: score, tn });
 
   // A failure is not a wasted turn, it is a beating: the two highest-HD
   // enemies each make one free attack immediately, and still act later.
@@ -67,7 +78,7 @@ export function heroFlees(combat, { bonus = 0, automatic = false } = {}, service
       attack(combat, enemy, { ...(enemy.attack ?? {}), target: combat.hero, free: true }, services),
     );
   }
-  return { fled: false, roll, total, tn, freeAttacks };
+  return { fled: false, roll, total: score, tn, freeAttacks };
 }
 
 /** The `freeAttackers` living enemies with the highest hit dice. */

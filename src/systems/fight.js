@@ -365,7 +365,8 @@ export function createFight({
       if (!check.legal) return { acted: false, why: check.why };
 
       if (id === 'flee') {
-        const ran = heroFlees(combat, { bonus: combat.hero.fleeBonus ?? 0 }, {});
+        // The bonus is the hero's own AGI and LCK (`06` section 14).
+        const ran = heroFlees(combat, {}, {});
         say({
           text: t(ran.fled ? 'combat.log.youFlee' : 'combat.log.fleeFails'),
           tone: ran.fled ? 'accent' : 'danger',

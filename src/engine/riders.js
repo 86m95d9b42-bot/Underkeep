@@ -15,6 +15,7 @@
  */
 import { applyCondition, blockedFrom } from './conditions.js';
 import { remember } from './ai.js';
+import { effectDcOf } from '../data/monsters.js';
 
 /** The rider an attack carries, if it carries one. */
 export function riderOf(attack) {
@@ -66,8 +67,11 @@ export function applyRider(combat, attacker, target, attack, result = {}) {
     return { condition: rider.condition, applied: false, why: blocked };
   }
 
+  // Most stat blocks state the DC; anything that does not falls back to the
+  // monster's own, which is `01` section 4's 10 + floor(HD / 2).
+  const dc = rider.dc ?? effectDcOf(attacker);
   const save = rider.save
-    ? rollSave(target, rider.save, rider.dc ?? 10, combat.rng, {
+    ? rollSave(target, rider.save, dc, combat.rng, {
         // A telegraphed attack's saves get advantage while the hero Defends.
         advantage: Boolean(attack.telegraphed && target.defending),
       })
@@ -75,7 +79,7 @@ export function applyRider(combat, attacker, target, attack, result = {}) {
   if (save?.passed) return { condition: rider.condition, applied: false, why: 'saved', save };
 
   const applied = applyCondition(target, rider.condition, {
-    dc: rider.dc,
+    dc,
     source: attacker?.id,
     // A rider lands on the *target's* turn only when it is the target acting,
     // which an on-hit rider never is.

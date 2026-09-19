@@ -40,7 +40,12 @@ import {
   startingHp,
 } from '../src/systems/derived.js';
 import { ATTRIBUTE_ORDER, MAX_AT_CREATION } from '../src/data/attributes.js';
-import { createStream } from '../src/engine/rng.js';
+import { carriedStreams, createStream } from '../src/engine/rng.js';
+import { createFight, standInHero } from '../src/systems/fight.js';
+import { effectDcOf, makeMonster } from '../src/data/monsters.js';
+import { fleeBonusOf } from '../src/engine/ending.js';
+import { applyRider } from '../src/engine/riders.js';
+import { applyCondition } from '../src/engine/conditions.js';
 
 const SEED = 20260918;
 
@@ -310,6 +315,75 @@ describe('finishing a hero', () => {
     expect(typeof hero.init).toBe('number');
     expect(hero.saves).toMatchObject({ body: expect.any(Number) });
     expect(hero.critFrom).toBe(20);
+  });
+});
+
+describe('the derived statistics reaching the game', () => {
+  /** A fight with one rat, and whatever hero is handed in. */
+  const fightWith = (hero) =>
+    createFight({
+      hero: standInHero(hero),
+      monsters: [makeMonster('giant_rat')],
+      streams: carriedStreams(11),
+      surprise: false,
+    });
+
+  it('lets Vigor shake off poison, through the condition engine', () => {
+    // `06` section 4 step 13 rolls the end-of-turn saves; `01` section 4 says
+    // what a hero adds to them. A flat 9 fails DC 12 and 9 + 3 passes it.
+    const outcome = (body) => {
+      const fight = fightWith({ id: 'hero', name: 'H', hp: 20, maxHp: 20, saves: { body, reflex: 0, mind: 0 } });
+      applyCondition(fight.hero, 'poisoned', { dc: 12 });
+      const payload = fight.combat.hooks.fire('turnEnd', {
+        combat: fight.combat,
+        unit: fight.hero,
+        rng: { d20: () => 9 },
+      });
+      return payload.saves[0];
+    };
+    expect(outcome(0)).toMatchObject({ total: 9, passed: false });
+    expect(outcome(3)).toMatchObject({ total: 12, passed: true });
+  });
+
+  it('flees on Agility and Luck, as section 14 says', () => {
+    expect(fleeBonusOf({ mods: { agility: 2, luck: 1 } })).toBe(3);
+    expect(fleeBonusOf({})).toBe(0);
+
+    // A hero who is quick and lucky gets away on a roll a clumsy one does not.
+    const tryFlee = (mods) => {
+      const fight = fightWith({ id: 'hero', name: 'H', hp: 20, maxHp: 20, mods });
+      fight.combat.rng.d20 = () => 8; // TN is 10 + 1 living enemy = 11
+      return fight.act('flee');
+    };
+    expect(tryFlee({ agility: 0, luck: 0 }).fled).toBe(false);
+    expect(tryFlee({ agility: 2, luck: 1 }).fled).toBe(true);
+  });
+
+  it('gives a monster with no stated DC the one its Hit Dice earn', () => {
+    // `01` section 4: DC 10 + floor(HD / 2), which is what the bestiary's own
+    // stated DCs come to — a Zombie of HD 2 forces DC 11.
+    expect([1, 2, 3, 5, 10].map((hd) => effectDcOf({ hd }))).toEqual([10, 11, 11, 12, 15]);
+    expect(effectDcOf(makeMonster('zombie'))).toBe(11);
+    expect(effectDcOf(makeMonster('ghoul'))).toBe(11);
+
+    // A rider that states nothing is rolled against that DC.
+    const fight = fightWith({ id: 'hero', name: 'H', hp: 20, maxHp: 20, saves: { body: 0 } });
+    const rat = fight.combat.units[1];
+    fight.combat.rng.d20 = () => 10;
+    const landed = applyRider(fight.combat, rat, fight.hero, { onHit: { save: 'body', condition: 'weakened' } }, {});
+    expect(landed.save.dc).toBe(effectDcOf(rat));
+  });
+
+  it('is the created hero’s own sheet the fight reads', () => {
+    const hero = finish(
+      setName(chooseOrigin({ ...createDraft({ seed: SEED }), scores: { ...MOCKUP } }, 'cutpurse'), 'Nyx'),
+    );
+    const fight = fightWith(hero);
+    // Cutpurse raises AGI 12 to 13: +1 to DEF, to initiative and to Reflex.
+    expect(fight.hero.def).toBe(11);
+    expect(fight.hero.init).toBe(1);
+    expect(fight.hero.saves.reflex).toBe(1);
+    expect(fleeBonusOf(fight.hero)).toBe(1 + -1);
   });
 });
 

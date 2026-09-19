@@ -11,6 +11,7 @@
  * and the engine's job is to run what the table says.
  */
 import data from './monsters.json' with { type: 'json' };
+import { DERIVED } from './attributes.js';
 
 export const MONSTERS = data.monsters;
 
@@ -128,6 +129,17 @@ export function makeMonster(id, { floor = 1, elite = false, overrides = {} } = {
     ...(elite ? { elite: true } : {}),
     ...overrides,
   };
+}
+
+/**
+ * The DC of an effect a monster forces: **10 + floor(HD / 2)**
+ * (`01` section 4, Effect DCs). A stat block that states its own DC — most of
+ * them do — keeps it; this is what anything else falls back to.
+ * @param {object} unit
+ */
+export function effectDcOf(unit) {
+  const rule = DERIVED.effectDc.monster;
+  return rule.base + Math.floor((unit?.hd ?? 0) / rule.perHd);
 }
 
 /**
