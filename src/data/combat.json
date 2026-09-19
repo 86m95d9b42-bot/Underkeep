@@ -1,0 +1,40 @@
+{
+  "_source": "06 sections 2 (Combat Setup) and 3 (Round Order), with the row capacity of section 13 and the surprise die of 01 section 12. Later sections of 06 add their own tables to this file.",
+
+  "field": {
+    "_source": "06 section 2 step 1 and section 13.",
+    "rows": ["front", "back"],
+    "rowCapacity": 4,
+    "crowdCap": 5
+  },
+
+  "surprise": {
+    "_source": "06 section 2 step 3 and 01 section 12. Each side rolls a d6; a side that rolls inside its band surprises the other. Only one side surprised means a round 0 in which only that side acts.",
+    "die": 6,
+    "heroSurprisesUpTo": 1,
+    "monstersSurpriseUpTo": 1,
+    "surpriseRound": 0
+  },
+
+  "initiative": {
+    "_source": "06 section 3, Initiative. Rolled fresh every round; monsters of the same type share one roll.",
+    "die": 6,
+    "bands": ["first", "normal", "last"],
+    "_bands": "first = under Quicksilver; last = Slowed, plus the Zombie, which always acts last. Both are flags on the unit (actsFirst / actsLast), so a potion, a condition and a monster's own tactics all reach the same band."
+  },
+
+  "roundStartOrder": {
+    "_source": "06 section 3 steps 3-5, which is a finer order than the example column of section 16.",
+    "hooks": ["grimoirePage", "ghastStench", "basiliskGaze", "fallenTroll", "bossPhase"]
+  },
+
+  "roundEndOrder": {
+    "_source": "06 section 3 step 8.",
+    "hooks": ["shriek", "regrowth", "reassemble", "summons", "sickened"]
+  },
+
+  "reactionFlags": {
+    "_source": "06 section 3 step 2. Reset at the start of every round, for any unit that has them.",
+    "flags": ["riposte", "arcaneShield", "shieldBlock", "guardian"]
+  }
+}

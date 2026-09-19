@@ -180,12 +180,49 @@ function checkConditions(json, strings) {
 }
 
 /**
+ * combat.json: `06` sections 2 and 3. The two ordered hook lists are the round
+ * itself, and `src/engine/hooks.js` reads them straight out of this file, so a
+ * name that is not a hook anywhere would silently reorder a round.
+ */
+function checkCombat(json) {
+  const field = json.field ?? {};
+  if (!(field.rows?.length === 2)) problems.push('combat.json does not have two rows');
+  if (!(field.rowCapacity >= 1)) problems.push('combat.json has no row capacity');
+  if (!(field.crowdCap >= field.rowCapacity)) {
+    problems.push(`combat.json crowd cap (${field.crowdCap}) is below one row's capacity`);
+  }
+
+  const surprise = json.surprise ?? {};
+  if (!(surprise.die >= 2)) problems.push('combat.json surprise has no die');
+  for (const key of ['heroSurprisesUpTo', 'monstersSurpriseUpTo']) {
+    if (!(surprise[key] >= 1 && surprise[key] < surprise.die)) {
+      problems.push(`combat.json surprise.${key} is ${surprise[key]}, which is not a band on the die`);
+    }
+  }
+  if (surprise.surpriseRound !== 0) problems.push('combat.json surprise round is not round 0');
+
+  const initiative = json.initiative ?? {};
+  if (!(initiative.die >= 2)) problems.push('combat.json initiative has no die');
+  if (initiative.bands?.join() !== 'first,normal,last') {
+    problems.push('combat.json initiative bands are not first, normal, last');
+  }
+
+  for (const list of ['roundStartOrder', 'roundEndOrder']) {
+    const hooks = json[list]?.hooks ?? [];
+    if (hooks.length === 0) problems.push(`combat.json ${list} lists no hooks`);
+    if (new Set(hooks).size !== hooks.length) problems.push(`combat.json ${list} repeats a hook`);
+  }
+  if (!json.reactionFlags?.flags?.length) problems.push('combat.json lists no reaction flags');
+}
+
+/**
  * file name -> checker. A file with no checker is only parsed, which still
  * catches the most common failure: a trailing comma in hand-edited JSON.
  * @type {Record<string, (json: any) => void>}
  */
 const CHECKS = {
   'strings.json': checkStrings,
+  'combat.json': checkCombat,
   'floors.json': checkFloors,
   'locks.json': checkLocks,
   // Checked against strings.json, so it is read first.

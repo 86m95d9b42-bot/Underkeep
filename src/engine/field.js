@@ -1,0 +1,263 @@
+/**
+ * The field: setting a fight up and knowing who stands where
+ * (`06` section 2, with the row capacity of section 13).
+ *
+ * A fight is a plain object — units, a round number, the streams and the hook
+ * register — so it can be saved, replayed and simulated. Nothing here rolls an
+ * attack or ends a turn; the round runs in `round.js` and the turns come next.
+ *
+ * Positions are the two rows the whole game is built on: **front** and
+ * **back**, four units each, left to right in the order the encounter lists
+ * them. Five enemies at most, and objects (valves, the Phylactery, the Hydra's
+ * body) take a back-row spot without counting toward that cap.
+ *
+ * No DOM, no `Math.random()`: every roll comes from the combat stream it is
+ * handed.
+ */
+import data from '../data/combat.json' with { type: 'json' };
+import { prepare } from './conditions.js';
+
+export const ROWS = /** @type {['front', 'back']} */ (data.field.rows);
+export const ROW_CAPACITY = data.field.rowCapacity;
+export const CROWD_CAP = data.field.crowdCap;
+export const SURPRISE = data.surprise;
+export const REACTION_FLAGS = data.reactionFlags.flags;
+
+/**
+ * @typedef {object} Unit
+ * @property {string} id            unique on the field
+ * @property {'hero' | 'monsters'} side
+ * @property {string} [type]        monsters of one type share an initiative roll
+ * @property {'front' | 'back'} row
+ * @property {number} slot          0-3, left to right
+ * @property {boolean} alive
+ * @property {boolean} [object]     scenery: no crowd cap, no turn unless `acts`
+ * @property {boolean} [acts]       an object that takes turns anyway
+ * @property {boolean} [fled]       left the field (`06` section 14)
+ * @property {boolean} [fallen]     a Troll that has not been burned yet
+ * @property {number} [init]        the initiative modifier, the bestiary's Init
+ * @property {boolean} [actsFirst]  Quicksilver
+ * @property {boolean} [actsLast]   the Zombie's tactics
+ * @property {boolean} [surprised]  set for round 0 only
+ */
+
+/** Where a unit sits for "front row left to right, then back row". */
+export function positionOf(unit) {
+  const row = ROWS.indexOf(unit.row);
+  return (row === -1 ? ROWS.length : row) * ROW_CAPACITY + (unit.slot ?? 0);
+}
+
+/** Units in field order: front row left to right, then back row (`06` section 3 step 4). */
+export function inFieldOrder(units) {
+  return [...units].sort((a, b) => positionOf(a) - positionOf(b) || a.seq - b.seq);
+}
+
+/** Everything still on the field on one side. */
+export function sideOf(combat, side) {
+  return combat.units.filter((unit) => unit.side === side && onField(unit));
+}
+
+/** The monsters, objects included. */
+export function enemies(combat) {
+  return sideOf(combat, 'monsters');
+}
+
+/**
+ * The enemies that count: objects don't, for the crowd cap, for morale, or for
+ * the hero's flee roll (`06` sections 2, 13 and 14).
+ */
+export function countedEnemies(combat) {
+  return enemies(combat).filter((unit) => !unit.object);
+}
+
+/** True while a unit is still standing on the field. */
+export function onField(unit) {
+  return Boolean(unit) && !unit.fled && !unit.removed;
+}
+
+/**
+ * True while a unit still keeps the fight going: alive, or an unburned Fallen
+ * troll, whose wounds are closing (`06` sections 9 and 15).
+ */
+export function stillFighting(unit) {
+  if (!onField(unit)) return false;
+  return Boolean(unit.alive) || Boolean(unit.fallen && !unit.burned);
+}
+
+/** True when this unit gets a place in the turn order. */
+export function takesTurns(unit) {
+  return onField(unit) && Boolean(unit.alive) && (!unit.object || unit.acts === true);
+}
+
+/**
+ * The leftmost free slot in one side's row, or −1 when the row is full. Rows
+ * are per side: the hero's front row is not the monsters' front row.
+ */
+export function freeSlot(combat, row, side = 'monsters') {
+  const taken = new Set(
+    combat.units
+      .filter((unit) => onField(unit) && unit.side === side && unit.row === row)
+      .map((unit) => unit.slot),
+  );
+  for (let slot = 0; slot < ROW_CAPACITY; slot += 1) if (!taken.has(slot)) return slot;
+  return -1;
+}
+
+/**
+ * Puts a unit on the field in the leftmost open spot of its row. Used by setup
+ * and, later, by summons — which is why a full row is a refusal and not an
+ * error: "a summon that doesn't fit simply fails" (`06` section 13).
+ *
+ * Setup passes `overflow`, because a group of five front-row monsters — five
+ * Giant Rats — is within the crowd cap but one over the row. The fifth stands
+ * in the back row, where `02` says a melee monster waits and steps forward
+ * when there is room. A summon never overflows: its ability names its row.
+ *
+ * @param {object} combat
+ * @param {object} unit
+ * @param {{ overflow?: boolean }} [options]
+ * @returns {{ placed: boolean, why?: 'rowFull' | 'crowded', unit?: object }}
+ */
+export function place(combat, unit, { overflow = false } = {}) {
+  const wanted = ROWS.includes(unit.row) ? unit.row : ROWS[0];
+  if (!unit.object && countedEnemies(combat).length >= CROWD_CAP && unit.side === 'monsters') {
+    return { placed: false, why: 'crowded' };
+  }
+  const rows = overflow ? [wanted, ...ROWS.filter((row) => row !== wanted)] : [wanted];
+  const row = rows.find((candidate) => freeSlot(combat, candidate, unit.side) !== -1);
+  if (!row) return { placed: false, why: 'rowFull' };
+  const slot = freeSlot(combat, row, unit.side);
+
+  unit.row = row;
+  unit.slot = slot;
+  unit.seq = combat.nextSeq++;
+  prepare(unit);
+  combat.units.push(unit);
+  return { placed: true, unit };
+}
+
+/**
+ * Turns whatever the encounter lists into a unit on the field. Templates are
+ * copied, never shared: two rats are two objects.
+ * @param {object} template
+ * @param {'hero' | 'monsters'} side
+ * @param {number} ordinal how many of this type came before it
+ */
+function toUnit(template, side, ordinal) {
+  const type = template.type ?? template.id ?? 'monster';
+  const unit = {
+    type,
+    row: side === 'hero' ? 'front' : template.row ?? 'front',
+    init: 0,
+    ...template,
+    id: template.id ?? (side === 'hero' ? 'hero' : `${type}-${ordinal + 1}`),
+    side,
+    alive: template.alive ?? true,
+    hp: template.hp ?? template.maxHp ?? 1,
+    maxHp: template.maxHp ?? template.hp ?? 1,
+  };
+  return prepare(unit);
+}
+
+/**
+ * Rolls surprise for both sides (`06` section 2 step 3, `01` section 12).
+ *
+ * Both dice are always drawn, even when a side cannot be surprised, so the
+ * combat stream advances the same way however the fight was reached — the same
+ * reasoning as the cancelled advantage pair in `rng.d20`.
+ *
+ * @param {object} combat
+ * @returns {{ heroRoll: number, monsterRoll: number, heroSurprised: boolean,
+ *   monstersSurprised: boolean, side: 'hero' | 'monsters' | null }}
+ */
+export function rollSurprise(combat) {
+  const { rng, hero } = combat;
+  const heroRoll = rng.die(SURPRISE.die);
+  const monsterRoll = rng.die(SURPRISE.die);
+
+  // The hero surprises on a 1, or 1-2 with Sneak; enemies never surprise a
+  // hero with Keen Senses rank 2.
+  const monsters = countedEnemies(combat);
+  const monstersSurprised =
+    heroRoll <= (hero?.surpriseOn ?? SURPRISE.heroSurprisesUpTo) &&
+    monsters.some((unit) => !unit.cannotBeSurprised);
+  const heroSurprised =
+    monsterRoll <= (combat.monsterSurpriseOn ?? SURPRISE.monstersSurpriseUpTo) &&
+    !hero?.cannotBeSurprised;
+
+  // Both or neither surprised means no surprise round at all.
+  const side = monstersSurprised === heroSurprised ? null : monstersSurprised ? 'hero' : 'monsters';
+
+  if (side === 'hero') for (const unit of monsters) if (!unit.cannotBeSurprised) unit.surprised = true;
+  if (side === 'monsters' && hero) hero.surprised = true;
+
+  return { heroRoll, monsterRoll, heroSurprised, monstersSurprised, side };
+}
+
+/** Clears the surprised flags: the surprise round is over (`06` section 2 step 3). */
+export function clearSurprise(combat) {
+  for (const unit of combat.units) delete unit.surprised;
+}
+
+/**
+ * Sets a fight up: `06` section 2, steps 1, 3 and 4.
+ *
+ * Step 2 (elite traits and boss phase 1) and step 5 (save, then show the
+ * screen) belong to the caller: traits register hooks, and saving is the run's
+ * job. `beginCombat` in `round.js` is what fires `combatStart` afterwards.
+ *
+ * @param {object} options
+ * @param {object} options.hero
+ * @param {object[]} [options.monsters] templates, in the order the encounter lists them
+ * @param {import('./rng.js').Stream} options.rng the combat stream
+ * @param {ReturnType<import('./hooks.js').createHooks>} [options.hooks]
+ * @param {boolean} [options.surprise] false skips the surprise roll entirely
+ * @param {object} [options.encounter] what this fight is, for the log and for loot
+ */
+export function createCombat({ hero, monsters = [], rng, hooks, surprise = true, encounter }) {
+  const combat = {
+    round: null,
+    units: [],
+    hero: null,
+    rng,
+    hooks,
+    encounter,
+    nextSeq: 0,
+    /** @type {object[]} the turn order for the round in progress */
+    order: [],
+    /** @type {object[]} structured events; the run turns them into log lines */
+    events: [],
+    over: false,
+    turnedAway: [],
+  };
+
+  combat.hero = toUnit(hero, 'hero', 0);
+  place(combat, combat.hero);
+
+  // Left to right in the order the encounter lists them, front row first, so
+  // an encounter's own ordering is what the player sees.
+  const counts = new Map();
+  for (const template of monsters) {
+    const type = template.type ?? template.id ?? 'monster';
+    const ordinal = counts.get(type) ?? 0;
+    counts.set(type, ordinal + 1);
+    const unit = toUnit(template, 'monsters', ordinal);
+    const result = place(combat, unit, { overflow: true });
+    // Over the crowd cap or into a full row: the monster simply isn't there.
+    if (!result.placed) combat.turnedAway.push({ unit, why: result.why });
+  }
+
+  // Step 4: the starting group size, for morale, not counting objects.
+  combat.startingGroupSize = countedEnemies(combat).length;
+
+  combat.surprise = surprise
+    ? rollSurprise(combat)
+    : { heroRoll: 0, monsterRoll: 0, heroSurprised: false, monstersSurprised: false, side: null };
+
+  return combat;
+}
+
+/** @param {object} combat @param {string} id */
+export function unitById(combat, id) {
+  return combat.units.find((unit) => unit.id === id) ?? null;
+}
