@@ -13,10 +13,14 @@ import { settings as settingsScreen } from './ui/screens/settings.js';
 import { explore } from './ui/screens/explore.js';
 import { pause } from './ui/screens/pause.js';
 import { map } from './ui/screens/map.js';
+import { newGame } from './ui/screens/newgame.js';
+import { createStats } from './ui/screens/create-stats.js';
+import { createOrigin } from './ui/screens/create-origin.js';
 import { combat } from './ui/screens/combat.js';
 import { combatSkills } from './ui/screens/combat-skills.js';
 import { createRun, PLACEHOLDER_HERO } from './systems/run.js';
 import { createFight, standInHero } from './systems/fight.js';
+import { createDraft } from './systems/creation.js';
 
 const app = /** @type {HTMLElement} */ (document.getElementById('app'));
 const isBuild = document.documentElement.dataset.build === '1';
@@ -32,28 +36,55 @@ function applySettings(values) {
 applySettings(settings.all);
 
 /**
- * Phase 2 has no character creation and no save layer, so the game starts on
- * one fixed seed with a stand-in hero. New Game (Phase 4) chooses the seed and
- * the hero; the IndexedDB store (Phase 8) reloads them.
+ * Until the save layer arrives (Phase 8) a session holds one run in memory.
+ * Creation makes one from the hero it rolled; opening Exploration without
+ * having made a hero — the tools do, through the URL fragment — falls back to
+ * the demonstration seed and the stand-in of Phase 2.
  */
 const DEMO_SEED = 20260918;
-const run = createRun({ masterSeed: DEMO_SEED, floor: 1 });
+
+/** @type {ReturnType<typeof createRun> | null} */
+let run = null;
+/** @type {object | null} */
+let hero = null;
+
+/**
+ * Starts a run. The Town is Phase 6, so a new hero goes straight to the first
+ * floor; when the Town exists, creation will hand the hero to it instead.
+ * @param {object} [newHero] the hero creation finished, if there is one
+ */
+function startRun(newHero) {
+  hero = newHero ?? hero;
+  run = createRun({
+    masterSeed: hero?.seed ?? DEMO_SEED,
+    floor: 1,
+    ...(hero ? { hero } : {}),
+  });
+  fight = null;
+  return run;
+}
 
 const save = {
   hasGame: true,
-  lastPlayed: {
-    name: PLACEHOLDER_HERO.name,
-    level: PLACEHOLDER_HERO.level,
-    floor: run.floor.floor,
-    theme: run.floor.spec.theme,
-    mode: 'Adventurer',
-    played: '0m',
+  get lastPlayed() {
+    const who = hero ?? PLACEHOLDER_HERO;
+    return {
+      name: who.name,
+      level: who.level,
+      floor: run?.floor.floor ?? 1,
+      theme: run?.floor.spec.theme ?? '',
+      mode: hero?.mode === 'ironman' ? 'Ironman' : 'Adventurer',
+      played: '0m',
+    };
   },
 };
 
 const screens = {
   title,
   settings: settingsScreen,
+  newGame,
+  createStats,
+  createOrigin,
   explore,
   pause,
   map,
@@ -70,11 +101,14 @@ const screens = {
  */
 let fight = null;
 function startFight() {
+  const current = run ?? startRun();
   fight = createFight({
-    hero: standInHero(run.hero),
-    floor: run.floor.floor,
-    masterSeed: DEMO_SEED,
-    difficulty: settings.all.difficulty ?? 'normal',
+    // A created hero brings their own attack bonus and DEF; the weapon is
+    // still the stand-in's until the pack arrives (`04`, Phase 5).
+    hero: standInHero(current.hero),
+    floor: current.floor.floor,
+    masterSeed: current.masterSeed,
+    difficulty: hero?.difficulty ?? settings.all.difficulty ?? 'normal',
   });
   return fight;
 }
@@ -93,7 +127,12 @@ router = createRouter({
     settings,
     haptics,
     save,
-    run,
+    // The run is made when a hero is, so the screens ask for it rather than
+    // being handed one at startup.
+    get run() {
+      return run ?? startRun();
+    },
+    startRun,
     // The screen reads the fight in progress, and starting one is what
     // opening the screen means until the exploration loop does it.
     get fight() {
@@ -112,9 +151,14 @@ settings.subscribe((values) => {
 // floor before shooting the Automap, and `npm run check` opens each screen.
 // It is one object on the global, and nothing in the game reads it.
 globalThis.underkeep = {
-  run,
+  get run() {
+    return run ?? startRun();
+  },
+  startRun,
   router,
   settings,
+  // `npm run shots` opens Create: Origin, which needs a hero half-made.
+  newDraft: (options) => createDraft({ seed: DEMO_SEED, rollMode: 'standard', ...options }),
   startFight,
   get fight() {
     return fight;

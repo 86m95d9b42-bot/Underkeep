@@ -17,7 +17,18 @@ const PAGE = process.env.URL ?? `file://${join(ROOT, 'dist', 'index.html')}`;
 const OUT = join(ROOT, 'dist', 'shots');
 
 /** Every screen the shell can open, by its router id. Grows with each phase. */
-const SCREENS = ['title', 'settings', 'explore', 'pause', 'map', 'combat', 'combatSkills'];
+const SCREENS = [
+  'title',
+  'settings',
+  'newGame',
+  'createStats',
+  'createOrigin',
+  'explore',
+  'pause',
+  'map',
+  'combat',
+  'combatSkills',
+];
 
 /**
  * Some screens are only worth looking at with something on them. The page
@@ -25,6 +36,14 @@ const SCREENS = ['title', 'settings', 'explore', 'pause', 'map', 'combat', 'comb
  * the state it wants first — here, a walked floor for the Automap.
  */
 const PREPARE = {
+  // The creation screens are worth looking at with a hero half-made.
+  createStats: `(() => {
+    globalThis.underkeep.router.go('createStats', { seed: 20260918, rollMode: 'standard' });
+  })()`,
+  createOrigin: `(() => {
+    const { router, newDraft } = globalThis.underkeep;
+    router.go('createOrigin', { draft: { ...newDraft(), origin: 'cutpurse', name: 'Harrow' } });
+  })()`,
   // A fight is worth looking at with a fight in it, and the Skills sheet with
   // the Combat screen dimmed behind it.
   combat: `(() => {

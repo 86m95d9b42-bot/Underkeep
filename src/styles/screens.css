@@ -387,3 +387,187 @@
   color: var(--muted);
   font-size: var(--fs-body);
 }
+
+/* --- Hero creation (00-build-outline.md, "Start and Hero Creation") --- */
+
+/* A labelled block: the outline's label row and the controls under it. */
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 0.08);
+  min-height: 0;
+}
+.block__label {
+  font-family: var(--font-label);
+  font-size: var(--fs-micro);
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+.block__body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: var(--gap);
+}
+.block__body > * {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Mode and origin cards: a label with a line of explanation under it. */
+.cards {
+  display: grid;
+  gap: var(--gap);
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.cards--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.cards--grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+.card-choice {
+  align-items: flex-start;
+  text-align: left;
+  white-space: normal;
+}
+.card-choice .hint {
+  white-space: normal;
+}
+
+/* A chosen card takes the amber outline, not the amber fill: the fill belongs
+   to the one primary button and to segmented options (the CreateOrigin and
+   NewGame mockups both draw it this way). */
+.card-choice.btn--selected {
+  background: var(--panel-raised);
+  color: var(--bone);
+  border-color: var(--accent);
+}
+.card-choice.btn--selected .hint {
+  color: var(--muted);
+}
+
+/* A row of mutually exclusive keys: difficulty, and the roll style. */
+.choices {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: var(--gap);
+  flex: 1 1 auto;
+}
+
+/* The seed line: an input with a key beside it. */
+.seedrow {
+  display: flex;
+  align-items: stretch;
+  gap: var(--gap);
+}
+.seedrow > .textinput {
+  flex: 1 1 auto;
+}
+.seedrow__key {
+  flex: 0 0 auto;
+  width: auto;
+  padding-inline: calc(var(--u) * 0.2);
+}
+.seedrow__key .label {
+  font-size: var(--fs-micro);
+}
+
+/* The six attribute rows, two grid rows each. */
+.statlist {
+  display: grid;
+  grid-auto-rows: minmax(0, 1fr);
+  gap: var(--gap);
+  min-height: 0;
+}
+.statrow {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 0.14);
+  box-sizing: border-box;
+  margin: 0;
+  padding: calc(var(--u) * 0.06) calc(var(--u) * 0.16);
+  background: var(--panel);
+  color: var(--bone);
+  border: var(--line) solid var(--bone);
+  border-radius: var(--radius);
+  font: inherit;
+  text-align: left;
+  min-width: 0;
+}
+.statrow:disabled {
+  /* Classic cannot rearrange, so the row is a readout, not a control. */
+  opacity: 1;
+  cursor: default;
+}
+.statrow--picked {
+  border-color: var(--accent);
+  background: var(--panel-raised);
+}
+.statrow__abbr {
+  font-family: var(--font-label);
+  font-size: var(--fs-body);
+  width: calc(var(--u) * 0.95);
+  flex: 0 0 auto;
+}
+.statrow__text {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+.statrow__name {
+  font-family: var(--font-label);
+  font-size: var(--fs-micro);
+}
+.statrow__text .hint {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.statrow__score {
+  font-family: var(--font-label);
+  font-size: var(--fs-button);
+  flex: 0 0 auto;
+}
+.statrow__mod {
+  font-weight: 700;
+  color: var(--muted);
+  width: calc(var(--u) * 0.7);
+  text-align: right;
+  flex: 0 0 auto;
+}
+.statrow__swap {
+  font-family: var(--font-label);
+  font-size: var(--fs-micro);
+  color: var(--accent);
+  flex: 0 0 auto;
+}
+
+/* The live preview, and the chosen origin's kit. */
+.preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: var(--gap);
+}
+.preview > .chip {
+  font-size: var(--fs-body);
+}
+.kit {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 0.08);
+  box-sizing: border-box;
+  padding: calc(var(--u) * 0.1);
+  min-height: 0;
+}
+.kit__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--u) * 0.08);
+}

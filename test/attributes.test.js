@@ -55,7 +55,8 @@ describe('the six attributes (01 section 3)', () => {
       name: 'MIGHT',
       governs: expect.stringContaining('Melee'),
     });
-    expect(wordsFor('luck').governs).toContain('Critical range');
+    // The hints are the mockup's, which are short enough for the row.
+    expect(wordsFor('luck').governs).toContain('Crits');
   });
 
   it('are scored 3 to 20, and creation rolls no higher than 18', () => {

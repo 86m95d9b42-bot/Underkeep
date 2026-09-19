@@ -162,6 +162,43 @@ export function field({ label, control, value }) {
 }
 
 /**
+ * A text input: the seed on New Game and the hero's name on Create: Origin.
+ * The shell turns selection off everywhere except inputs, so this is the one
+ * place a keyboard is wanted.
+ *
+ * @param {object} options
+ * @param {string} options.ariaLabel
+ * @param {string} [options.value]
+ * @param {string} [options.placeholder]
+ * @param {number} [options.maxLength]
+ * @param {'text' | 'numeric'} [options.keyboard] which keyboard a phone shows
+ * @param {(value: string) => void} [options.onInput]
+ */
+export function textInput({
+  ariaLabel,
+  value = '',
+  placeholder,
+  maxLength,
+  keyboard = 'text',
+  onInput,
+}) {
+  const node = el('input', {
+    type: 'text',
+    class: 'textinput',
+    value,
+    placeholder,
+    maxLength,
+    'aria-label': ariaLabel,
+    inputMode: keyboard === 'numeric' ? 'numeric' : 'text',
+    autocomplete: 'off',
+    autocapitalize: keyboard === 'numeric' ? 'off' : 'words',
+    spellcheck: 'false',
+  });
+  if (onInput) node.addEventListener('input', () => onInput(node.value));
+  return node;
+}
+
+/**
  * A sheet: a panel over the dimmed screen that opened it. The router places it;
  * this only builds the box and its header.
  * @param {object} options

@@ -95,6 +95,10 @@
   border-color: var(--accent);
   color: var(--ground);
 }
+/* A filled button's hint has to be readable on the fill, as the primary's is. */
+.btn--selected > .hint {
+  color: var(--ground);
+}
 
 /* --- Top bar (always rows 1–2) --- */
 .topbar {
@@ -310,4 +314,27 @@
 }
 #app.wide .sheet {
   grid-template-columns: repeat(8, minmax(0, 1fr));
+}
+
+/* --- Text input (the seed, and the hero's name) --- */
+.textinput {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: calc(var(--u) * 0.1) calc(var(--u) * 0.2);
+  background: var(--panel);
+  color: var(--bone);
+  border: var(--line) solid var(--bone);
+  border-radius: var(--radius);
+  font-family: var(--font-body);
+  font-size: var(--fs-button);
+  line-height: 1.2;
+}
+.textinput::placeholder {
+  color: var(--muted);
+  font-size: var(--fs-body);
+}
+.textinput:focus-visible {
+  outline: var(--line) solid var(--accent);
+  outline-offset: calc(var(--u) * 0.04);
 }

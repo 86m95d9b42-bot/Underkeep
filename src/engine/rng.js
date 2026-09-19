@@ -31,8 +31,15 @@
 /** The carried streams, whose state is part of the save file. */
 export const CARRIED_STREAMS = /** @type {const} */ (['encounter', 'combat', 'loot']);
 
-/** The derived streams, rebuilt from the master seed and a number. */
-export const DERIVED_STREAMS = /** @type {const} */ (['layout', 'restock']);
+/**
+ * The derived streams, rebuilt from the master seed and a number.
+ *
+ * `05` section 11 names layout and restock; `creation` is the same shape and
+ * was added for character creation, where the player may reroll the whole set
+ * as often as they like (`01` section 3). The attempt number is that number,
+ * so the tenth reroll of a seed is the tenth reroll of that seed for ever.
+ */
+export const DERIVED_STREAMS = /** @type {const} */ (['layout', 'restock', 'creation']);
 
 /** 2^32, the divisor that turns a 32-bit word into a float in [0, 1). */
 const TWO32 = 4294967296;
@@ -283,6 +290,16 @@ export function layoutStream(masterSeed, floor, attempt = 0) {
  */
 export function restockStream(masterSeed, townVisits) {
   return createStream(seedState(masterSeed, 'restock', townVisits), `restock:${townVisits}`);
+}
+
+/**
+ * The stream one roll of a new hero's attributes comes from. Derived, never
+ * saved: the same seed and the same attempt always roll the same six numbers.
+ * @param {number} masterSeed
+ * @param {number} attempt how many times the player has rerolled
+ */
+export function creationStream(masterSeed, attempt = 0) {
+  return createStream(seedState(masterSeed, 'creation', attempt), `creation:${attempt}`);
 }
 
 /**

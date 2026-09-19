@@ -25,7 +25,18 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PAGE = join(ROOT, 'dist', 'index.html');
 
 /** Every screen the shell can open, by its router id. Grows with each phase. */
-const SCREENS = ['title', 'settings', 'explore', 'pause', 'map', 'combat', 'combatSkills'];
+const SCREENS = [
+  'title',
+  'settings',
+  'newGame',
+  'createStats',
+  'createOrigin',
+  'explore',
+  'pause',
+  'map',
+  'combat',
+  'combatSkills',
+];
 
 if (!existsSync(PAGE)) {
   console.error('  no dist/index.html — run `npm run build` first');

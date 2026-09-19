@@ -318,27 +318,27 @@
   "attributes": {
     "might": {
       "name": "MIGHT",
-      "governs": "Melee hit and damage, carrying, bashing doors"
+      "governs": "Melee, carrying, bashing"
     },
     "agility": {
       "name": "AGILITY",
-      "governs": "Defense, ranged attacks, initiative, locks and traps"
+      "governs": "Defense, ranged, locks"
     },
     "vigor": {
       "name": "VIGOR",
-      "governs": "Hit points, Body saves, poison and disease"
+      "governs": "Hit points, Body saves"
     },
     "intellect": {
       "name": "INTELLECT",
-      "governs": "Spell power, Focus, identifying, scrolls"
+      "governs": "Spells, Focus"
     },
     "wits": {
       "name": "WITS",
-      "governs": "Perception, secret doors, healing, Mind saves"
+      "governs": "Perception, healing, Mind"
     },
     "luck": {
       "name": "LUCK",
-      "governs": "Critical range, loot, fleeing, shop prices"
+      "governs": "Crits, loot, fleeing"
     }
   },
   "origins": {
@@ -358,5 +358,57 @@
       "name": "PILGRIM",
       "blurb": "Walks towards what others run from."
     }
+  },
+  "newGame": {
+    "title": "NEW GAME",
+    "mode": "MODE",
+    "modes": {
+      "adventurer": "ADVENTURER",
+      "adventurerHint": "Wake in town when you fall. Your grave holds what you lost.",
+      "ironman": "IRONMAN",
+      "ironmanHint": "One life. One save. Death is final."
+    },
+    "difficulty": "DIFFICULTY",
+    "difficulties": {
+      "easy": "EASY",
+      "normal": "NORMAL",
+      "hard": "HARD"
+    },
+    "rolls": "ATTRIBUTE ROLLS",
+    "rollModes": {
+      "classic": "CLASSIC",
+      "classicHint": "3d6 in order",
+      "standard": "STANDARD",
+      "standardHint": "4d6, arrange"
+    },
+    "seed": "SEED (OPTIONAL)",
+    "seedPlaceholder": "Leave blank for a new one",
+    "seedRandom": "New seed",
+    "begin": "BEGIN"
+  },
+  "create": {
+    "title": "ROLL HERO",
+    "step1": "1 / 2",
+    "step2": "2 / 2",
+    "classicHint": "Classic: rolled in order",
+    "standardHint": "Standard: tap swap to arrange",
+    "swap": "SWAP",
+    "swapWith": "Swap {name} with {other}",
+    "swapPick": "Tap another attribute to swap with {name}",
+    "hp": "HP",
+    "fp": "FOCUS",
+    "def": "DEFENSE",
+    "reroll": "REROLL",
+    "next": "NEXT",
+    "originTitle": "ORIGIN",
+    "name": "NAME",
+    "namePlaceholder": "Name your hero",
+    "chooseOne": "CHOOSE ONE",
+    "freeSkill": "Free skill: {skill}",
+    "kit": "KIT",
+    "kitGold": "{n} gp",
+    "enter": "ENTER THE UNDERKEEP",
+    "noOrigin": "Choose an origin.",
+    "noName": "Your hero needs a name."
   }
 }
