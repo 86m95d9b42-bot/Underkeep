@@ -114,6 +114,7 @@
     "skill": { "tags": ["skill"], "needsTarget": false, "costsFp": true },
     "item": { "tags": ["item"], "needsTarget": false },
     "defend": { "tags": ["defend"] },
+    "telegraph": { "tags": ["telegraph"], "_note": "06 section 5: a monster spends its action announcing the attack." },
     "breakFree": { "tags": ["breakFree"] },
     "flee": { "tags": ["flee"] },
     "swap": { "tags": ["swap"] },

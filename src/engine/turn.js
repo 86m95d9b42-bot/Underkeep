@@ -41,6 +41,7 @@ import {
   stunnedStart,
 } from './conditions.js';
 import { legalityOf, tagsOf } from './actions.js';
+import { spend } from './ai.js';
 import { monsterFlees, zeroHp } from './defeat.js';
 import { onField } from './field.js';
 
@@ -307,9 +308,11 @@ function perform(combat, unit, action, record, services) {
     return null;
   }
 
-  // 11. Pay the cost before anything is resolved.
+  // 11. Pay the cost before anything is resolved. An ability is spent when it
+  // is used, which is what the recharge rolls at step 6 are for.
   if (action.fp) unit.fp = (unit.fp ?? 0) - action.fp;
   if (action.free) unit.turn.freeUsed += 1;
+  if (action.ability) spend(unit, action.ability);
 
   const result = builtIn(combat, unit, action, record)
     ?? services.resolveAction?.(combat, unit, { ...action, targets: legality.targets });
@@ -330,6 +333,13 @@ function perform(combat, unit, action, record, services) {
 function builtIn(combat, unit, action, record) {
   if (action.id === 'defend') return defend(unit, record);
   if (action.id === 'breakFree') return breakFree(combat, unit, action, record);
+  // A wind-up spends the turn announcing itself (`06` section 5).
+  if (action.id === 'telegraph') {
+    const waiting = telegraph(combat, unit, action.ability ?? action.name);
+    step(record, { type: 'telegraph', unit: unit.id, ability: waiting.ability });
+    return waiting;
+  }
+  if (action.id === 'wait') return { waited: true };
   return null;
 }
 

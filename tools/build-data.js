@@ -8,6 +8,7 @@
  * go with it, in the `CHECKS` list below.
  */
 import { readdir, readFile } from 'node:fs/promises';
+import { checkCondition } from '../src/engine/ai.js';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -289,6 +290,45 @@ function checkCombat(json, strings) {
 }
 
 /**
+ * ai.json: `06` section 11. Every condition in a shipped script is run through
+ * the engine's own reader, so a typo in a table transcribed out of section 12
+ * fails the build instead of leaving a monster standing still.
+ */
+function checkAi(json) {
+  const settings = json.difficulty?.settings ?? {};
+  for (const name of ['easy', 'normal', 'hard']) {
+    const setting = settings[name];
+    if (!setting) {
+      problems.push(`ai.json has no "${name}" difficulty`);
+      continue;
+    }
+    if (!(setting.slip >= 0 && setting.slip <= 1)) problems.push(`ai.json ${name}.slip is not a share`);
+  }
+  if (!settings[json.difficulty?.default]) problems.push('ai.json default difficulty is not one of its settings');
+  if (!(settings.easy?.slip > settings.normal?.slip && settings.normal.slip > settings.hard?.slip)) {
+    problems.push('ai.json difficulties do not follow the script in the order 06 section 11 gives');
+  }
+
+  for (const [name, archetype] of Object.entries(json.archetypes ?? {})) {
+    if (name.startsWith('_')) continue;
+    if (!archetype.rules?.length) {
+      problems.push(`ai.json archetype "${name}" has no rules`);
+      continue;
+    }
+    for (const rule of archetype.rules) {
+      const why = checkCondition(rule.when);
+      if (why) problems.push(`ai.json archetype "${name}": ${why}`);
+      if (!rule.do) problems.push(`ai.json archetype "${name}" has a rule that does nothing`);
+    }
+    // 06 section 11: "The last rule is always a fallback."
+    const last = archetype.rules.at(-1);
+    if (checkCondition(last.when) === null && last.when && !/^(always|true)$/i.test(last.when)) {
+      problems.push(`ai.json archetype "${name}" has no fallback rule`);
+    }
+  }
+}
+
+/**
  * file name -> checker. A file with no checker is only parsed, which still
  * catches the most common failure: a trailing comma in hand-edited JSON.
  * @type {Record<string, (json: any) => void>}
@@ -297,6 +337,7 @@ const CHECKS = {
   'strings.json': checkStrings,
   // Checked against strings.json, so it is read first.
   'combat.json': (json) => checkCombat(json, loaded['strings.json']),
+  'ai.json': checkAi,
   'floors.json': checkFloors,
   'locks.json': checkLocks,
   // Checked against strings.json, so it is read first.

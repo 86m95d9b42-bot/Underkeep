@@ -1,0 +1,88 @@
+{
+  "_source": "06 section 11. The per-monster scripts of section 12 live with their monsters in monsters.json; these are the patterns most of them follow, and the settings that bend them.",
+
+  "difficulty": {
+    "_source": "06 section 11, Difficulty Settings. `slip` is how often a monster just attacks instead of following its script.",
+    "default": "normal",
+    "settings": {
+      "easy": { "slip": 0.25, "triesImmuneControl": true, "eliteBonus": 0 },
+      "normal": { "slip": 0.1, "triesImmuneControl": false, "eliteBonus": 0 },
+      "hard": { "slip": 0, "triesImmuneControl": false, "eliteBonus": 0.05 }
+    }
+  },
+
+  "_rules": "A script is an ordered list; the first rule whose `when` is true and whose action is legal is the one that runs. `when` is the condition vocabulary of section 11, and `do` is an ability id, one of the built-in actions (attack, wait, defend, flee, telegraph), or a selector: `role:<role>` for the best ready ability of that role, `scheduled` for one whose own `when` has come round, `phase` for one belonging to the monster's current phase.",
+
+  "archetypes": {
+    "_source": "06 section 11, Archetypes.",
+
+    "brute": {
+      "_pattern": "Attack",
+      "rules": [{ "when": "always", "do": "attack" }]
+    },
+
+    "controller": {
+      "_pattern": "Use a control ability if the hero can be affected; otherwise attack",
+      "rules": [
+        { "when": "always", "do": "role:control" },
+        { "when": "always", "do": "attack" }
+      ]
+    },
+
+    "archer": {
+      "_pattern": "Ranged attack from the Back row; weak knife attack if forced forward",
+      "rules": [
+        { "when": "in front row", "do": "role:melee" },
+        { "when": "always", "do": "role:ranged" },
+        { "when": "always", "do": "attack" }
+      ]
+    },
+
+    "caster": {
+      "_pattern": "Strongest spell first, then cheap spells; defensive spell when hurt",
+      "rules": [
+        { "when": "hp < 50%", "do": "role:defensive" },
+        { "when": "always", "do": "role:spell" },
+        { "when": "always", "do": "attack" }
+      ]
+    },
+
+    "support": {
+      "_pattern": "Heal a hurt ally, then buff or debuff, then attack",
+      "rules": [
+        { "when": "ally hp < 50%", "do": "role:heal" },
+        { "when": "always", "do": "role:buff" },
+        { "when": "always", "do": "role:debuff" },
+        { "when": "always", "do": "attack" }
+      ]
+    },
+
+    "thief": {
+      "_pattern": "Attack to steal; flee once holding gold",
+      "rules": [
+        { "when": "holding(gold)", "do": "flee" },
+        { "when": "always", "do": "attack" }
+      ]
+    },
+
+    "breather": {
+      "_pattern": "Use the recharge ability when ready; otherwise attack",
+      "rules": [
+        { "when": "always", "do": "role:breath" },
+        { "when": "always", "do": "attack" }
+      ]
+    },
+
+    "boss": {
+      "_pattern": "Resolve telegraphs, then scheduled abilities, then phase abilities, then attack. The telegraph is the turn's own step 8, before the script is asked at all.",
+      "rules": [
+        { "when": "always", "do": "scheduled" },
+        { "when": "always", "do": "phase" },
+        { "when": "always", "do": "attack" }
+      ]
+    }
+  },
+
+  "_hurtAlly": "The share of maximum HP that counts as a hurt ally for the Support archetype, and as hurt for the Caster's defensive spell.",
+  "hurtBelow": 0.5
+}
