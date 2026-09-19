@@ -295,6 +295,7 @@ function perform(combat, unit, action, record, services) {
     combat,
     unit,
     action,
+    phase: 'action',
     tags: [...tagsOf(action)],
     free: Boolean(action.free),
     targets: legality.targets,

@@ -41,6 +41,16 @@
     ]
   },
 
+  "attack": {
+    "_source": "06 section 6, and its Attack Modifiers table. Critical range is 01 section 4: a natural 20, or 19-20 with a Luck modifier of +2 or better, which a unit carries as its own critFrom.",
+    "die": 20,
+    "critFrom": 20,
+    "naturalMiss": 1,
+    "halfCover": -2,
+    "requirementNotMet": -2,
+    "maxRerolls": 2
+  },
+
   "turn": {
     "_source": "06 section 4 (Defend, Hidden, Free Actions) and section 5 step 6 (recharge).",
     "freeActionsPerTurn": 1,

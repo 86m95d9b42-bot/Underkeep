@@ -207,6 +207,17 @@ function checkCombat(json, strings) {
     problems.push('combat.json initiative bands are not first, normal, last');
   }
 
+  const attack = json.attack ?? {};
+  if (!(attack.die >= 2)) problems.push('combat.json attack has no die');
+  if (!(attack.critFrom >= 2 && attack.critFrom <= attack.die)) {
+    problems.push(`combat.json crit range starts at ${attack.critFrom}, which is not on the die`);
+  }
+  if (attack.naturalMiss !== 1) problems.push('combat.json does not miss on a natural 1');
+  for (const key of ['halfCover', 'requirementNotMet']) {
+    if (!(attack[key] < 0)) problems.push(`combat.json attack.${key} is not a penalty`);
+  }
+  if (!(attack.maxRerolls >= 1)) problems.push('combat.json allows no reroll, so Lucky could not work');
+
   const turn = json.turn ?? {};
   if (!(turn.freeActionsPerTurn >= 1)) problems.push('combat.json allows no free action');
   if (!(turn.defend?.def >= 1)) problems.push('combat.json Defend gives no DEF');

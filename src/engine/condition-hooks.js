@@ -148,10 +148,14 @@ export function registerConditionHooks(hooks, { rng, saveBonus = () => 0, hurt }
 
   /* -- attackRoll: advantage and disadvantage from both sides ---------- */
 
+  // `06` section 6 throws the die at step 5 and judges it at step 8, so the
+  // engine fires this event twice. What a condition does to a roll has to be
+  // known before the die, which is the `gather` phase.
   off.push(
     hooks.on(
       'attackRoll',
       (payload) => {
+        if (payload.phase === 'judge') return;
         const fromAttacker = payload.attacker ? attackMods(payload.attacker) : {};
         const fromTarget = payload.target ? defenceMods(payload.target) : {};
         payload.advantage = Boolean(payload.advantage || fromAttacker.advantage || fromTarget.advantage);
@@ -172,7 +176,9 @@ export function registerConditionHooks(hooks, { rng, saveBonus = () => 0, hurt }
       'beforeAction',
       (payload) => {
         const unit = payload.unit;
-        if (!unit || payload.free) return;
+        // Step 2 of an attack fires this event again to offer Guardian the
+        // blow; acting is what ends Hidden, and that already happened.
+        if (!unit || payload.free || payload.phase === 'redirect') return;
         // The turn engine puts the action's tags on the payload; without them
         // every action counts as an active one, which is the old behaviour.
         const tags = payload.tags ? new Set(payload.tags) : null;
