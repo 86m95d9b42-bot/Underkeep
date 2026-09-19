@@ -17,6 +17,7 @@
     "check": "node tools/check-frames.js",
     "sweep": "node tools/sweep.js",
     "walk": "node tools/walk.js",
+    "fight": "node tools/fight.js",
     "view-check": "node tools/view-check.js"
   },
   "devDependencies": {

@@ -281,13 +281,17 @@ function registerSharedTurns(hooks, unit) {
           other.actedInRound = payload.combat.round;
           const theirs = (other.abilities ?? []).find((entry) => entry.id === ability.id);
           if (theirs) theirs.used = true;
-          resolveAttack(payload.combat, other, {
+          const result = resolveAttack(payload.combat, other, {
             id: 'attack',
             kind: ability.kind ?? 'ranged',
             bonus: (other.atk ?? 0) + (ability.bonus ?? 0),
             damage: ability.damage,
             ability: ability.id,
           });
+          // Somebody else's arrow is still something the player watched
+          // happen, so the turn records it and the log says so.
+          payload.alsoResolved ??= [];
+          payload.alsoResolved.push({ by: other, action: 'attack', result });
         }
         payload.say(`${unit.id} volleys`);
       },

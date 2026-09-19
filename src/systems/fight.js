@@ -11,7 +11,7 @@
  * monster turn after it, up to the hero's next — before the screen is told
  * anything (CLAUDE.md; `06` section 1).
  */
-import { createCombat, countedEnemies, isTargetable } from '../engine/field.js';
+import { createCombat, countedEnemies, isTargetable, onField } from '../engine/field.js';
 import { createHooks } from '../engine/hooks.js';
 import { registerRules } from '../engine/rules.js';
 import { beginCombat, endRound, peekTurn, startRound, takeNextTurn } from '../engine/round.js';
@@ -20,6 +20,7 @@ import { coverPenalty, resolveAction, reachableTargets } from '../engine/attack.
 import { chooseAction } from '../engine/ai.js';
 import { legalityOf } from '../engine/actions.js';
 import { endCombat, heroFlees, outcomeOf } from '../engine/ending.js';
+import { combatOver } from '../engine/round.js';
 import { defendBonus } from '../engine/turn.js';
 import { defenceOf } from '../engine/attack.js';
 import { listed, spec } from '../engine/conditions.js';
@@ -30,6 +31,26 @@ import { t } from '../data/strings.js';
 /** How many log lines are kept, as on the Exploration screen. */
 export const LOG_KEPT = 40;
 
+/**
+ * What a level 1 hero brings to a fight until `01` section 4 derives it
+ * (Phase 4): the run's stand-in with the numbers a starting hero would have —
+ * BA 0, a Might modifier of +2, leather and a shield, a short sword.
+ * `main.js` and `tools/fight.js` both build their hero from this, so the
+ * screen and the audit fight the same person.
+ */
+export function standInHero(hero) {
+  return {
+    ...hero,
+    atk: hero.atk ?? 2,
+    def: hero.def ?? 12,
+    init: hero.init ?? 0,
+    saves: hero.saves ?? { body: 1, reflex: 1, mind: 1 },
+    attack: hero.attack ?? { name: 'sword', kind: 'melee', damage: '1d6+1 slash' },
+    // The solo protections are a flag on the unit, not a check for the hero.
+    protected: true,
+  };
+}
+
 /** The six actions of the outline's Combat table, in its order. */
 export const ACTIONS = ['attack', 'skill', 'item', 'defend', 'swap', 'flee'];
 
@@ -39,11 +60,14 @@ export const ACTIONS = ['attack', 'skill', 'item', 'defend', 'swap', 'flee'];
  *
  * @param {object} step
  * @param {object} unit the unit whose turn it was
- * @returns {{ text: string, tone?: 'accent' | 'muted' | 'danger' } | null}
+ * @returns {object | object[] | null} one line, several, or none
  */
 export function lineFor(step, unit) {
-  const who = unit?.name ?? unit?.id ?? '';
-  const mine = unit?.side === 'hero';
+  // A step may name its own actor: a Volley's other archers act inside the
+  // volleying archer's turn (`06` section 12).
+  const actor = step.by ?? unit;
+  const who = actor?.name ?? actor?.id ?? '';
+  const mine = actor?.side === 'hero';
   switch (step.type) {
     case 'turnDamage': {
       const total = step.damage.reduce((sum, row) => sum + row.amount, 0);
@@ -70,28 +94,37 @@ export function lineFor(step, unit) {
     case 'illegal':
       return { text: t(`combat.illegal.${step.why}`) ?? null, tone: 'muted' };
     case 'action':
-      return lineForAction(step, unit, who, mine);
+      return lineForAction(step, actor, who, mine);
     default:
       return null;
   }
 }
 
-/** What one resolved action says. Attacks carry their own result. */
+/**
+ * What one resolved action says. A blow that killed says two things: what it
+ * did, and what fell — the death is part of the attack (`06` section 6 step 9),
+ * not a step of the turn.
+ */
 function lineForAction(step, unit, who, mine) {
   const result = step.result;
+  // A multi-attack action hands back a list; each attack spoke for itself.
   if (!result || result.hit === undefined) return null;
   const target = result.targetName ?? result.target ?? '';
   if (!result.hit) {
     return { text: t(mine ? 'combat.log.youMiss' : 'combat.log.theyMiss', { who, target }), tone: 'muted' };
   }
+
   const amount = result.damage?.total ?? 0;
   const key = result.crit
     ? mine ? 'combat.log.youCrit' : 'combat.log.theyCrit'
     : mine ? 'combat.log.youHit' : 'combat.log.theyHit';
-  return {
+  const hit = {
     text: t(key, { who, target, n: amount }),
     tone: mine ? (result.crit ? 'accent' : undefined) : 'danger',
   };
+  // The hero falling is the fight's ending line, not one blow's aftermath.
+  if (!result.killed || result.targetIsHero) return hit;
+  return [hit, { text: t('combat.log.dies', { who: target }), tone: mine ? 'accent' : 'danger' }];
 }
 
 /**
@@ -105,6 +138,12 @@ function lineForAction(step, unit, who, mine) {
  * @param {number} [options.masterSeed] when there are no streams yet
  * @param {string} [options.difficulty]
  * @param {boolean} [options.surprise] false skips the surprise roll
+ * @param {(combat: object) => void} [options.watch] called once the field and
+ *   the rules are ready and before the first round runs, which is the only
+ *   moment a second observer can register hooks and see everything
+ * @param {number} [options.logKept] how many lines the log holds. The screen
+ *   keeps the last forty, as Exploration does; a tool auditing the log against
+ *   the rules asks for all of them
  */
 export function createFight({
   hero,
@@ -114,6 +153,8 @@ export function createFight({
   masterSeed = 1,
   difficulty = 'normal',
   surprise = true,
+  watch,
+  logKept = LOG_KEPT,
 }) {
   const rng = streams ?? carriedStreams(masterSeed);
   const rolled = monsters ?? rollEncounter(floor, rng.encounter).monsters;
@@ -128,6 +169,7 @@ export function createFight({
   combat.difficulty = difficulty;
   combat.floor = floor;
   registerRules(combat);
+  watch?.(combat);
 
   /** @type {{ text: string, tone?: string }[]} oldest first */
   const log = [];
@@ -137,8 +179,11 @@ export function createFight({
 
   const say = (line) => {
     if (!line) return;
-    log.push(line);
-    if (log.length > LOG_KEPT) log.splice(0, log.length - LOG_KEPT);
+    // Every line remembers the round it was said in: a batch of turns can
+    // cross a round boundary, and a log that groups them wrongly reads as if
+    // the hero acted twice.
+    for (const one of Array.isArray(line) ? line : [line]) log.push({ round: combat.round, ...one });
+    if (log.length > logKept) log.splice(0, log.length - logKept);
   };
 
   const record = (result) => {
@@ -153,6 +198,7 @@ export function createFight({
       // The log wants a name, and the engine deals in ids.
       if (result && !Array.isArray(result) && result.target) {
         result.targetName = unitById(result.target)?.name ?? result.target;
+        result.targetIsHero = result.target === combat.hero.id;
       }
       return result;
     },
@@ -165,7 +211,10 @@ export function createFight({
   /** Runs turns until it is the hero's turn again, or the fight is over. */
   function advance() {
     for (let guard = 0; guard < 200; guard += 1) {
-      if (combat.over) return finish();
+      // `combat.over` is settled at round end (`06` section 3 step 9), but a
+      // turn can finish the fight in the middle of one — so ask section 15
+      // itself rather than waiting for the round to catch up.
+      if (combat.over || combatOver(combat)) return finish();
       const next = peekTurn(combat);
 
       if (!next) {
@@ -242,10 +291,14 @@ export function createFight({
       return target ? unitById(target) : null;
     },
 
-    /** The enemies, front row then back, for the two card rows. */
+    /**
+     * The enemies of one row, for its card slots. A monster that ran is gone
+     * from the field and gone from the screen (`06` section 14); a Fallen
+     * troll is not alive and is still there to be burned (section 9).
+     */
     rowOf(row) {
       return combat.units
-        .filter((unit) => unit.side === 'monsters' && unit.row === row && !unit.removed)
+        .filter((unit) => unit.side === 'monsters' && unit.row === row && onField(unit))
         .filter((unit) => unit.alive || (unit.fallen && !unit.burned))
         .sort((a, b) => a.slot - b.slot);
     },

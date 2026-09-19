@@ -314,6 +314,13 @@ function perform(combat, unit, action, record, services) {
     return null;
   }
 
+  // A hook may have resolved something for another unit — a Volley fires every
+  // archer in the group (`06` section 12) — and each of those is a thing the
+  // player saw happen, so it goes in the record with its own name on it.
+  for (const also of before?.alsoResolved ?? []) {
+    step(record, { type: 'action', action: also.action ?? 'attack', by: also.by, result: also.result });
+  }
+
   // 11. Pay the cost before anything is resolved. An ability is spent when it
   // is used, which is what the recharge rolls at step 6 are for.
   if (action.fp) unit.fp = (unit.fp ?? 0) - action.fp;

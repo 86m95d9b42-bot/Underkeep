@@ -16,7 +16,7 @@ import { map } from './ui/screens/map.js';
 import { combat } from './ui/screens/combat.js';
 import { combatSkills } from './ui/screens/combat-skills.js';
 import { createRun, PLACEHOLDER_HERO } from './systems/run.js';
-import { createFight } from './systems/fight.js';
+import { createFight, standInHero } from './systems/fight.js';
 
 const app = /** @type {HTMLElement} */ (document.getElementById('app'));
 const isBuild = document.documentElement.dataset.build === '1';
@@ -71,16 +71,7 @@ const screens = {
 let fight = null;
 function startFight() {
   fight = createFight({
-    hero: {
-      ...run.hero,
-      // A stand-in's numbers, until Phase 4 derives them (`01` section 4).
-      atk: 2,
-      def: 12,
-      init: 0,
-      saves: { body: 1, reflex: 1, mind: 1 },
-      attack: { name: 'sword', kind: 'melee', damage: '1d6+1 slash' },
-      protected: true,
-    },
+    hero: standInHero(run.hero),
     floor: run.floor.floor,
     masterSeed: DEMO_SEED,
     difficulty: settings.all.difficulty ?? 'normal',
