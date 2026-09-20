@@ -86,7 +86,7 @@ Work top to bottom. Check a box when the task is done and tested. Each phase end
 - [x] Waystones: attune, Dungeon Gate travel, return to town from a Waystone
 - [x] Scroll of Return and the Return Mark
 - [x] Restocking on each return (`05` section 8)
-- [ ] **Done when:** the full loop works: descend, fight, return, shop, descend again
+- [x] **Done when:** the full loop works: descend, fight, return, shop, descend again
 
 ## Phase 7 — Depth
 

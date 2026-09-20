@@ -262,11 +262,19 @@ export function contextFor(floor, ex) {
   const ahead = lookAhead(floor, ex);
   const here = whatIsAt(floor, ex.pos, ex);
 
+  // What is in the way comes first: a web and a shut door are what stop the
+  // hero going on.
   if (ahead.hazard?.kind === 'web_curtain' && !ahead.hazard.burned && !ex.hazardsCleared.has(key(...ahead.at))) {
     return 'burn';
   }
-  if (ahead.chest && !ahead.chest.opened) return 'open';
   if (ahead.door && !doorOpen(ahead.door, key(...ahead.at), ex)) return 'open';
+
+  // Then what is underfoot, which the hero is already standing in: a
+  // Waystone is the way out (`05` section 9), and a chest in the next tile
+  // can wait for them to step off it.
+  if (here.waystone) return 'touch';
+
+  if (ahead.chest && !ahead.chest.opened) return 'open';
   for (const spot of [ahead, here]) {
     if (spot.waystone) return 'touch';
     if (spot.curiosity && !spot.curiosity.used) {

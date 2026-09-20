@@ -30,11 +30,9 @@ import { combat } from './ui/screens/combat.js';
 import { combatSkills } from './ui/screens/combat-skills.js';
 import { loot } from './ui/screens/loot.js';
 import { levelUp } from './ui/screens/levelup.js';
-import { createRun, PLACEHOLDER_HERO } from './systems/run.js';
-import { createTown, descend as descendTown } from './systems/town.js';
-import { openShop } from './systems/shop.js';
-import { returnToTown, useMark } from './systems/travel.js';
-import { createFight, standInHero } from './systems/fight.js';
+import { PLACEHOLDER_HERO } from './systems/run.js';
+import { createSession } from './systems/session.js';
+import { standInHero } from './systems/fight.js';
 import { chooseOrigin, createDraft, finish, setName } from './systems/creation.js';
 import { awardXp, xpNeeded } from './systems/levelling.js';
 import { learn } from './systems/skill-tree.js';
@@ -67,47 +65,44 @@ function demoHero() {
   );
 }
 
-/** @type {ReturnType<typeof createRun> | null} */
-let run = null;
-/** @type {object | null} */
-let hero = null;
-/** The town the hero comes back to: the day, the trip, and what is open. */
-let town = null;
-/** The shop's shelves for this stay, and what has been bought out for good. */
-let shelves = null;
-const sold = [];
+/** @type {ReturnType<typeof createSession> | null} */
+let session = null;
 
 /**
- * Starts a run. The Town is Phase 6, so a new hero goes straight to the first
- * floor; when the Town exists, creation will hand the hero to it instead.
+ * The game in progress. Creation makes one from the hero it rolled; opening
+ * a screen without having made a hero — the tools do, through the URL
+ * fragment — makes one from the demonstration seed, so every screen has a
+ * real hero to draw.
  * @param {object} [newHero] the hero creation finished, if there is one
  */
 function startRun(newHero) {
-  hero = newHero ?? hero ?? demoHero();
-  // A hero has a town to come back to from the moment they exist
-  // (`05` section 12 counts the days from the first one).
-  town ??= createTown();
-  run = createRun({
-    masterSeed: hero?.seed ?? DEMO_SEED,
-    floor: 1,
-    ...(hero ? { hero } : {}),
-    town,
-    leaveDungeon: (options) => ctx.leaveDungeon(options),
-  });
-  fight = null;
-  return run;
+  if (newHero || !session) {
+    session = createSession({
+      hero: newHero ?? session?.hero ?? demoHero(),
+      seed: DEMO_SEED,
+      difficulty: newHero?.difficulty ?? settings.all.difficulty ?? 'normal',
+      go: (to, params) => router.go(to, params),
+    });
+  }
+  return session.run ?? session.descend({ floor: 1 });
+}
+
+/** The session, made on the first ask. */
+function game() {
+  if (!session) startRun();
+  return /** @type {ReturnType<typeof createSession>} */ (session);
 }
 
 const save = {
   hasGame: true,
   get lastPlayed() {
-    const who = hero ?? PLACEHOLDER_HERO;
+    const who = session?.hero ?? PLACEHOLDER_HERO;
     return {
       name: who.name,
       level: who.level,
-      floor: run?.floor.floor ?? 1,
-      theme: run?.floor.spec.theme ?? '',
-      mode: hero?.mode === 'ironman' ? 'Ironman' : 'Adventurer',
+      floor: session?.run?.floor.floor ?? 1,
+      theme: session?.run?.floor.spec.theme ?? '',
+      mode: who.mode === 'ironman' ? 'Ironman' : 'Adventurer',
       played: '0m',
     };
   },
@@ -147,20 +142,14 @@ const screens = {
  * play a fight through on a phone. Phase 4 hands it the real hero, and the
  * exploration loop starts it when the clock says so.
  */
-let fight = null;
 function startFight(seed) {
-  const current = run ?? startRun();
-  fight = createFight({
-    // A created hero brings their own attack bonus and DEF; the weapon is
-    // still the stand-in's until the pack arrives (`04`, Phase 5).
-    hero: standInHero(current.hero),
-    floor: current.floor.floor,
-    // A tool asking for another fight passes its own seed; the same one
-    // would hand back the same encounter and the same rolls.
-    masterSeed: seed ?? current.masterSeed,
-    difficulty: hero?.difficulty ?? settings.all.difficulty ?? 'normal',
-  });
-  return fight;
+  const current = game();
+  // The solo protections are a flag on the unit, and a hero who was made
+  // before them gets them here (`01`, and the conditions ruling).
+  standInHero(current.hero);
+  // A tool asking for another fight passes its own seed; the same one would
+  // hand back the same encounter and the same rolls.
+  return current.startFight({ seed });
 }
 
 /** @type {ReturnType<typeof createRouter>} */
@@ -171,73 +160,29 @@ const watcher = watchFrame(app, () => router?.render());
 
 /** The session's own state, which the screens reach through the router. */
 const ctx = {
-    settings,
-    haptics,
-    save,
-    // The run is made when a hero is, so the screens ask for it rather than
-    // being handed one at startup.
-    get run() {
-      return run ?? startRun();
-    },
-    startRun,
-    // The screen reads the fight in progress, and starting one is what
-    // opening the screen means until the exploration loop does it.
-    get fight() {
-      return fight ?? startFight();
-    },
-    /** The town's own state, made with the hero. */
-    get town() {
-      if (!town) startRun();
-      return town;
-    },
-    /**
-     * The shop as it stands on this visit. It is built once per stay, so
-     * walking out and back in shows the same shelves: the rotating lines
-     * reroll when the hero comes back from the dungeon (`04` section 15).
-     */
-    get shop() {
-      if (!town) startRun();
-      if (!shelves || shelves.day !== town.day) {
-        shelves = { day: town.day, ...openShop({ town, masterSeed: hero?.seed ?? DEMO_SEED, sold }) };
-      }
-      return shelves;
-    },
-    /**
-     * Taking the Dungeon Gate: the trip is counted before the hero is in the
-     * dungeon, so a trip they never come back from is still a trip. A trip
-     * that begins at a Return Mark begins where the scroll was read, and
-     * spends the mark (`05` section 9).
-     */
-    descend({ floor: toFloor, mark: byMark = false } = {}) {
-      if (!town) startRun();
-      const startAt = byMark ? useMark(town) : null;
-      const floorNumber = startAt?.floor ?? toFloor ?? run?.floor?.floor ?? 1;
-      run = createRun({
-        masterSeed: hero?.seed ?? DEMO_SEED,
-        floor: floorNumber,
-        hero,
-        ...(startAt ? { startAt } : {}),
-        town,
-        leaveDungeon: (options) => ctx.leaveDungeon(options),
-      });
-      fight = null;
-      descendTown(town);
-      return run;
-    },
-
-    /**
-     * Coming back up. The Scroll of Return leaves a mark where it was read;
-     * everything else (a Waystone, and Phase 8's death) does not. The run is
-     * let go: the next trip builds its own.
-     */
-  leaveDungeon({ leaveMark = false } = {}) {
-    if (!town) startRun();
-    const left = returnToTown(town, { run, leaveMark });
-    run = null;
-    fight = null;
-    shelves = null;
-    router.go('town');
-    return left;
+  settings,
+  haptics,
+  save,
+  // Every screen reads the game in progress; `systems/session.js` is what
+  // one is, and this hands the screens their way into it.
+  get run() {
+    return game().run ?? startRun();
+  },
+  startRun,
+  get fight() {
+    return game().fight ?? startFight();
+  },
+  get town() {
+    return game().town;
+  },
+  get shop() {
+    return game().shop;
+  },
+  descend(options) {
+    return game().descend(options);
+  },
+  leaveDungeon(options) {
+    return game().leaveDungeon(options);
   },
 };
 
@@ -254,7 +199,10 @@ settings.subscribe((values) => {
 // It is one object on the global, and nothing in the game reads it.
 globalThis.underkeep = {
   get run() {
-    return run ?? startRun();
+    return game().run ?? startRun();
+  },
+  get session() {
+    return game();
   },
   startRun,
   router,
@@ -272,7 +220,7 @@ globalThis.underkeep = {
    * Level Up card it earned.
    */
   showVictory(screen = 'loot') {
-    const current = run ?? startRun();
+    const current = game().run ?? startRun();
     // A hero who has been down a few floors, left a few XP short so the fight
     // is worth a level, and fights until one of them is won.
     if (current.hero.level < 3) awardXp(current.hero, 300, current.rng.loot);
@@ -289,7 +237,7 @@ globalThis.underkeep = {
   },
 
   showHero(screen) {
-    const current = run ?? startRun();
+    const current = game().run ?? startRun();
     if (current.hero.level < 5 && current.hero.attributes) {
       awardXp(current.hero, 2400, current.rng.loot);
       for (const id of ['weapon_training', 'toughness', 'toughness', 'brute_force', 'mend', 'keen_senses']) {

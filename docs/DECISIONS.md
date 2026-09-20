@@ -4,6 +4,13 @@ Rulings here override the other documents. Add new entries at the top of each li
 
 ## Decisions
 
+- **2026-09-20 — Phase 6's "done when", and the session it needed.** `npm run loop` plays whole games — descend, fight, return, shop, descend again — and audits every step against `04` and `05`. **200 games x 4 trips: 583 trips, 583 fights, 471 waystone journeys home, 465 purchases, and no game broke a rule.** Five notes:
+  - **The loop needed a session, so `main.js` gave one up.** `src/systems/session.js` is the game in progress — the hero, the town, the trip, the fight, the shop — and `main.js` is now the browser half only. Two reasons beyond this task: the browser is not the only thing that plays the game, and Phase 8's save file is this object written down.
+  - **The harness presses the same buttons a player does.** It walks the pad rather than teleporting, uses `npm run walk`'s own router to find its way back to the stone, drinks a potion before it runs, and buys from the Shop's own shelves. A loop that reached into the modules would prove nothing about the loop.
+  - **The context key needed an order.** Restocked chests now appear in dead ends, and a chest in the next tile was beating the Waystone underfoot. The rule is now written down: what blocks the way comes first (a web, a shut door), then what is underfoot, then what is ahead.
+  - **A death is not a rule broken.** 112 of 200 games lost their hero before the fourth trip. They are level 1, taking a rolled encounter every trip, with what 60 gold buys; `npm run climb` measured the same thing in Phase 4 and Phase 7's simulator is where it gets settled. The loop only claims that the games that ran, ran clean — and 107 of 200 walked all four trips.
+  - **It was proved by breaking things.** The trip counter and the floor's memory of opened doors were each broken on purpose, and the audit named both.
+
 - **2026-09-20 — Restocking, and what a floor remembers.** `05` section 8 only means something once a floor can remember being visited, so this task is two: `src/systems/floor-memory.js` keeps one record per floor on the town, and restocks it. Six rulings:
   - **The memory is the floor's, and the town holds it.** A floor is rebuilt from the seed every trip (`05` section 11), so what the hero *did* — the map they made, the doors they opened, the lairs they cleared — lives in `town.floors[n]` and is stamped back onto the floor when it is next built.
   - **Exploration writes straight into it.** `createExploration(floor, memory)` hands the run the memory's own sets rather than fresh ones, so walking, opening and finding are recorded by happening. There is no "save the floor" step to forget.

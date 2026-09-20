@@ -20,6 +20,7 @@
     "fight": "node tools/fight.js",
     "climb": "node tools/climb.js",
     "loot": "node tools/loot.js",
+    "loop": "node tools/loop.js",
     "view-check": "node tools/view-check.js"
   },
   "devDependencies": {

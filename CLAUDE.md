@@ -89,6 +89,7 @@ npm run walk       # walk every floor of N seeds from arrival to the boss arena
 npm run climb      # play heroes from level 1 to level 5 on floors 1-2
 npm run fight      # play fights to the end and check the log against the rules
 npm run loot       # roll, carry and use a game's worth of items; audit against 04
+npm run loop       # play whole games: descend, fight, return, shop, descend again
 npm run view-check # render the dungeon view in a browser and check what came out
 npm run sim        # balance simulator (Phase 7+)
 ```
