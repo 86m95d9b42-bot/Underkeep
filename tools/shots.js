@@ -28,6 +28,7 @@ const SCREENS = [
   'inn',
   'temple',
   'sage',
+  'alchemist',
   'explore',
   'pause',
   'map',

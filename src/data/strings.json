@@ -282,6 +282,25 @@
       "notCursed": "Nothing wrong with it."
     }
   },
+  "alchemist": {
+    "title": "ALCHEMIST",
+    "label": "RECIPES",
+    "gold": "{n} GP",
+    "fee": "{n} GP",
+    "brew": "BREW",
+    "pick": "Pick a recipe first.",
+    "result": "{name}",
+    "resultMany": "{name} x{n}",
+    "ingredient": "{name} {have} / {need}",
+    "locked": "Opens after the floor {n} boss.",
+    "why": {
+      "locked": "Opens after the floor {n} boss.",
+      "missingParts": "You are short of parts.",
+      "notEnoughGold": "Not enough gold.",
+      "packFull": "No room in your pack.",
+      "pick": "Pick a recipe first."
+    }
+  },
   "conditions": {
     "poisoned": {
       "name": "POISONED",

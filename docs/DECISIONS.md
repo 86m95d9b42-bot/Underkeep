@@ -4,6 +4,12 @@ Rulings here override the other documents. Add new entries at the top of each li
 
 ## Decisions
 
+- **2026-09-20 — The Alchemist.** `src/systems/alchemist.js` is `04` section 12's nine recipes and `src/ui/screens/alchemist.js` is the outline's own table, which is close to the service layout but not it: the recipe list wants the whole middle of the screen. Four rulings:
+  - **The rows keep their "have / need", whatever the reason.** `00`'s table asks for *"ingredients as have / need in green or red"*, and that line **is** the reason a recipe cannot be brewed — it says which part is short. So a row is never dimmed with words that replace it; the BREW button carries the refusal, which is where the UI rule wants it.
+  - **A locked shop still shows its recipes.** The Alchemist opens after the floor 2 boss, but knowing that three Dragon Scales make Dragonscale Mail is worth having on floor 1. The list is readable from the first day and the button says when the door opens.
+  - **Brewable sorts first.** The outline says so, and it is what a player with a pack of parts wants: the four things they can make, then the five they are saving for.
+  - **What comes off the counter is known.** The hero watched it being made, so the result is identified — the same reading as `04` section 5's "anything bought in a shop is identified".
+
 - **2026-09-20 — The Inn, the Temple and the Sage: one screen, three shopfronts.** `src/systems/services.js` is what each one offers and what it charges; `src/ui/screens/service.js` is the outline's Temple table, built once and exported three times, because `00` says the Inn and the Sage use that same layout. Six rulings:
   - **An offer carries its own price and its own refusal.** Every service hands back the same shape — `{ id, cost, why, apply }` — so the screen dims a row, prices it and pays for it without knowing whether it is a bed, a cure or a name.
   - **A full rest at the Inn clears the drain.** `01` section 7 ends Drained on "Temple cure, **or a full rest in town**", and `02` section 18's counterplay table says the same, so the Inn's 5 gp x level rest takes it. That makes the Temple's 100 gp x level restore the expensive way round; it is kept because the documents name it, and flagged below.

@@ -21,6 +21,7 @@ import { skillTree } from './ui/screens/skill-tree.js';
 import { town as townScreen } from './ui/screens/town.js';
 import { shop as shopScreen } from './ui/screens/shop.js';
 import { inn, sage, temple } from './ui/screens/service.js';
+import { alchemist } from './ui/screens/alchemist.js';
 import { pack as packScreen } from './ui/screens/pack.js';
 import { itemDetail } from './ui/screens/item-detail.js';
 import { combat } from './ui/screens/combat.js';
@@ -123,6 +124,7 @@ const screens = {
   inn,
   temple,
   sage,
+  alchemist,
   pack: packScreen,
   itemDetail,
   combat,
