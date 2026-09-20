@@ -19,6 +19,7 @@
     "walk": "node tools/walk.js",
     "fight": "node tools/fight.js",
     "climb": "node tools/climb.js",
+    "loot": "node tools/loot.js",
     "view-check": "node tools/view-check.js"
   },
   "devDependencies": {

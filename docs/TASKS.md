@@ -74,7 +74,7 @@ Work top to bottom. Check a box when the task is done and tested. Each phase end
 - [x] Cursed item binding and effects
 - [x] Item effects through hooks (weapon properties, armor properties, charms, potions, scrolls, bombs)
 - [x] Hero: Pack screen and Item Detail sheet; drops on Victory & Loot
-- [ ] **Done when:** unknown potions, scrolls, and cursed gear behave exactly as `04` describes
+- [x] **Done when:** unknown potions, scrolls, and cursed gear behave exactly as `04` describes
 
 ## Phase 6 — Town
 
