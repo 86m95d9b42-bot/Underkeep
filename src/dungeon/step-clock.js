@@ -43,6 +43,20 @@ export function createClock() {
   };
 }
 
+/**
+ * Travelling by Waystone "resets the floor's Hollow Stalker count"
+ * (`05` section 9). The steps themselves are the count, so the clock starts
+ * again: the warnings are unsaid and the Stalker, if it was out, is not.
+ * @param {object} clock the exploration state
+ */
+export function resetStalker(clock) {
+  clock.steps = 0;
+  clock.sinceCheck = 0;
+  clock.stalkerWarned = [];
+  clock.stalkerLoose = false;
+  return clock;
+}
+
 /** The cost in steps of a named action, for callers that don't hold the data. */
 export function costOf(action) {
   const cost = ACTION_STEPS[action];

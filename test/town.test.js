@@ -47,8 +47,14 @@ function makeHero() {
   );
 }
 
-function mount({ frame = 'tall', hero = makeHero(), town = createTown(), descend: onDescend } = {}) {
-  const router = { has: () => true, go: vi.fn(), back: vi.fn(), openSheet: vi.fn() };
+function mount({
+  frame = 'tall',
+  hero = makeHero(),
+  town = createTown(),
+  descend: onDescend,
+  has = () => true,
+} = {}) {
+  const router = { has, go: vi.fn(), back: vi.fn(), openSheet: vi.fn() };
   const run = { hero, floor: { floor: 1 } };
   const built = townScreen.build({ router, run, town, descend: onDescend, frame, settings: { all: {} } });
   return { built, router, placed: placeRegions(townScreen, frame), hero, town };
@@ -228,12 +234,18 @@ describe('what the Hub shows', () => {
     expect(open.built.alchemist.textContent).toContain(t('town.hints.alchemist'));
   });
 
-  it('takes the gate down, counting the trip', () => {
-    const onDescend = vi.fn();
-    const { built, router } = mount({ descend: onDescend });
+  it('opens the Dungeon Gate, which is where a trip is chosen', () => {
+    const { built, router } = mount();
     const gate = buttons(built).get(t('town.gate'));
     expect(gate.classList.contains('btn--primary')).toBe(true);
     gate.click();
+    expect(router.go).toHaveBeenCalledWith('gate');
+  });
+
+  it('goes straight down while there is no Gate screen to open', () => {
+    const onDescend = vi.fn();
+    const { built, router } = mount({ descend: onDescend, has: () => false });
+    buttons(built).get(t('town.gate')).click();
     expect(onDescend).toHaveBeenCalledOnce();
     expect(router.go).toHaveBeenCalledWith('explore');
   });

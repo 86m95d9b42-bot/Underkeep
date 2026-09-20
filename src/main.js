@@ -23,6 +23,7 @@ import { shop as shopScreen } from './ui/screens/shop.js';
 import { inn, sage, temple } from './ui/screens/service.js';
 import { alchemist } from './ui/screens/alchemist.js';
 import { stash } from './ui/screens/stash.js';
+import { gate } from './ui/screens/gate.js';
 import { pack as packScreen } from './ui/screens/pack.js';
 import { itemDetail } from './ui/screens/item-detail.js';
 import { combat } from './ui/screens/combat.js';
@@ -90,6 +91,8 @@ function startRun(newHero) {
     masterSeed: hero?.seed ?? DEMO_SEED,
     floor: 1,
     ...(hero ? { hero } : {}),
+    town,
+    leaveDungeon: (options) => ctx.leaveDungeon(options),
   });
   fight = null;
   return run;
@@ -128,6 +131,7 @@ const screens = {
   sage,
   alchemist,
   stash,
+  gate,
   pack: packScreen,
   itemDetail,
   combat,
@@ -165,11 +169,8 @@ let router;
 // Rotating or resizing re-renders the current screen from the same state.
 const watcher = watchFrame(app, () => router?.render());
 
-router = createRouter({
-  app,
-  screens,
-  frame: () => watcher.frame,
-  ctx: {
+/** The session's own state, which the screens reach through the router. */
+const ctx = {
     settings,
     haptics,
     save,
@@ -207,21 +208,21 @@ router = createRouter({
      * that begins at a Return Mark begins where the scroll was read, and
      * spends the mark (`05` section 9).
      */
-    descend() {
+    descend({ floor: toFloor, mark: byMark = false } = {}) {
       if (!town) startRun();
-      const startAt = useMark(town);
-      if (startAt) {
-        run = createRun({
-          masterSeed: hero?.seed ?? DEMO_SEED,
-          floor: startAt.floor,
-          hero,
-          startAt,
-        });
-        fight = null;
-      }
-      const current = run ?? startRun();
+      const startAt = byMark ? useMark(town) : null;
+      const floorNumber = startAt?.floor ?? toFloor ?? run?.floor?.floor ?? 1;
+      run = createRun({
+        masterSeed: hero?.seed ?? DEMO_SEED,
+        floor: floorNumber,
+        hero,
+        ...(startAt ? { startAt } : {}),
+        town,
+        leaveDungeon: (options) => ctx.leaveDungeon(options),
+      });
+      fight = null;
       descendTown(town);
-      return current;
+      return run;
     },
 
     /**
@@ -229,17 +230,18 @@ router = createRouter({
      * everything else (a Waystone, and Phase 8's death) does not. The run is
      * let go: the next trip builds its own.
      */
-    leaveDungeon({ leaveMark = false } = {}) {
-      if (!town) startRun();
-      const left = returnToTown(town, { run, leaveMark });
-      run = null;
-      fight = null;
-      shelves = null;
-      router.go('town');
-      return left;
-    },
+  leaveDungeon({ leaveMark = false } = {}) {
+    if (!town) startRun();
+    const left = returnToTown(town, { run, leaveMark });
+    run = null;
+    fight = null;
+    shelves = null;
+    router.go('town');
+    return left;
   },
-});
+};
+
+router = createRouter({ app, screens, frame: () => watcher.frame, ctx });
 
 // A settings change repaints whatever screen is open.
 settings.subscribe((values) => {

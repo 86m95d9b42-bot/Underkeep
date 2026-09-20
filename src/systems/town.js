@@ -42,8 +42,16 @@ export const SERVICE_PRICES = shops.services;
  * @param {object} [state]
  * @returns {{ day: number, trips: number, bosses: number[] }}
  */
-export function createTown({ day = 1, trips = 0, bosses = [] } = {}) {
-  return { day, trips, bosses: [...bosses] };
+export function createTown({ day = 1, trips = 0, bosses = [], attuned = [] } = {}) {
+  return {
+    day,
+    trips,
+    bosses: [...bosses],
+    // The Waystones the hero has stepped on (`05` section 9). Attuning is
+    // permanent, and the Dungeon Gate lists them.
+    attuned: [...attuned],
+    mark: null,
+  };
 }
 
 /** The trip the Dungeon Gate would begin: one more than those taken. */

@@ -115,7 +115,10 @@ export const town = {
           ? t('town.gateMark', { n: mark.floor })
           : t('town.gateHint', { n: run.floor?.floor ?? 1 }),
         kind: 'primary',
+        // The Dungeon Gate has a screen of its own (`00`, the screen flow);
+        // the Hub's key is what opens it.
         onTap: () => {
+          if (router.has?.('gate')) return router.go('gate');
           descend?.();
           router.go('explore');
         },

@@ -29,6 +29,7 @@ import { remember } from '../dungeon/automap.js';
 import { bestWay, waysToOpen, tryOpen, stepsFor, bashTn } from './locks.js';
 import { layoutStream, carriedStreams } from '../engine/rng.js';
 import { t } from '../data/strings.js';
+import { attune, whyNotLeaveByStone } from './travel.js';
 
 /**
  * A stand-in hero so the bars have something to show. Real attributes, derived
@@ -64,6 +65,10 @@ export function lineFor(event) {
       return { text: t(`explore.log.stairs.${event.direction}`) };
     case 'waystone':
       return { text: t('explore.log.waystone'), tone: 'accent' };
+    case 'attuned':
+      return { text: t('explore.log.attuned'), tone: 'accent' };
+    case 'waystoneTravel':
+      return { text: t('explore.log.waystoneTravel'), tone: 'accent' };
     case 'pit':
       return { text: t('explore.log.pit'), tone: 'danger' };
     case 'safeRoom':
@@ -118,6 +123,9 @@ export function firstReason(door, ex, hero) {
  * @param {ReturnType<typeof carriedStreams>} [options.streams] resumed streams
  * @param {{ at: [number, number], facing?: string }} [options.startAt] a Return
  *   Mark, or anywhere else a trip begins that is not the arrival room
+ * @param {object} [options.town] what the trip attunes and comes home to
+ * @param {(options?: object) => void} [options.leaveDungeon] the way up, which
+ *   the session owns: a Waystone offers it, `travel.js` does it
  */
 export function createRun({
   masterSeed,
@@ -125,6 +133,8 @@ export function createRun({
   hero = { ...PLACEHOLDER_HERO },
   streams,
   startAt,
+  town,
+  leaveDungeon,
 }) {
   const rng = streams ?? carriedStreams(masterSeed);
   let floor = buildFloor(floorNumber, masterSeed, layoutStream);
@@ -170,7 +180,10 @@ export function createRun({
 
   // The hero is standing on the up stairs and its waystone, so the log opens
   // with what is underfoot — the same events as walking onto the tile.
-  record(arrivalEvents(floor, ex.pos, ex));
+  const arriving = arrivalEvents(floor, ex.pos, ex);
+  // Arriving on the stone is standing on it (`05` section 9).
+  if (town && arriving.some((event) => event.type === 'waystone')) attune(town, floor.floor);
+  record(arriving);
   remember(floor, ex);
 
   const run = {
@@ -224,6 +237,11 @@ export function createRun({
       // A key underfoot is picked up on the way past: it belongs to the floor,
       // not to a pack, until inventory arrives in Phase 5.
       for (const event of events) if (event.type === 'key') ex.keysTaken.add(event.key.id);
+      // Stepping on a Waystone attunes it, permanently (`05` section 9).
+      for (const event of events) {
+        if (event.type !== 'waystone' || !town) continue;
+        if (attune(town, floor.floor).attuned) events.push({ type: 'attuned', floor: floor.floor });
+      }
       record(events);
       return { outcome, events };
     },
@@ -240,6 +258,16 @@ export function createRun({
     act() {
       const ahead = run.ahead;
       const at = ahead.at;
+
+      // A Waystone the hero has attuned offers a free trip to town
+      // (`05` section 9). It is not a step and it costs nothing.
+      if (run.context === 'touch') {
+        const why = whyNotLeaveByStone(town, run);
+        if (why) return { events: [] };
+        record([{ type: 'waystoneTravel', floor: floor.floor }]);
+        leaveDungeon?.({ leaveMark: false, by: 'waystone' });
+        return { events: [{ type: 'waystoneTravel', floor: floor.floor }], left: true };
+      }
 
       if (run.context === 'burn') {
         clearHazard(ex, at);
@@ -296,6 +324,10 @@ export function createRun({
     /** Why the context key is disabled, or undefined when it can be pressed. */
     get actReason() {
       if (run.context === 'burn') return undefined;
+      if (run.context === 'touch') {
+        const why = whyNotLeaveByStone(town, run);
+        return why ? t(`explore.reason.${why}`) : undefined;
+      }
       if (run.context === 'open' && run.doorAhead) {
         // A door with no way through says which one is missing, not "later".
         const way = run.openingWay;
@@ -306,6 +338,9 @@ export function createRun({
 
     /** What the context key's second line says. */
     get actHint() {
+      if (run.context === 'touch') {
+        return whyNotLeaveByStone(town, run) ? null : t('explore.hint.toTown');
+      }
       const way = run.openingWay;
       if (!way) return null;
       const steps = stepsFor(way.method);

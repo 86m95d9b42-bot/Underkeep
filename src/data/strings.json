@@ -62,7 +62,9 @@
       "bashFail": "The door holds.",
       "returned": "The scroll burns away and the town rises around you.",
       "markLeft": "A mark glows on the stone where you stood.",
-      "markRefused": "The arena will not hold a mark."
+      "markRefused": "The arena will not hold a mark.",
+      "attuned": "The waystone answers. You could return here.",
+      "waystoneTravel": "The waystone takes you up and out."
     },
     "title": "EXPLORE",
     "pad": {
@@ -94,7 +96,8 @@
       "touch": "Waystone",
       "drink": "Fountain",
       "offer": "Shrine",
-      "burn": "Torch"
+      "burn": "Torch",
+      "toTown": "To town"
     },
     "way": {
       "bash": "Bash",
@@ -113,7 +116,10 @@
       "noRuneKey": "Needs its rune key",
       "notPickable": "Stuck fast; bash it",
       "barred": "Barred from the far side",
-      "shut": "No way through"
+      "shut": "No way through",
+      "notOnStone": "Stand on the waystone.",
+      "notAttuned": "This stone is not yours yet.",
+      "nowhere": "Not here."
     }
   },
   "pause": {
@@ -324,6 +330,28 @@
       "stashFull": "The stash is full.",
       "packFull": "No room in your pack.",
       "pick": "Pick something to move."
+    }
+  },
+  "gate": {
+    "title": "DUNGEON GATE",
+    "sub": "Choose where to begin",
+    "label": "WAYSTONES",
+    "floor": "FLOOR {n}",
+    "attuned": "ATTUNED",
+    "locked": "LOCKED",
+    "unknown": "Unknown",
+    "notAttuned": "Its waystone is not yours yet",
+    "mark": "RETURN MARK",
+    "markCard": "Floor {n} · one use",
+    "noMark": "No return mark. A Scroll of Return leaves one.",
+    "go": "GO",
+    "descend": "DESCEND TO FLOOR {n}",
+    "descendMark": "RETURN TO THE MARK",
+    "pick": "Pick a floor first.",
+    "why": {
+      "notAttuned": "Its waystone is not yours yet.",
+      "unknown": "You have not heard of it.",
+      "pick": "Pick a floor first."
     }
   },
   "conditions": {

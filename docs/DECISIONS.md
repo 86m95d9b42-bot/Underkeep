@@ -4,6 +4,14 @@ Rulings here override the other documents. Add new entries at the top of each li
 
 ## Decisions
 
+- **2026-09-20 — Waystones, and the Dungeon Gate.** `05` section 9's other half: attuning a stone by standing on it, travelling to any attuned stone from town, and taking one back up. `src/systems/travel.js` gained the waystone half beside the Return Mark, and `src/ui/screens/gate.js` is the outline's Dungeon Gate. Six rulings:
+  - **A stone is attuned by standing on it, not by arriving near it.** The Waystone sits *in* the arrival room, a step from the stairs the hero lands on, so attuning hangs off the `waystone` event the movement rules already fire when the hero lands on that tile. Arriving beside it and facing it is not attuning it, and the context key says so: "Stand on the waystone."
+  - **The Gate knows one floor past the deepest thing the hero has done.** A floor is reachable when its own stone is attuned (and floor 1 always is, because that is where a trip starts). Everything up to one past the deepest stone *or* the deepest boss shows what it is waiting for; past that it is "Unknown", which is the mockup's own word.
+  - **Travelling up is the context key, and it is free.** Standing on an attuned stone, TOUCH takes the hero to town: no step, no cost, no mark. `05` section 9 says travel is free and instant, and that it "offers a free trip to town", so the key is the offer.
+  - **A Waystone trip resets the floor's Hollow Stalker count.** Section 9 says so outright; `resetStalker` puts the step clock, its warnings and the Stalker itself back to nothing.
+  - **The run is told where home is.** `createRun` now takes the `town` it attunes and the `leaveDungeon` the session owns, so the dungeon can send the hero up without knowing what a town is. The same callback serves the Scroll of Return.
+  - **A dimmed row keeps its own line.** `listRow` gained a `disabled` option beside `reason`, because a locked floor still has to show its theme or its "Unknown", and a recipe still has to show its "have / need". `reason` replaces the line; `disabled` only dims.
+
 - **2026-09-20 — The Scroll of Return, the Return Mark, and the first way out of the dungeon.** `src/systems/travel.js` is `05` section 9's mark and the trip home. The Waystone half of that section — attuning, travelling between stones — is still its own task, and will leave and arrive through these same two functions. Six rulings:
   - **The mark lives on the town.** The town is what offers it and what remembers the day it was left, and it is one thing at a time for the whole game rather than one per hero state. A second scroll replaces it, as section 9 says.
   - **"Not inside a boss arena" is read as the arena's safe zone.** `inSafeZone` already covers the arena, its Safe Room and the stairs behind it, and none of those is somewhere a scroll should be allowed to plant a shortcut past a boss.

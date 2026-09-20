@@ -85,7 +85,10 @@ export function chip(text, { tone, title } = {}) {
  * @param {string} [options.side]
  * @param {HTMLElement[]} [options.chips]
  * @param {boolean} [options.selected]
- * @param {string} [options.reason] why the row cannot be picked
+ * @param {string} [options.reason] why the row cannot be picked; it is shown
+ *   in place of `sub`
+ * @param {boolean} [options.disabled] dims the row without taking its own line
+ *   away — a locked floor keeps its theme, a recipe keeps its "have / need"
  * @param {string} [options.color] a CSS colour token for the name (rarity)
  * @param {() => void} [options.onTap]
  */
@@ -96,10 +99,13 @@ export function listRow({
   chips = [],
   selected = false,
   reason,
+  disabled: off = false,
   color,
   onTap,
 }) {
-  const disabled = Boolean(reason);
+  // A row can be dimmed and still keep its own line: a locked floor's theme,
+  // a recipe's "have / need". `reason` replaces the line; `disabled` does not.
+  const disabled = Boolean(reason) || off;
   return el(
     'button',
     {

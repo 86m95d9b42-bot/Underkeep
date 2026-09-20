@@ -20,7 +20,7 @@
  * No DOM.
  */
 import { inSafeZone } from '../dungeon/step-clock.js';
-import { arrive } from './town.js';
+import { arrive, deepestBoss } from './town.js';
 
 /** Why a mark cannot be left here, or null (`05` section 9). */
 export function whyNotMark(floor, pos) {
@@ -99,4 +99,82 @@ export function useMark(town) {
   if (!start) return null;
   clearMark(town);
   return start;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Waystones (`05` section 9)                                                 */
+/* -------------------------------------------------------------------------- */
+
+/** Every floor a Waystone could be on, which is every floor. */
+export const FLOORS = Array.from({ length: 10 }, (_, index) => index + 1);
+
+/** The floors whose Waystones the hero has stepped on, in order. */
+export function attunedFloors(town) {
+  return [...(town?.attuned ?? [])].sort((a, b) => a - b);
+}
+
+/** True once this floor's stone has been stood on. */
+export function isAttuned(town, floor) {
+  return attunedFloors(town).includes(floor);
+}
+
+/**
+ * Stepping on a Waystone attunes it, permanently (`05` section 9).
+ * @returns {{ attuned: boolean, floor: number }} whether this was the first time
+ */
+export function attune(town, floor) {
+  if (!town || isAttuned(town, floor)) return { attuned: false, floor };
+  town.attuned = [...attunedFloors(town), floor];
+  return { attuned: true, floor };
+}
+
+/**
+ * The Dungeon Gate's list: every floor, whether it can be travelled to, and
+ * what is known about the ones that cannot (`00`, Dungeon Gate: *"Locked
+ * floors show what unlocks them, or 'Unknown'"*).
+ *
+ * A floor is reachable when its own stone is attuned. The next floor down
+ * from the deepest attuned one is the one the hero has not been to yet but
+ * knows how to reach — everything past that is Unknown.
+ *
+ * @param {object} town
+ * @returns {{ floor: number, attuned: boolean, known: boolean, why: string | null }[]}
+ */
+export function gateFloors(town) {
+  const attunedList = attunedFloors(town);
+  const deepest = attunedList.length ? attunedList[attunedList.length - 1] : 0;
+  // What the hero knows is there: one floor past the deepest stone they have
+  // touched, and one past the deepest boss they have beaten — either is how
+  // you learn a floor below exists.
+  const frontier = Math.max(deepest, deepestBoss(town)) + 1;
+  return FLOORS.map((floor) => {
+    // Floor 1 is always reachable: the stairs down are where a trip starts.
+    const reachable = attunedList.includes(floor) || floor === 1;
+    const known = reachable || floor <= frontier;
+    return {
+      floor,
+      attuned: reachable,
+      known,
+      why: reachable ? null : known ? 'notAttuned' : 'unknown',
+    };
+  });
+}
+
+/** Why the hero cannot travel to this floor from town, or null. */
+export function whyNotTravel(town, floor) {
+  const row = gateFloors(town).find((entry) => entry.floor === floor);
+  return row ? row.why : 'unknown';
+}
+
+/**
+ * Leaving the dungeon by Waystone: free, instant, and no mark
+ * (`05` section 9). The stone has to be one the hero has attuned.
+ */
+export function whyNotLeaveByStone(town, run) {
+  const floor = run?.floor;
+  const pos = run?.ex?.pos;
+  if (!floor || !pos) return 'nowhere';
+  if (floor.waystone?.[0] !== pos[0] || floor.waystone?.[1] !== pos[1]) return 'notOnStone';
+  if (!isAttuned(town, floor.floor)) return 'notAttuned';
+  return null;
 }

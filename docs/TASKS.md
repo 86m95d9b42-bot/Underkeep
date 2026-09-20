@@ -83,7 +83,7 @@ Work top to bottom. Check a box when the task is done and tested. Each phase end
 - [x] Inn, Temple (prices in `DECISIONS.md`), and Sage using the shared service layout
 - [x] Alchemist (unlocks after the floor 2 boss)
 - [x] Stash (50 slots)
-- [ ] Waystones: attune, Dungeon Gate travel, return to town from a Waystone
+- [x] Waystones: attune, Dungeon Gate travel, return to town from a Waystone
 - [x] Scroll of Return and the Return Mark
 - [ ] Restocking on each return (`05` section 8)
 - [ ] **Done when:** the full loop works: descend, fight, return, shop, descend again
