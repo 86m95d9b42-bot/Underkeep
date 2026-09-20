@@ -262,8 +262,9 @@ describe('what a skill does in a fight', () => {
       surprise: false,
     });
     combat.round = 1;
+    // `registerRules` registers the hero's own skills and gear as well now,
+    // which is how a real fight is set up (`06` section 16).
     registerRules(combat);
-    registerSkills(combat);
     return combat;
   }
 

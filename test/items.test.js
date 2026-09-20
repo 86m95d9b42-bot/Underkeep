@@ -245,7 +245,10 @@ describe('magic, curses and identification (04 sections 4, 5 and 6)', () => {
     expect(MAGIC.weaponProperties.die).toBe(12);
     expect(MAGIC.weaponProperties.price).toBe(300);
     expect(weaponPropertyFor(1).id).toBe('flaming');
-    expect(weaponPropertyFor(1).effects).toEqual([{ sheet: 'damage', add: '1d6', damageType: 'fire' }]);
+    // A die of extra damage needs the hit to know about it, so it is a hook.
+    expect(weaponPropertyFor(1).effects).toEqual([
+      { hook: 'damageCalc', handler: 'extraDamage', add: '1d6', damageType: 'fire' },
+    ]);
     expect(weaponPropertyFor(5).effects).toEqual([{ sheet: 'critFrom', widen: 1 }]);
     expect(weaponPropertyFor(11)).toMatchObject({ id: 'seeking', rerollFor: ['melee'] });
     expect(weaponPropertyFor(12).id).toBe('thundering');

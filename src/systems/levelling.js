@@ -20,7 +20,7 @@
  */
 import { LEVELING, levelForXp, modFor, xpForLevel } from '../data/attributes.js';
 import { derivedFor, hpGain } from './derived.js';
-import { gearDef, maxAgiFor, refreshGear } from './kit.js';
+import { gearDef, maxAgiFor, refreshGear, wornScores } from './kit.js';
 import { applySkillSheet } from '../engine/skill-hooks.js';
 
 /** The level a hero cannot climb past (`01` section 5). */
@@ -68,7 +68,11 @@ export function rebuildSheet(hero) {
   // into DEF twice (the same reasoning as the skill sheet's base).
   // The pack is read first, so what is worn is current before it is counted.
   refreshGear(hero);
-  const derived = derivedFor(hero.attributes, {
+  // A charm that raises a score raises it first: everything below is derived
+  // from what the hero is *wearing* as much as from what they rolled
+  // (`04` section 7).
+  const scores = wornScores(hero);
+  const derived = derivedFor(scores, {
     level: hero.level,
     maxHp: rolledHp,
     gear: gearDef(hero),
@@ -87,7 +91,10 @@ export function rebuildSheet(hero) {
   hero.maxHp = rolledHp;
   // The base has moved, so the skill sheet takes a fresh snapshot of it.
   hero.baseSheet = null;
-  return applySkillSheet(hero);
+  const out = applySkillSheet(hero);
+  // A Wanderer's Coat adds slots, so the pack is told after the sheet settles.
+  if (hero.pack) hero.pack.capacity = hero.slots;
+  return out;
 }
 
 /**

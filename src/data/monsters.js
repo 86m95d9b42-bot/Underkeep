@@ -92,6 +92,10 @@ export function makeMonster(id, { floor = 1, elite = false, overrides = {} } = {
 
   return {
     type: id,
+    // The bestiary's own `type` is the family — beast, undead, fiend — and
+    // rules that name one read it (`04` sections 2 and 4: a mace and a Holy
+    // weapon both care).
+    family: block.type ?? null,
     name: block.name,
     side: 'monsters',
     hd: at(block.hd),

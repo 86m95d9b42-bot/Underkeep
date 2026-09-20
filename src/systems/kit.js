@@ -44,6 +44,22 @@ export function maxAgiFor(hero) {
 }
 
 /**
+ * The hero's scores with whatever their gear adds (`04` section 7: the Lucky
+ * Coin's "+1 to LCK score, max 20"). The hero's own attributes are left alone:
+ * taking the charm off takes the point with it.
+ * @param {object} hero
+ */
+export function wornScores(hero) {
+  const shift = hero?.gear?.attributes;
+  if (!shift) return hero?.attributes ?? {};
+  const out = { ...hero.attributes };
+  for (const [attribute, amount] of Object.entries(shift)) {
+    out[attribute] = (out[attribute] ?? 0) + amount;
+  }
+  return out;
+}
+
+/**
  * Reads the pack and writes what the rest of the game looks at. Called
  * whenever the gear changes and at every sheet rebuild, so these are never
  * stale and never counted twice.

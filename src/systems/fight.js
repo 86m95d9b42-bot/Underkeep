@@ -14,6 +14,8 @@
 import { createCombat, countedEnemies, isTargetable, onField } from '../engine/field.js';
 import { createHooks } from '../engine/hooks.js';
 import { actionForSkill, resolveSkillAction } from '../engine/skill-actions.js';
+import { clearCombatBuffs, resolveItemAction } from '../engine/item-actions.js';
+import { actionForItem, consumeItem, usableItems } from './use-item.js';
 import { registerRules } from '../engine/rules.js';
 import { beginCombat, endRound, peekTurn, startRound, takeNextTurn } from '../engine/round.js';
 import { takeTurn } from '../engine/turn.js';
@@ -109,8 +111,46 @@ export function lineFor(step, unit) {
  * did, and what fell — the death is part of the attack (`06` section 6 step 9),
  * not a step of the turn.
  */
+/** What using an item says in the log (`04` sections 8 to 10). */
+function lineForItem(result, mine) {
+  const name = result.name ?? '';
+  const lines = [];
+  if (result.thrown) {
+    lines.push({ text: t('combat.log.throw', { name }), tone: 'accent' });
+    for (const hit of result.hits ?? []) {
+      const who = hit.targetName ?? hit.target;
+      if (hit.immune) lines.push({ text: t('combat.log.shrugsOff', { who }), tone: 'muted' });
+      else if (hit.saved) lines.push({ text: t('combat.log.shrugsOff', { who }), tone: 'muted' });
+      else if (hit.applied) {
+        lines.push({ text: t('combat.log.condition', { who, what: t(`conditions.${hit.condition}.name`) }) });
+      } else if (hit.hit) {
+        lines.push({
+          text: t('combat.log.youHit', { who: '', target: who, n: hit.damage?.total ?? 0 }),
+          tone: 'accent',
+        });
+        if (hit.killed) lines.push({ text: t('combat.log.dies', { who }), tone: 'accent' });
+      } else if (hit.hit === false) {
+        lines.push({ text: t('combat.log.youMiss', { who: '', target: who }), tone: 'muted' });
+      }
+    }
+    return lines;
+  }
+
+  lines.push({ text: t('combat.log.useItem', { name }), tone: 'accent' });
+  if (result.healed > 0) lines.push({ text: t('combat.log.itemHeals', { n: result.healed }), tone: 'accent' });
+  if (result.fp > 0) lines.push({ text: t('combat.log.itemFocus', { n: result.fp }), tone: 'accent' });
+  for (const id of result.cured ?? []) {
+    lines.push({ text: t('combat.log.cured', { what: t(`conditions.${id}.name`) }), tone: 'accent' });
+  }
+  if (result.buff) lines.push({ text: t('combat.log.itemBuff'), tone: 'accent' });
+  return lines;
+}
+
 function lineForAction(step, unit, who, mine) {
   const result = step.result;
+  // An item says what it was and what it did (`04` section 16's loot card is
+  // the same idea: the player is told what they got out of it).
+  if (result?.item && !result.hit) return lineForItem(result, mine);
   // A skill that healed says what it was worth, not what it hit.
   if (result?.healed !== undefined) {
     const name = t(`skills.${result.skill}.name`);
@@ -210,7 +250,10 @@ export function createFight({
     resolveAction: (fight, unit, action) => {
       // A skill action is resolved by the skill rules; everything else is
       // section 6's.
-      const result = resolveSkillAction(fight, unit, action, services) ?? resolveAction(fight, unit, action);
+      const result =
+        resolveItemAction(fight, unit, action, services) ??
+        resolveSkillAction(fight, unit, action, services) ??
+        resolveAction(fight, unit, action);
       // The log wants a name, and the engine deals in ids.
       if (result && !Array.isArray(result) && result.target) {
         result.targetName = unitById(result.target)?.name ?? result.target;
@@ -257,6 +300,8 @@ export function createFight({
       // The loot stream rolls the gold the defeated were carrying, so a
       // reload cannot re-roll the purse (`05` section 11).
       summary = endCombat(combat, { loot: rng.loot });
+      // What was drunk for one fight lasts one fight (`04` section 8).
+      clearCombatBuffs(combat.hero);
 
       // `06` section 15 step 5: levelling happens immediately, and `05`
       // section 11 wants it committed before it is shown. The Victory screen
@@ -303,6 +348,13 @@ export function createFight({
     },
     get hero() {
       return combat.hero;
+    },
+    /** What the hero can reach for, quick slots first (`04` sections 1, 16). */
+    get items() {
+      return usableItems(combat.hero, { inCombat: true }).map((entry) => ({
+        ...entry,
+        reason: entry.why ? t(`combat.illegal.${entry.why}`) : undefined,
+      }));
     },
     get round() {
       return combat.round;
@@ -418,13 +470,31 @@ export function createFight({
         return { acted: true, fled: ran.fled };
       }
 
+      // An item is used up by using it, and using it is one of the ways to
+      // learn what it was (`04` sections 1 and 5).
+      const spent = id === 'item' ? action.item : null;
+
       const step = takeNextTurn(combat, {
         takeTurn: (fightNow, unit) =>
           takeTurn(fightNow, unit, { ...services, chooseAction: () => action }),
       });
       record(step.result);
+      // An item is used up by using it, and using it is one of the ways to
+      // learn what it was (`04` sections 1 and 5).
+      if (spent) consumeItem(combat.hero, spent);
       pickTargetIfGone();
       phase = advance();
+      // A Smoke Bomb flees the fight outright (`04` section 10).
+      const used = step.result?.steps?.find((one) => one.result?.flee);
+      if (used) {
+        const ran = heroFlees(combat, { automatic: true });
+        say({
+          text: t(ran.fled ? 'combat.log.youFlee' : 'combat.illegal.noEscape'),
+          tone: ran.fled ? 'accent' : 'muted',
+        });
+        phase = advance();
+        return { acted: true, fled: ran.fled ?? true };
+      }
       return { acted: true };
     },
   };
@@ -437,6 +507,13 @@ export function createFight({
     const weapon = combat.hero.attack ?? {};
     if (id === 'attack') {
       return { id: 'attack', kind: weapon.kind ?? 'melee', ...weapon, target: at ?? undefined };
+    }
+    if (id === 'item' && options.item) {
+      const built = actionForItem(combat.hero, options.item, {
+        target: at ?? undefined,
+        floor: combat.floor,
+      });
+      return built.action ?? { id: 'item', item: options.item, ready: false, why: built.why };
     }
     if (id === 'skill' && options.skill) {
       const built = actionForSkill(combat.hero, options.skill, { target: at ?? undefined });

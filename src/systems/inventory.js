@@ -422,24 +422,45 @@ export function gearSummary(pack, hero = null) {
   for (const slot of ['armor', 'offHand']) {
     const gear = worn[slot];
     if (!gear) continue;
+    // Featherlight, Shadowed and Spellwoven change what the armour costs to
+    // wear rather than what the hero is (`04` section 4).
+    const local = propertyEffects(gear).filter((effect) => GEAR_LOCAL.includes(effect.sheet));
+    const waives = (key) => local.some((effect) => effect.sheet === key);
+    const lighter = local.find((effect) => effect.sheet === 'maxAgi')?.value ?? 0;
+
     summary.def += (gear.def ?? 0) + (gear.bonus ?? 0);
     if (gear.maxAgi !== undefined) {
-      summary.maxAgi = summary.maxAgi === null ? gear.maxAgi : Math.min(summary.maxAgi, gear.maxAgi);
+      const cap = gear.maxAgi + lighter;
+      summary.maxAgi = summary.maxAgi === null ? cap : Math.min(summary.maxAgi, cap);
     }
     if (gear.heavy) summary.heavyArmor = true;
     if (slot === 'offHand') summary.shield = true;
     if (!gear.noPenalties) {
       summary.heavyToHit += gear.toHit ?? 0;
-      summary.fizzle += gear.fizzle ?? 0;
-      summary.stealth += gear.stealth ?? 0;
+      if (!waives('noFizzle')) summary.fizzle += gear.fizzle ?? 0;
+      if (!waives('noStealthPenalty')) summary.stealth += gear.stealth ?? 0;
     }
-    if (!meets(gear)) {
+    if (!meets(gear) && !waives('noRequirement')) {
       summary.toHit += ITEM_RULES.requirementNotMet.toHit;
       summary.unmet.push(gear.instanceId);
     }
   }
 
   summary.effects = wornEffects(worn);
+
+  // A score a charm raises is raised before the sheet is derived from it: the
+  // Lucky Coin's +1 LCK is a +1 to the score, capped where the charm says
+  // (`04` section 7).
+  summary.attributes = {};
+  for (const effect of summary.effects) {
+    if (effect.sheet !== 'attribute') continue;
+    const at = effect.attribute;
+    summary.attributes[at] = (summary.attributes[at] ?? 0) + (effect.value ?? 0);
+    if (effect.max !== undefined) {
+      const capped = Math.min((scores[at] ?? 0) + summary.attributes[at], effect.max);
+      summary.attributes[at] = capped - (scores[at] ?? 0);
+    }
+  }
 
   const weapon = worn.weapon;
   if (weapon) {
@@ -452,6 +473,22 @@ export function gearSummary(pack, hero = null) {
     }
   }
   return summary;
+}
+
+/**
+ * Effects that change how the *item* is read rather than what the hero is, so
+ * `gearSummary` answers them where it reads the item and they never reach the
+ * sheet (`04` section 4's armour properties).
+ */
+const GEAR_LOCAL = ['noRequirement', 'maxAgi', 'noStealthPenalty', 'noFizzle'];
+
+/** The effects of whatever property a piece of gear rolled. */
+function propertyEffects(gear) {
+  if (!gear?.property) return [];
+  const table = ['armor', 'shield'].includes(gear.category)
+    ? MAGIC.armorProperties
+    : MAGIC.weaponProperties;
+  return table.properties[gear.property]?.effects ?? [];
 }
 
 /**
@@ -472,12 +509,10 @@ function wornEffects(worn) {
       out.push(...effects.map((effect) => ({ ...effect, slot, source, item: gear.instanceId })));
 
     from(gear.effects ?? [], 'item');
-    if (gear.property) {
-      const table = ['armor', 'shield'].includes(gear.category)
-        ? MAGIC.armorProperties
-        : MAGIC.weaponProperties;
-      from(table.properties[gear.property]?.effects ?? [], 'property');
-    }
+    from(
+      propertyEffects(gear).filter((effect) => !GEAR_LOCAL.includes(effect.sheet)),
+      'property',
+    );
     if (gear.curse) {
       const curse = CURSES.table.find((row) => row.id === gear.curse);
       from(curse?.effects ?? [], 'curse');

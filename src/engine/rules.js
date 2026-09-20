@@ -6,14 +6,17 @@
  * zero-HP ladder's Fallen countdown, and morale with the row movement behind
  * it. A fight registers these once, at setup, before `combatStart` fires.
  *
- * Skills, items, elite traits and boss phases register on top of these, and
- * the documented order sorts them all.
+ * The hero's own — the skills they know and what their gear does — go on top
+ * of those, and elite traits and boss phases on top again; the documented
+ * order sorts them all.
  */
 import { registerConditionHooks } from './condition-hooks.js';
 import { registerDefeatHooks } from './defeat.js';
 import { registerMonsterTraits } from './monster-traits.js';
 import { registerMoraleHooks } from './morale.js';
 import { registerRiders, saveBonus } from './riders.js';
+import { registerSkills } from './skill-hooks.js';
+import { registerItems } from './item-hooks.js';
 import { conditionHurt } from './damage.js';
 
 /**
@@ -47,6 +50,12 @@ export function registerRules(combat, services = {}) {
     registerRiders(hooks),
     registerMonsterTraits(combat),
   ];
+
+  // And what the hero brings: the skills they have learned or been lent
+  // (`01` section 6) and what their gear does (`04` sections 4, 6 and 7).
+  if (combat.hero) {
+    off.push(registerSkills(combat), registerItems(combat));
+  }
 
   return () => {
     for (const remove of off) remove();

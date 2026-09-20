@@ -12,6 +12,7 @@ import { checkCondition } from '../src/engine/ai.js';
 import { parsePart } from '../src/engine/damage.js';
 import { PENDING, TRAITS } from '../src/engine/monster-traits.js';
 import { HANDLERS, PENDING as SKILLS_PENDING } from '../src/engine/skill-hooks.js';
+import { HANDLERS as ITEM_HANDLERS, PENDING as ITEMS_PENDING } from '../src/engine/item-hooks.js';
 import { EVENTS } from '../src/engine/hooks.js';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -688,6 +689,9 @@ function checkItems(json, strings, combat, conditions, skills, attributes) {
         problems.push(`${where} hangs on "${effect.hook}", which is not an event 06 section 16 fires`);
       }
       if (!effect.handler) problems.push(`${where} hangs on an event with no handler`);
+      else if (!ITEM_HANDLERS[effect.handler] && !ITEMS_PENDING[effect.handler]) {
+        problems.push(`${where} names handler "${effect.handler}", which nothing implements`);
+      }
     }
     if (effect.grants && !skillIds.includes(effect.grants)) {
       problems.push(`${where} grants "${effect.grants}", which is not a skill`);

@@ -184,6 +184,21 @@ export function gearDamage(attacker, attack = {}) {
   return (attack.kind ?? 'melee') === 'spell' ? 0 : attacker.damageBonus;
 }
 
+/**
+ * What a weapon adds against a particular kind of creature: the mace's "+1
+ * damage vs. undead" (`04` section 2). The family is the bestiary's own `type`
+ * column, carried on the unit.
+ * @param {object} attacker
+ * @param {object} target
+ * @param {object} attack
+ */
+export function weaponVsBonus(attacker, target, attack = {}) {
+  if ((attack.kind ?? 'melee') === 'spell') return 0;
+  const table = attacker?.weapon?.damageVs;
+  if (!table || !target?.family) return 0;
+  return table[target.family] ?? 0;
+}
+
 export function calcDamage(combat, { attacker, target, attack = {}, result = {} }, options = {}) {
   const rng = combat.rng;
   const overTime = Boolean(options.overTime || attack.overTime);
@@ -203,13 +218,13 @@ export function calcDamage(combat, { attacker, target, attack = {}, result = {} 
     weapon: attack.weapon ?? (attack.kind ?? 'melee') !== 'spell',
     parts: gatherParts(attack),
     // Step 4's flats, gathered before a hook can change them.
-    flat: (attack.flat ?? 0) + weaponMod(attacker, attack) + gearDamage(attacker, attack),
+    flat: (attack.flat ?? 0) + weaponMod(attacker, attack) + gearDamage(attacker, attack) + weaponVsBonus(attacker, target, attack),
     crit: Boolean(result.crit),
     critDice: attack.mastery ? DAMAGE.critDiceWithMastery : DAMAGE.critDice,
     dr: 0,
   }) ?? {
     parts: gatherParts(attack),
-    flat: (attack.flat ?? 0) + weaponMod(attacker, attack) + gearDamage(attacker, attack),
+    flat: (attack.flat ?? 0) + weaponMod(attacker, attack) + gearDamage(attacker, attack) + weaponVsBonus(attacker, target, attack),
     crit: Boolean(result.crit),
   };
 

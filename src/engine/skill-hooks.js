@@ -65,8 +65,28 @@ export const PENDING = {
  * @param {object} hero the hero, with `skills: [{ id, rank }]`
  * @returns {object} the same hero, changed in place
  */
+/**
+ * The skills a hero has: the ones they learned, plus the ones their gear
+ * lends them (`04` section 13, "A granted skill works exactly like the learned
+ * skill while the item is equipped. If the hero already has the skill, the
+ * item adds nothing extra").
+ * @param {object} hero
+ * @returns {{ id: string, rank: number, granted?: boolean }[]}
+ */
+export function skillsOf(hero) {
+  const out = (hero?.skills ?? []).map(({ id, rank = 1 }) => ({ id, rank }));
+  for (const effect of hero?.gear?.effects ?? []) {
+    if (!effect.grants) continue;
+    const rank = effect.rank ?? 1;
+    const known = out.find((entry) => entry.id === effect.grants);
+    if (known) known.rank = Math.max(known.rank, rank);
+    else out.push({ id: effect.grants, rank, granted: true });
+  }
+  return out;
+}
+
 export function applySkillSheet(hero) {
-  const learned = hero.skills ?? [];
+  const learned = skillsOf(hero);
   // Start from what the attributes alone give, so re-applying is safe.
   const base = hero.baseSheet ?? snapshot(hero);
   hero.baseSheet = base;
@@ -82,6 +102,11 @@ export function applySkillSheet(hero) {
   // the heavy penalties (`04` section 3). `hero.gear` is the pack's summary,
   // so nothing here has to know what an item is.
   applyGear(sheet, hero.gear, hero);
+  // And what the hero drank: a buff lasts a combat or a hundred steps, and is
+  // folded last so it is on top of everything (`04` section 8).
+  for (const buff of hero.buffs ?? []) {
+    for (const effect of buff.effects ?? []) applySheetEffect(sheet, effect, 1, hero);
+  }
 
   hero.maxHp = sheet.maxHp;
   hero.maxFp = sheet.maxFp;
@@ -102,10 +127,18 @@ export function applySkillSheet(hero) {
   hero.spellFizzle = sheet.spellFizzle ?? 0;
   hero.stealth = sheet.stealth ?? 0;
   hero.init = sheet.initiative ?? hero.init;
+  hero.slots = sheet.slots ?? hero.slots;
+  // The damage rules read these three off the unit (`06` section 7).
+  hero.resistant = [...(sheet.resistant ?? [])];
+  hero.immune = [...(sheet.immune ?? [])];
+  hero.immunities = [...(sheet.immunities ?? [])];
   hero.mods = { ...sheet.mods };
   hero.damageBonus = sheet.damageBonus ?? 0;
   hero.cannot = sheet.cannot ?? [];
   hero.explore = sheet.explore ?? {};
+  // A potion can put the hero in the first initiative band, and the fight's
+  // end takes it away again (`06` section 3, `04` section 8).
+  hero.actsFirst = Boolean(sheet.actsFirst);
 
   // Anything the engine does not read itself — the pack's and the dungeon's
   // own flags — is copied across under its own name for that system to find.
@@ -152,6 +185,10 @@ function snapshot(hero) {
     saves: { ...hero.saves },
     attacks: { ...hero.attacks },
     mods: { ...(hero.mods ?? {}) },
+    slots: hero.slots ?? 0,
+    resistant: [...(hero.baseResistant ?? [])],
+    immune: [...(hero.baseImmune ?? [])],
+    immunities: [...(hero.baseImmunities ?? [])],
     attacksPerAction: 1,
   };
 }
@@ -219,7 +256,9 @@ function applySheetEffect(sheet, effect, rank, hero) {
       for (const save of Object.keys(sheet.saves)) sheet.saves[save] += amount;
       break;
     case 'attack':
-      sheet.attacks[effect.attack] += amount;
+      // A potion's "+2 to attack" names no kind, so it lands on all of them.
+      if (effect.attack) sheet.attacks[effect.attack] += amount;
+      else for (const kind of Object.keys(sheet.attacks)) sheet.attacks[kind] += amount;
       break;
     case 'critFrom':
       sheet.critFrom -= effect.widen ?? 0;
@@ -243,6 +282,26 @@ function applySheetEffect(sheet, effect, rank, hero) {
       break;
     case 'cannot':
       sheet.cannot = [...new Set([...(sheet.cannot ?? []), ...(effect.actions ?? [])])];
+      break;
+    case 'resist':
+      sheet.resistant = [...new Set([...(sheet.resistant ?? []), effect.damageType])];
+      break;
+    case 'immune':
+      // A charm can turn away a damage type, a condition or a whole tag
+      // (`04` section 7): the Amulet of Antivenom does two of the three.
+      if (effect.damageType) sheet.immune = [...new Set([...(sheet.immune ?? []), effect.damageType])];
+      if (effect.conditions?.length || effect.tags?.length) {
+        sheet.immunities = [
+          ...new Set([...(sheet.immunities ?? []), ...(effect.conditions ?? []), ...(effect.tags ?? [])]),
+        ];
+      }
+      break;
+    case 'inventorySlots':
+      sheet.slots = (sheet.slots ?? 0) + amount;
+      break;
+    case 'attribute':
+      // The score itself is raised before the sheet is derived, by the pack's
+      // summary; nothing to fold here.
       break;
     case 'critDice':
       sheet.critDice = effect.value;
@@ -359,7 +418,7 @@ export const HANDLERS = {
  */
 export function registerSkills(combat, unit = combat.hero) {
   const off = [];
-  for (const { id, rank = 1 } of unit?.skills ?? []) {
+  for (const { id, rank = 1 } of skillsOf(unit)) {
     for (const effect of hookEffects(id, rank)) {
       const handler = HANDLERS[effect.handler];
       if (!handler) {
