@@ -4,6 +4,16 @@ Rulings here override the other documents. Add new entries at the top of each li
 
 ## Decisions
 
+- **2026-09-20 — The Town Hub, and what a day is.** `src/systems/town.js` keeps the two counters every town screen shows and knows which services are open; `src/ui/screens/town.js` is the outline's Town Hub table. Creation now ends in the Town rather than underground, which is `00`'s own screen flow. Six rulings:
+  - **A day is a stay in town, and a trip is a descent.** `05` section 12 counts "days in the dungeon (town visits)", so the hero arrives on day 1 and every return turns the day over. The two move at different moments: the gate counts a trip on the way down, arriving counts a day on the way back.
+  - **The Hub shows the trip it would begin.** The mockup reads *"Day 7 · Return trip 8"* — seven stays, seven trips taken, and the eighth waiting — so the subtitle is `trips + 1`, and the first one says "Trip 1" rather than calling itself a return.
+  - **A trip is counted on the way down, not on the way back.** A hero who dies on trip 8 took trip 8. This also means the counter is right for the Hall of the Dead without anything having to reconstruct it.
+  - **`shops.json` arrives early, with only its tier table.** `04` section 15's first column — which boss opens each tier — is what the Hub's SHOP hint reads, and putting it in code would have been five magic numbers. The stock itself comes with the Shop screen. The Alchemist's own unlock stays in `items.json`, because section 12 puts it with the recipes.
+  - **Locked and unbuilt are different disabled.** A locked service says which boss opens it ("After the floor 2 boss"); one that is open but has no screen yet says "Not built yet". Both are dimmed, and the reason is the difference.
+  - **The gate is the screen's one primary button.** Six services and a gate is seven tap targets; the outline allows one amber, and it is the way down.
+
+  **Not yet wired:** `arrive` — the day turning over — has nothing to call it, because there is no way back from the dungeon until the Waystones and the Dungeon Gate are built. The counter and its rule are tested; the moment it hangs off is the next task but one.
+
 - **2026-09-19 — Phase 5's "done when", and what the audit had to be told.** `npm run loot` is to Phase 5 what `npm run fight` was to Phase 3: it drives the same loot tables, pack, identification rules and `gear.js` the screens drive, and audits every step against `04`. **200 games x 10 floors: 120,000 drops, 43,479 of them magic, 26,808 potions drunk, 1,629 scrolls read, 10,433 pieces of gear worn, and not one rule broken.** `tools/lib/looter.js` does the work and `test/loot-run.test.js` runs four games on every test run. Five notes:
   - **The audit is a second reader of the document.** It never asks a rule module whether a rule held: it checks the bonus against `02` section 17's floor limits itself, the property against the table its category rolls on, the curse against the d8, and the identification state against section 5's list of what arrives unknown.
   - **A share is checked over the run, not over one item.** The curse rate came out at 8.7% of magic gear, which is what 5% on two floors and 10% on eight should average, and about half of cursed items carried a property.

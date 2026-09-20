@@ -31,6 +31,7 @@ const SCREENS = [
   'newGame',
   'createStats',
   'createOrigin',
+  'town',
   'explore',
   'pause',
   'map',

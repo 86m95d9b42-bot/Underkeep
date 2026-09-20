@@ -1,0 +1,21 @@
+{
+  "_source": "04 section 15, the tier table's first two columns: what unlocks each tier of the Shop's stock. The stock itself — what each tier adds, and which lines are rotating — arrives with the Shop screen. The Alchemist's own unlock is items.json's alchemy block, because the recipes are 04 section 12.",
+
+  "tiers": [
+    { "tier": 1, "unlockedBy": null },
+    { "tier": 2, "unlockedBy": { "boss": 2 } },
+    { "tier": 3, "unlockedBy": { "boss": 4 } },
+    { "tier": 4, "unlockedBy": { "boss": 6 } },
+    { "tier": 5, "unlockedBy": { "boss": 8 } }
+  ],
+
+  "services": {
+    "_source": "01 section 3 and the Temple prices in DECISIONS. Each is what the Town Hub shows before the service's own screen is built.",
+    "inn": { "goldPerLevel": 5 },
+    "shop": { "sellRate": 0.5 },
+    "temple": { "cureGoldPerLevel": 10, "drainedGoldPerLevel": 100, "respecGoldPerLevel": 100 },
+    "sage": { "goldPerItem": 20 },
+    "alchemist": {},
+    "stash": {}
+  }
+}

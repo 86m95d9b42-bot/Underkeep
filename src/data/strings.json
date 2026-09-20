@@ -145,6 +145,34 @@
       "grave": "GRAVE"
     }
   },
+  "town": {
+    "title": "TOWN",
+    "sub": "Day {day} · Trip {trip}",
+    "subReturn": "Day {day} · Return trip {trip}",
+    "level": "LV {n}",
+    "gold": "{n} GP",
+    "gate": "DUNGEON GATE",
+    "gateHint": "Floor {n}",
+    "gateWaystones": "Waystones 1–{n} attuned",
+    "services": {
+      "inn": "INN",
+      "shop": "SHOP",
+      "temple": "TEMPLE",
+      "sage": "SAGE",
+      "alchemist": "ALCHEMIST",
+      "stash": "STASH"
+    },
+    "hints": {
+      "inn": "Full rest · {n} gp",
+      "shop": "Stock tier {n}",
+      "temple": "Cures, curses, respec",
+      "sage": "Identify · {n} gp",
+      "alchemist": "Brew from parts",
+      "stash": "{used} / {total} slots"
+    },
+    "locked": "After the floor {n} boss",
+    "menu": "Menu"
+  },
   "conditions": {
     "poisoned": {
       "name": "POISONED",

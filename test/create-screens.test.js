@@ -261,6 +261,7 @@ describe('Create: Origin', () => {
     const hero = startRun.mock.calls[0][0];
     expect(hero).toMatchObject({ name: 'Brannoc', origin: 'pilgrim', level: 1 });
     expect(hero.maxHp).toBeGreaterThan(0);
-    expect(router.go).toHaveBeenCalledWith('explore');
+    // `00`'s screen flow ends creation in the Town, not underground.
+    expect(router.go).toHaveBeenCalledWith('town');
   });
 });

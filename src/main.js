@@ -18,6 +18,7 @@ import { createStats } from './ui/screens/create-stats.js';
 import { createOrigin } from './ui/screens/create-origin.js';
 import { hero as heroScreen } from './ui/screens/hero.js';
 import { skillTree } from './ui/screens/skill-tree.js';
+import { town as townScreen } from './ui/screens/town.js';
 import { pack as packScreen } from './ui/screens/pack.js';
 import { itemDetail } from './ui/screens/item-detail.js';
 import { combat } from './ui/screens/combat.js';
@@ -25,6 +26,7 @@ import { combatSkills } from './ui/screens/combat-skills.js';
 import { loot } from './ui/screens/loot.js';
 import { levelUp } from './ui/screens/levelup.js';
 import { createRun, PLACEHOLDER_HERO } from './systems/run.js';
+import { createTown, descend as descendTown } from './systems/town.js';
 import { createFight, standInHero } from './systems/fight.js';
 import { chooseOrigin, createDraft, finish, setName } from './systems/creation.js';
 import { awardXp, xpNeeded } from './systems/levelling.js';
@@ -62,6 +64,8 @@ function demoHero() {
 let run = null;
 /** @type {object | null} */
 let hero = null;
+/** The town the hero comes back to: the day, the trip, and what is open. */
+let town = null;
 
 /**
  * Starts a run. The Town is Phase 6, so a new hero goes straight to the first
@@ -70,6 +74,9 @@ let hero = null;
  */
 function startRun(newHero) {
   hero = newHero ?? hero ?? demoHero();
+  // A hero has a town to come back to from the moment they exist
+  // (`05` section 12 counts the days from the first one).
+  town ??= createTown();
   run = createRun({
     masterSeed: hero?.seed ?? DEMO_SEED,
     floor: 1,
@@ -105,6 +112,7 @@ const screens = {
   map,
   hero: heroScreen,
   skillTree,
+  town: townScreen,
   pack: packScreen,
   itemDetail,
   combat,
@@ -160,6 +168,20 @@ router = createRouter({
     // opening the screen means until the exploration loop does it.
     get fight() {
       return fight ?? startFight();
+    },
+    /** The town's own state, made with the hero. */
+    get town() {
+      if (!town) startRun();
+      return town;
+    },
+    /**
+     * Taking the Dungeon Gate: the trip is counted before the hero is in the
+     * dungeon, so a trip they never come back from is still a trip.
+     */
+    descend() {
+      const current = run ?? startRun();
+      descendTown(town);
+      return current;
     },
   },
 });

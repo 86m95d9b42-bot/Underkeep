@@ -78,7 +78,7 @@ Work top to bottom. Check a box when the task is done and tested. Each phase end
 
 ## Phase 6 — Town
 
-- [ ] Town Hub screen and trip/day counters
+- [x] Town Hub screen and trip/day counters
 - [ ] `shops.json`; Shop screen with tiers, rotating stock, buy, sell, repair
 - [ ] Inn, Temple (prices in `DECISIONS.md`), and Sage using the shared service layout
 - [ ] Alchemist (unlocks after the floor 2 boss)

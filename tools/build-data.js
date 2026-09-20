@@ -918,6 +918,38 @@ function checkLoot(json, items) {
   if (!(json.gear?.propertyChance > 0)) problems.push('loot.json rare gear never rolls a property');
 }
 
+/**
+ * shops.json: `04` section 15's tier table. The stock arrives with the Shop
+ * screen; what is here is what unlocks each tier, and the town reads it.
+ */
+function checkShops(json, items) {
+  const tiers = json.tiers ?? [];
+  if (tiers.length !== 5) problems.push(`shops.json has ${tiers.length} tiers, and 04 section 15 lists 5`);
+  let lastBoss = 0;
+  for (const [index, row] of tiers.entries()) {
+    const where = `shops.json tier ${row.tier}`;
+    if (row.tier !== index + 1) problems.push(`${where} is out of order`);
+    if (index === 0) {
+      if (row.unlockedBy !== null) problems.push('shops.json tier 1 is not open from the start');
+      continue;
+    }
+    const boss = row.unlockedBy?.boss;
+    if (!(boss >= 1 && boss <= 10)) problems.push(`${where} opens on floor ${boss}`);
+    else if (boss <= lastBoss) problems.push(`${where} opens no deeper than the tier before it`);
+    lastBoss = boss ?? lastBoss;
+  }
+  for (const [name, spec] of Object.entries(json.services ?? {})) {
+    if (name.startsWith('_')) continue;
+    for (const [key, value] of Object.entries(spec)) {
+      if (!(value >= 0)) problems.push(`shops.json ${name}.${key} is ${value}`);
+    }
+  }
+  // The Alchemist's own unlock is 04 section 12's, and lives with the recipes.
+  if (!(items?.alchemy?.unlockedBy?.boss >= 1)) {
+    problems.push('items.json does not say which boss opens the Alchemist');
+  }
+}
+
 const CHECKS = {
   'strings.json': checkStrings,
   // Checked against strings.json, so it is read first.
@@ -935,6 +967,7 @@ const CHECKS = {
       loaded['attributes.json'],
     ),
   'loot.json': (json) => checkLoot(json, loaded['items.json']),
+  'shops.json': (json) => checkShops(json, loaded['items.json']),
   'origins.json': (json) =>
     checkOrigins(
       json,

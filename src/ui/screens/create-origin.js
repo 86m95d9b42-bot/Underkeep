@@ -114,7 +114,8 @@ export const createOrigin = {
           onTap: () => {
             // The Town is Phase 6; until it exists the hero starts on floor 1.
             startRun?.(finish(draft));
-            router.go('explore');
+            // `00`'s screen flow: creation ends in the Town, not underground.
+            router.go('town');
           },
         }),
       );
