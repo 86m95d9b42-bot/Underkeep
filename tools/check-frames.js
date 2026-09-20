@@ -38,6 +38,8 @@ const SCREENS = [
   'skillTree',
   'combat',
   'combatSkills',
+  'loot',
+  'levelUp',
 ];
 
 if (!existsSync(PAGE)) {

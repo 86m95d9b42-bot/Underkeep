@@ -33,23 +33,25 @@ import { t } from '../data/strings.js';
 export const LOG_KEPT = 40;
 
 /**
- * What a level 1 hero brings to a fight until `01` section 4 derives it
- * (Phase 4): the run's stand-in with the numbers a starting hero would have —
- * BA 0, a Might modifier of +2, leather and a shield, a short sword.
- * `main.js` and `tools/fight.js` both build their hero from this, so the
- * screen and the audit fight the same person.
+ * What a level 1 hero brings to a fight until the pack arrives (`04`,
+ * Phase 5): the numbers a starting hero would have — BA 0, a Might modifier
+ * of +2, leather and a shield, a short sword. A created hero already carries
+ * every one of them but the weapon. `main.js` and `tools/fight.js` both build
+ * their hero from this, so the screen and the audit fight the same person.
+ *
+ * It fills the gaps **in place** and hands the same hero back: the XP and the
+ * gold a fight pays are paid to whoever fought it, and a copy would take them
+ * out of the run.
  */
 export function standInHero(hero) {
-  return {
-    ...hero,
-    atk: hero.atk ?? 2,
-    def: hero.def ?? 12,
-    init: hero.init ?? 0,
-    saves: hero.saves ?? { body: 1, reflex: 1, mind: 1 },
-    attack: hero.attack ?? { name: 'sword', kind: 'melee', damage: '1d6+1 slash' },
-    // The solo protections are a flag on the unit, not a check for the hero.
-    protected: true,
-  };
+  hero.atk ??= 2;
+  hero.def ??= 12;
+  hero.init ??= 0;
+  hero.saves ??= { body: 1, reflex: 1, mind: 1 };
+  hero.attack ??= { name: 'sword', kind: 'melee', damage: '1d6+1 slash' };
+  // The solo protections are a flag on the unit, not a check for the hero.
+  hero.protected = true;
+  return hero;
 }
 
 /** The six actions of the outline's Combat table, in its order. */
@@ -239,11 +241,18 @@ export function createFight({
 
   function finish() {
     if (!summary) {
-      summary = endCombat(combat, {});
+      // The loot stream rolls the gold the defeated were carrying, so a
+      // reload cannot re-roll the purse (`05` section 11).
+      summary = endCombat(combat, { loot: rng.loot });
 
       // `06` section 15 step 5: levelling happens immediately, and `05`
       // section 11 wants it committed before it is shown. The Victory screen
       // reads what already happened rather than causing it.
+      // `06` section 15 step 4: the gold is part of the fight's loot, and it
+      // was rolled as each monster fell. The screen reports a purse that has
+      // already been filled.
+      if (summary.gold > 0) combat.hero.gold = (combat.hero.gold ?? 0) + summary.gold;
+
       if (summary.xp > 0) {
         const gained = awardXp(combat.hero, summary.xp, rng.loot);
         summary.levels = gained.levels;

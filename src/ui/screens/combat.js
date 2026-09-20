@@ -212,7 +212,33 @@ export const combat = {
       paint();
     };
 
+    /**
+     * Where a finished fight goes: a victory to the rewards, a flight back
+     * into the dark, and a death to the Death screen when it is built
+     * (`00`, the screen flow).
+     */
+    const leave = () => {
+      const outcome = fight.outcome;
+      const to = outcome === 'victory' ? 'loot' : outcome === 'fled' ? 'explore' : 'death';
+      return {
+        label: t(`combat.after.${outcome}`),
+        reason: router.has?.(to) ? undefined : t('common.comingSoon'),
+        onTap: () => router.go(to),
+      };
+    };
+
     const paintActions = () => {
+      // Nothing is left to choose once the fight is over: the six actions
+      // become the one way out.
+      actionGrid.classList.toggle('actions--done', Boolean(fight.over));
+      if (fight.over) {
+        const out = leave();
+        actionGrid.replaceChildren(
+          button({ label: out.label, kind: 'primary', reason: out.reason, onTap: out.onTap }),
+        );
+        return;
+      }
+
       // DEFEND becomes the primary whenever a telegraph is pending; otherwise
       // ATTACK is the one amber button on the screen (`00`, Combat).
       const primary = fight.telegraphPending ? 'defend' : 'attack';

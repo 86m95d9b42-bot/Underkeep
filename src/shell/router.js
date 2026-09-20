@@ -60,7 +60,11 @@ export function createRouter({ app, screens, frame, ctx = {}, history = globalTh
     render,
   };
 
-  const fullCtx = { ...ctx, router };
+  // The context is copied by its property *descriptors*, not spread: a host
+  // passes `run` and `fight` as getters, and spreading would freeze whatever
+  // they happened to be when the router was made — so a screen would draw the
+  // run before the new hero, or the fight before the one that just ended.
+  const fullCtx = Object.defineProperties({ router }, Object.getOwnPropertyDescriptors(ctx));
 
   /** @param {string} id @param {object} [params] */
   function go(id, params = {}) {

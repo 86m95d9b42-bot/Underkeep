@@ -112,10 +112,14 @@ export function levelUp(hero, rng) {
   const fp = hero.maxFp - fpBefore;
   if (fp > 0) hero.fp = Math.min(hero.maxFp, hero.fp + fp);
 
+  // The Level Up screen draws "52 -> 57", so a gain carries the totals it
+  // arrived at as well as the difference it made.
   return {
     level: hero.level,
     hp,
     fp,
+    maxHp: hero.maxHp,
+    maxFp: hero.maxFp,
     skillPoints: LEVELING.skillPointsPerLevel,
     attributePoint,
   };

@@ -8,7 +8,27 @@
  */
 import { describe, it, expect } from 'vitest';
 import { playFight, RATS_AND_KOBOLDS, auditHero } from '../tools/lib/fighter.js';
+import { createFight, standInHero } from '../src/systems/fight.js';
+import { carriedStreams } from '../src/engine/rng.js';
+import { makeMonster } from '../src/data/monsters.js';
+import { chooseOrigin, createDraft, finish, setName } from '../src/systems/creation.js';
 import { t } from '../src/data/strings.js';
+
+/** A hero rolled the way a player rolls one. */
+function makeHero() {
+  return finish(
+    setName(
+      chooseOrigin(
+        {
+          ...createDraft({ seed: 11 }),
+          scores: { might: 15, agility: 12, vigor: 14, intellect: 9, wits: 13, luck: 8 },
+        },
+        'sellsword',
+      ),
+      'Harrow',
+    ),
+  );
+}
 
 /** Every line of a fight, as plain text. */
 const text = (result) => result.log.map((line) => line.text);
@@ -100,5 +120,44 @@ describe('the hero the fight is fought with', () => {
     const hero = auditHero();
     expect(hero).toMatchObject({ atk: 2, def: 12, protected: true });
     expect(hero.attack.damage).toBe('1d6+1 slash');
+  });
+
+  it('is the run\u2019s own hero, not a copy of them', () => {
+    // Everything a fight does happens to the person who walked in: the hit
+    // points they lose, the experience they earn, the coin they pick up.
+    const harrow = makeHero();
+    harrow.hp = harrow.maxHp = 60;
+    const fight = createFight({
+      hero: standInHero(harrow),
+      monsters: [makeMonster('kobold'), makeMonster('kobold')],
+      streams: carriedStreams(3),
+      surprise: false,
+    });
+    expect(fight.hero).toBe(harrow);
+    expect(fight.combat.hero).toBe(harrow);
+
+    fight.combat.rng.d20 = () => 19;
+    for (let guard = 0; guard < 40 && !fight.over; guard += 1) fight.act('attack');
+    expect(fight.outcome).toBe('victory');
+    expect(harrow.xp).toBe(fight.summary.xp);
+    expect(harrow.hp).toBeLessThanOrEqual(harrow.maxHp);
+  });
+
+  it('is paid the gold that fell, before the screen reports it', () => {
+    // `06` section 15 step 4: the gold is the fight's loot, and it is banked
+    // as combat ends rather than when a screen draws it.
+    const harrow = makeHero();
+    harrow.hp = harrow.maxHp = 60;
+    const purse = harrow.gold ?? 0;
+    const fight = createFight({
+      hero: standInHero(harrow),
+      monsters: [makeMonster('kobold'), makeMonster('kobold')],
+      streams: carriedStreams(3),
+      surprise: false,
+    });
+    fight.combat.rng.d20 = () => 19;
+    for (let guard = 0; guard < 40 && !fight.over; guard += 1) fight.act('attack');
+    expect(fight.summary.gold).toBeGreaterThan(0);
+    expect(harrow.gold).toBe(purse + fight.summary.gold);
   });
 });

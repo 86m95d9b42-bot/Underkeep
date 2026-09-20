@@ -44,6 +44,13 @@ const detail = {
   build: ({ params }) => ({ body: el('span', { text: `DETAIL ${params.item ?? ''}`.trim() }) }),
 };
 
+const mirror = {
+  id: 'mirror',
+  pattern: 'fold',
+  regions: { body: { tall: [1, 9, 1, 8] } },
+  build: ({ run }) => ({ body: el('span', { text: `RUN ${run?.name ?? 'none'}` }) }),
+};
+
 const paused = {
   id: 'paused',
   pattern: 'panel',
@@ -52,7 +59,7 @@ const paused = {
 };
 
 /** @param {'tall' | 'wide'} startFrame */
-function setup(startFrame = 'tall') {
+function setup(startFrame = 'tall', extra = {}) {
   document.body.innerHTML = '<div id="app"></div>';
   const app = document.getElementById('app');
   let frame = startFrame;
@@ -61,9 +68,10 @@ function setup(startFrame = 'tall') {
   const history = fakeHistory(() => window.dispatchEvent(new Event('popstate')));
   const router = createRouter({
     app,
-    screens: { home, detail, paused },
+    screens: { home, detail, paused, mirror },
     frame: () => frame,
     history,
+    ...extra,
   });
   return {
     app,
@@ -79,6 +87,27 @@ function setup(startFrame = 'tall') {
 
 beforeEach(() => {
   document.body.innerHTML = '';
+});
+
+describe('the context a screen is built with', () => {
+  it('is read when the screen is built, not when the router was made', () => {
+    // A host hands `run` and `fight` over as getters: what a screen draws is
+    // the run as it is now, not the one that existed at start-up.
+    let run = { name: 'first' };
+    const t = setup('tall', {
+      ctx: {
+        get run() {
+          return run;
+        },
+      },
+    });
+    t.router.go('mirror');
+    expect(t.text()).toContain('RUN first');
+
+    run = { name: 'second' };
+    t.router.render();
+    expect(t.text()).toContain('RUN second');
+  });
 });
 
 describe('navigation', () => {

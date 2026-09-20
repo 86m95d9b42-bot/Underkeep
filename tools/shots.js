@@ -30,6 +30,8 @@ const SCREENS = [
   'skillTree',
   'combat',
   'combatSkills',
+  'loot',
+  'levelUp',
 ];
 
 /**
@@ -61,6 +63,9 @@ const PREPARE = {
     router.go('combat');
     router.openSheet('combatSkills', { mode: 'skill' });
   })()`,
+  // The rewards screens want a fight that is over behind them.
+  loot: `(() => globalThis.underkeep.showVictory('loot'))()`,
+  levelUp: `(() => globalThis.underkeep.showVictory('levelUp'))()`,
   map: `(() => {
     const { run, router } = globalThis.underkeep;
     const step = () => run.press('forward').outcome.moved;

@@ -20,10 +20,12 @@ import { hero as heroScreen } from './ui/screens/hero.js';
 import { skillTree } from './ui/screens/skill-tree.js';
 import { combat } from './ui/screens/combat.js';
 import { combatSkills } from './ui/screens/combat-skills.js';
+import { loot } from './ui/screens/loot.js';
+import { levelUp } from './ui/screens/levelup.js';
 import { createRun, PLACEHOLDER_HERO } from './systems/run.js';
 import { createFight, standInHero } from './systems/fight.js';
 import { chooseOrigin, createDraft, finish, setName } from './systems/creation.js';
-import { awardXp } from './systems/levelling.js';
+import { awardXp, xpNeeded } from './systems/levelling.js';
 import { learn } from './systems/skill-tree.js';
 
 const app = /** @type {HTMLElement} */ (document.getElementById('app'));
@@ -103,6 +105,8 @@ const screens = {
   skillTree,
   combat,
   combatSkills,
+  loot,
+  levelUp,
 };
 
 /**
@@ -113,14 +117,16 @@ const screens = {
  * exploration loop starts it when the clock says so.
  */
 let fight = null;
-function startFight() {
+function startFight(seed) {
   const current = run ?? startRun();
   fight = createFight({
     // A created hero brings their own attack bonus and DEF; the weapon is
     // still the stand-in's until the pack arrives (`04`, Phase 5).
     hero: standInHero(current.hero),
     floor: current.floor.floor,
-    masterSeed: current.masterSeed,
+    // A tool asking for another fight passes its own seed; the same one
+    // would hand back the same encounter and the same rolls.
+    masterSeed: seed ?? current.masterSeed,
     difficulty: hero?.difficulty ?? settings.all.difficulty ?? 'normal',
   });
   return fight;
@@ -177,6 +183,28 @@ globalThis.underkeep = {
    * And the Hero screens want a hero who has been somewhere: this levels the
    * stand-in and spends a few points before opening one of them.
    */
+  /**
+   * The rewards screens want a fight that is over: this plays one out with
+   * the hero attacking until nothing is standing, then opens Victory or the
+   * Level Up card it earned.
+   */
+  showVictory(screen = 'loot') {
+    const current = run ?? startRun();
+    // A hero who has been down a few floors, left a few XP short so the fight
+    // is worth a level, and fights until one of them is won.
+    if (current.hero.level < 3) awardXp(current.hero, 300, current.rng.loot);
+    let playing = null;
+    for (let tries = 0; tries < 20; tries += 1) {
+      current.hero.xp = Math.max(current.hero.xp, (xpNeeded(current.hero) ?? 0) - 5);
+      current.hero.hp = current.hero.maxHp;
+      current.hero.alive = true;
+      playing = startFight(current.masterSeed + tries);
+      for (let guard = 0; guard < 200 && !playing.over; guard += 1) playing.act('attack');
+      if (playing.outcome === 'victory') break;
+    }
+    router.go(screen, screen === 'levelUp' ? { levels: playing?.summary?.levels ?? [] } : {});
+  },
+
   showHero(screen) {
     const current = run ?? startRun();
     if (current.hero.level < 5 && current.hero.attributes) {

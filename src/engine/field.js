@@ -151,25 +151,35 @@ export function place(combat, unit, { overflow = false } = {}) {
 }
 
 /**
- * Turns whatever the encounter lists into a unit on the field. Templates are
- * copied, never shared: two rats are two objects.
+ * Turns whatever the encounter lists into a unit on the field. A monster
+ * template is copied, never shared: two rats are two objects, and the entry
+ * in `monsters.json` is a description rather than a creature.
+ *
+ * **The hero is not a template.** They are the one person the run keeps, so
+ * the hero unit *is* the hero object: the hit points they lose, the poison
+ * they carry out, the experience the fight pays and the level it earns all
+ * happen to the hero the run walked in with. A copy would leave every one of
+ * them on the field.
+ *
  * @param {object} template
  * @param {'hero' | 'monsters'} side
  * @param {number} ordinal how many of this type came before it
  */
 function toUnit(template, side, ordinal) {
   const type = template.type ?? template.id ?? 'monster';
-  const unit = {
+  const fields = {
     type,
     row: side === 'hero' ? 'front' : template.row ?? 'front',
-    init: 0,
-    ...template,
+    init: template.init ?? 0,
     id: template.id ?? (side === 'hero' ? 'hero' : `${type}-${ordinal + 1}`),
     side,
     alive: template.alive ?? true,
     hp: template.hp ?? template.maxHp ?? 1,
     maxHp: template.maxHp ?? template.hp ?? 1,
   };
+  // Every field above is read off the template first, so the monster's copy
+  // and the hero's own object end up carrying exactly the same things.
+  const unit = side === 'hero' ? Object.assign(template, fields) : { ...template, ...fields };
   return prepare(unit);
 }
 

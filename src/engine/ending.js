@@ -13,6 +13,7 @@
  * rest to the phases that own it.
  */
 import data from '../data/combat.json' with { type: 'json' };
+import { goldFrom } from '../data/monsters.js';
 import { cannotEscape } from './actions.js';
 import { resolveAttack } from './attack.js';
 import { monsterFlees } from './defeat.js';
@@ -146,6 +147,8 @@ export function xpFrom(combat) {
  * @param {object} combat
  * @param {object} [services]
  * @param {(combat: object) => void} [services.save]
+ * @param {import('./rng.js').Stream} [services.loot] the loot stream, which
+ *   the gold each defeated monster leaves is rolled on (`05` section 11)
  * @returns {{ outcome: string, xp: number, gold: number, defeated: string[] }}
  */
 export function endCombat(combat, services = {}) {
@@ -154,6 +157,14 @@ export function endCombat(combat, services = {}) {
   combat.outcome = outcome;
 
   const earned = outcome === 'victory' ? xpFrom(combat) : { xp: 0, from: [] };
+  // Step 4's gold: what the defeated were carrying, on top of what anything
+  // that ran away dropped behind it (`06` sections 14 and 15).
+  if (services.loot && outcome === 'victory') {
+    for (const id of earned.from) {
+      const unit = combat.units.find((one) => one.id === id);
+      combat.droppedGold = (combat.droppedGold ?? 0) + goldFrom(unit, services.loot);
+    }
+  }
   const payload = combat.hooks?.fire('combatEnd', {
     combat,
     outcome,

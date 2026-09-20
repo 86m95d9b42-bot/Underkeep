@@ -4,6 +4,16 @@ Rulings here override the other documents. Add new entries at the top of each li
 
 ## Decisions
 
+- **2026-09-19 — Victory and Loot, Level Up, and the three wires under them.** `src/ui/screens/loot.js` and `src/ui/screens/levelup.js` are the outline's "Combat and Rewards" tables. Neither screen decides anything: `06` section 15 pays the XP, the gold and the levels as combat ends, and `05` section 11 wants them committed before they are shown. Six rulings:
+  - **The hero unit *is* the hero.** `toUnit` copies a monster template — two rats are two objects — but the hero is the one person the run keeps, so the hero unit is the hero's own object. Everything a fight does then happens to whoever walked in.
+  - **The gold is rolled as combat ends, on the `loot` stream.** `06` section 15 step 4 pays the defeated monsters' own gold on top of what a fleeing monster dropped; `endCombat` now takes the stream and rolls it, and the fight pays it into the purse before the screen draws it. A reload cannot re-roll the purse.
+  - **The Victory screen reports, it does not award.** XP, gold and levels are already banked when it opens; the LEVEL UP chip is on when the fight earned one, and CONTINUE goes to Level Up when it did and back to the dungeon when it did not.
+  - **TAKE ALL says why it has nothing.** Drops are Phase 5, so a victory pays coin and the drop list carries one line saying so. The button and the per-drop TAKE are built; only the items are missing.
+  - **The attribute point is picked on the screen and spent on CONFIRM.** Everything else about a level already happened. A fight worth several levels shows one card each, and CONFIRM walks to the next — the last one leaves for the dungeon.
+  - **A level carries the totals it reached.** `levelUp` returns `maxHp` and `maxFp` as well as the difference, because the screen draws "22 → 25".
+
+  **The two bugs this found.** The router copied its context with a spread, so a host's `run` and `fight` getters were read once, when the router was made: a screen drew the run as it was at start-up — the Victory screen showed a fight that had not been fought, and a hero made in creation would never have reached the screens at all. The context is now copied by its property descriptors, so the getters stay live. And with the hero unit a copy, a fight paid its XP, its levels and its gold to an object the run threw away.
+
 - **2026-09-19 — The Hero screens, and the 21st skill point.** `src/ui/screens/hero.js` and `src/ui/screens/skill-tree.js` are the outline's "Hero and Items" tables, with `src/ui/parts/hero-header.js` holding the rows the three Hero screens share. Five rulings:
   - **The header is declared once.** `heroHeaderRegions()` returns rows 1–2 and 3–4 for whichever screen asks, so Stats, the Skill Tree and — when `04` arrives — the Pack cannot drift apart. When the frame is wide the tabs sit *beside* the bar rather than under it: nine rows is not enough to spend two on a header and still fit the tiers.
   - **Stats reads, it does not compute.** Every number on the screen is one the hero already carries (`attacks`, `saves`, `def`, `init`, `slots`, `critFrom`). If a formula changes, it changes in `attributes.json` and the screen follows; a number that appears here and nowhere in the hero is a bug in the sheet, not in the screen.

@@ -424,6 +424,31 @@ describe('ending the fight (06 section 15)', () => {
     expect(hero.conditions.weakened).toBeTruthy();
   });
 
+  it('rolls what the defeated were carrying, on the loot stream', () => {
+    // 06 section 15 step 4. The roll is the monster's own `goldRoll`, so a
+    // kobold's 1d6 lands between 1 and 6 on top of anything dropped.
+    const combat = fight({ monsters: [monster('kobold', { xp: 10, goldRoll: '1d6' })] });
+    combat.units[1].alive = false;
+    combat.droppedGold = 2;
+
+    const summary = endCombat(combat, { loot: createStream('purse', 'loot') });
+    expect(summary.gold).toBeGreaterThanOrEqual(3);
+    expect(summary.gold).toBeLessThanOrEqual(8);
+  });
+
+  it('rolls the same purse from the same seed, and none on a defeat', () => {
+    const purse = () => {
+      const combat = fight({ monsters: [monster('kobold', { xp: 10, goldRoll: '1d6' })] });
+      combat.units[1].alive = false;
+      return endCombat(combat, { loot: createStream('purse', 'loot') }).gold;
+    };
+    expect(purse()).toBe(purse());
+
+    const lost = fight({ monsters: [monster('kobold', { xp: 10, goldRoll: '1d6' })] });
+    lost.hero.alive = false;
+    expect(endCombat(lost, { loot: createStream('purse', 'loot') }).gold).toBe(0);
+  });
+
   it('lets the loot and the healing hooks add to the summary', () => {
     const combat = fight();
     combat.units[1].alive = false;

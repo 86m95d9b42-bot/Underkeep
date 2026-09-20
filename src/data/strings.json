@@ -310,6 +310,11 @@
       "victory": "Nothing else is standing.",
       "defeat": "You fall.",
       "fled": "You get away."
+    },
+    "after": {
+      "victory": "CONTINUE",
+      "fled": "BACK TO THE DARK",
+      "defeat": "YOU HAVE FALLEN"
     }
   },
   "common": {
@@ -694,7 +699,32 @@
       "noPoints": "No attribute points.",
       "unknown": "No such attribute.",
       "atMaximum": "Already at 20."
-    }
+    },
+    "banner": "LEVEL UP",
+    "tiles": {
+      "hp": "HP",
+      "fp": "FOCUS",
+      "sp": "SKILL PT",
+      "attribute": "ATTRIBUTE"
+    },
+    "gain": "+{n}",
+    "from": "{before} → {after}",
+    "spendOnTree": "On the tree",
+    "pickBelow": "Yours to pick",
+    "noneYet": "—",
+    "pickTitle": "RAISE ONE ATTRIBUTE",
+    "pickWhen": "LEVELS {levels}",
+    "nextPoint": "The next attribute point comes at level {n}.",
+    "noMorePoints": "No attribute points are left to come.",
+    "raise": "Tap to raise",
+    "raised": "→ {score} ({mod})",
+    "note": "Skill points wait on the Skill Tree.",
+    "tree": "SKILL TREE",
+    "confirm": "CONFIRM",
+    "needPick": "Pick an attribute first.",
+    "more": "{n} more to come",
+    "nextPointShort": "Next at {n}",
+    "noMorePointsShort": "No more"
   },
   "hero": {
     "title": "HERO",
@@ -726,5 +756,23 @@
     "atCap": "The last level.",
     "noPaths": "Nothing spent yet",
     "xpLabel": "XP"
+  },
+  "loot": {
+    "title": "VICTORY",
+    "xp": "XP +{n}",
+    "levelUp": "LEVEL UP!",
+    "xpBar": "{into}/{needed}",
+    "xpLabel": "XP",
+    "atCap": "The last level.",
+    "gold": "GOLD",
+    "goldGain": "+{n}",
+    "purse": "You carry {n} gp.",
+    "drops": "DROPS",
+    "noDrops": "Only coin this time.",
+    "take": "TAKE",
+    "takeAll": "TAKE ALL",
+    "nothingToTake": "Nothing to carry.",
+    "continue": "CONTINUE",
+    "toLevel": "A level is waiting."
   }
 }
