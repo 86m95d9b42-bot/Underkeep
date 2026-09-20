@@ -143,6 +143,39 @@ describe('the hero the fight is fought with', () => {
     expect(harrow.hp).toBeLessThanOrEqual(harrow.maxHp);
   });
 
+  it('walks into the next fight carrying nothing from the last one', () => {
+    // The hero is their own object now, so what one fight wrote on them —
+    // their flight, their initiative, their telegraph — must not be there
+    // when the next one starts.
+    const harrow = makeHero();
+    harrow.hp = harrow.maxHp = 60;
+    const first = createFight({
+      hero: standInHero(harrow),
+      monsters: [makeMonster('kobold')],
+      streams: carriedStreams(3),
+      surprise: false,
+    });
+    first.act('defend');
+    // However that fight ended — run from, won, given up on — this is what it
+    // can leave behind.
+    Object.assign(harrow, { fled: true, defending: true, surprised: true, lostTurns: 2 });
+
+    const second = createFight({
+      hero: standInHero(harrow),
+      monsters: [makeMonster('kobold')],
+      streams: carriedStreams(4),
+      surprise: false,
+    });
+    expect(second.over).toBe(false);
+    expect(harrow.fled).toBeUndefined();
+    expect(harrow.alive).toBe(true);
+    expect(harrow.defending).toBeUndefined();
+    expect(harrow.surprised).toBeUndefined();
+    expect(harrow.lostTurns ?? 0).toBe(0);
+    // The wounds, though, are carried: a fight does not heal anyone.
+    expect(harrow.hp).toBeLessThanOrEqual(harrow.maxHp);
+  });
+
   it('is paid the gold that fell, before the screen reports it', () => {
     // `06` section 15 step 4: the gold is the fight's loot, and it is banked
     // as combat ends rather than when a screen draws it.

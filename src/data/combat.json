@@ -1,13 +1,14 @@
 {
   "_source": "06 sections 2 (Combat Setup) and 3 (Round Order), with the row capacity of section 13 and the surprise die of 01 section 12. Later sections of 06 add their own tables to this file.",
-
   "field": {
     "_source": "06 section 2 step 1 and section 13.",
-    "rows": ["front", "back"],
+    "rows": [
+      "front",
+      "back"
+    ],
     "rowCapacity": 4,
     "crowdCap": 5
   },
-
   "surprise": {
     "_source": "06 section 2 step 3 and 01 section 12. Each side rolls a d6; a side that rolls inside its band surprises the other. Only one side surprised means a round 0 in which only that side acts.",
     "die": 6,
@@ -15,14 +16,16 @@
     "monstersSurpriseUpTo": 1,
     "surpriseRound": 0
   },
-
   "initiative": {
     "_source": "06 section 3, Initiative. Rolled fresh every round; monsters of the same type share one roll.",
     "die": 6,
-    "bands": ["first", "normal", "last"],
+    "bands": [
+      "first",
+      "normal",
+      "last"
+    ],
     "_bands": "first = under Quicksilver; last = Slowed, plus the Zombie, which always acts last. Both are flags on the unit (actsFirst / actsLast), so a potion, a condition and a monster's own tactics all reach the same band."
   },
-
   "turnStartOrder": {
     "_source": "06 section 4 steps 5-6 and section 5 step 3, which order the start of a turn more finely than section 16's example column: every source of damage, then every source of healing.",
     "hooks": [
@@ -40,11 +43,26 @@
       "freeTraits"
     ]
   },
-
   "damage": {
     "_source": "06 section 7, with the Res / Weak / Imm line of 02. Every multiplier rounds down where it lands, as 06 section 1 rule 4 says.",
-    "types": ["slash", "pierce", "crush", "fire", "cold", "poison", "holy", "necrotic", "force", "acid", "dark"],
-    "physical": ["slash", "pierce", "crush"],
+    "types": [
+      "slash",
+      "pierce",
+      "crush",
+      "fire",
+      "cold",
+      "poison",
+      "holy",
+      "necrotic",
+      "force",
+      "acid",
+      "dark"
+    ],
+    "physical": [
+      "slash",
+      "pierce",
+      "crush"
+    ],
     "immune": 0,
     "resistant": 0.5,
     "weak": 1.5,
@@ -54,9 +72,19 @@
     "telegraphVsDefending": 0.5,
     "minimum": 1,
     "_overTime": "Damage over time and auras (Poisoned, Burning, Bleeding, auras, Molten Shell, Heat Aura, Thorned) skip these steps. Types still matter, so a fire-immune unit ignores Burning.",
-    "overTimeSkips": ["critical", "telegraph", "damageReduction"]
+    "overTimeSkips": [
+      "critical",
+      "telegraph",
+      "damageReduction"
+    ],
+    "_weaponAttribute": "06 section 7 step 4 and 01 section 8: weapon damage adds the attacker's own modifier — MIG for melee, AGI for a thrown weapon, nothing for a bow or a spell. A monster states its flat in its damage line, so only a unit with attributes adds one.",
+    "weaponAttribute": {
+      "melee": "might",
+      "thrown": "agility",
+      "ranged": null,
+      "spell": null
+    }
   },
-
   "zeroHp": {
     "_source": "06 section 9. The traits that catch a unit at 0 HP are hooks; these are the numbers they use.",
     "heroRecoveryShare": 0.5,
@@ -64,33 +92,39 @@
       "_source": "Troll, Won't Stay Down. The combat does not end while an unburned troll is Fallen.",
       "rounds": 3,
       "hp": 10,
-      "burnedBy": ["fire", "holy"]
+      "burnedBy": [
+        "fire",
+        "holy"
+      ]
     }
   },
-
   "morale": {
     "_source": "06 section 9, Morale Triggers. Each trigger fires at most once per monster.",
     "dice": "2d6",
-    "triggers": ["groupHalved", "hurt", "leaderDead"],
+    "triggers": [
+      "groupHalved",
+      "hurt",
+      "leaderDead"
+    ],
     "groupShare": 0.5,
     "hurtBelow": 0.25,
     "fearless": 12
   },
-
   "fleeing": {
     "_source": "06 section 14: d20 + AGI mod + LCK mod vs 10 + the number of living enemies.",
-    "mods": ["agility", "luck"],
+    "mods": [
+      "agility",
+      "luck"
+    ],
     "tn": 10,
     "perLivingEnemy": 1,
     "freeAttackers": 2,
     "goldDroppedShare": 0.5
   },
-
   "victory": {
     "_source": "06 section 15, After a Victory.",
     "summonsWorthXp": 4
   },
-
   "attack": {
     "_source": "06 section 6, and its Attack Modifiers table. Critical range is 01 section 4: a natural 20, or 19-20 with a Luck modifier of +2 or better, which a unit carries as its own critFrom.",
     "die": 20,
@@ -100,33 +134,88 @@
     "requirementNotMet": -2,
     "maxRerolls": 2
   },
-
   "turn": {
     "_source": "06 section 4 (Defend, Hidden, Free Actions) and section 5 step 6 (recharge).",
     "freeActionsPerTurn": 1,
-    "defend": { "def": 4, "fp": 1 },
+    "defend": {
+      "def": 4,
+      "fp": 1
+    },
     "hiddenTurns": 2,
-    "recharge": { "die": 6, "readyFrom": 5 }
+    "recharge": {
+      "die": 6,
+      "readyFrom": 5
+    }
   },
-
   "actions": {
     "_source": "06 section 4. `tags` are what the legality table blocks: a condition that blocks `melee` stops melee attacks and melee skills alike.",
-    "attack": { "tags": ["attack"], "needsTarget": true, "defaultKind": "melee" },
-    "skill": { "tags": ["skill"], "needsTarget": false, "costsFp": true },
-    "item": { "tags": ["item"], "needsTarget": false },
-    "defend": { "tags": ["defend"] },
-    "telegraph": { "tags": ["telegraph"], "_note": "06 section 5: a monster spends its action announcing the attack." },
-    "breakFree": { "tags": ["breakFree"] },
-    "flee": { "tags": ["flee"] },
-    "swap": { "tags": ["swap"] },
-    "wait": { "tags": ["wait"] }
+    "attack": {
+      "tags": [
+        "attack"
+      ],
+      "needsTarget": true,
+      "defaultKind": "melee"
+    },
+    "skill": {
+      "tags": [
+        "skill"
+      ],
+      "needsTarget": false,
+      "costsFp": true
+    },
+    "item": {
+      "tags": [
+        "item"
+      ],
+      "needsTarget": false
+    },
+    "defend": {
+      "tags": [
+        "defend"
+      ]
+    },
+    "telegraph": {
+      "tags": [
+        "telegraph"
+      ],
+      "_note": "06 section 5: a monster spends its action announcing the attack."
+    },
+    "breakFree": {
+      "tags": [
+        "breakFree"
+      ]
+    },
+    "flee": {
+      "tags": [
+        "flee"
+      ]
+    },
+    "swap": {
+      "tags": [
+        "swap"
+      ]
+    },
+    "wait": {
+      "tags": [
+        "wait"
+      ]
+    }
   },
-
   "legality": {
     "_source": "06 section 4, Action Legality. Conditions bring their own `blocks` lists from conditions.json; these are the situations that are not conditions.",
-    "antiMagicField": { "blocks": ["arcana", "spirit", "scroll"] },
-    "noEscape": { "blocks": ["flee"], "_note": "Boss fights, and any monster with preventsFlight (the Frozen Revenant). Smoke Bomb, Vanish and Teleport fail here too." },
-
+    "antiMagicField": {
+      "blocks": [
+        "arcana",
+        "spirit",
+        "scroll"
+      ]
+    },
+    "noEscape": {
+      "blocks": [
+        "flee"
+      ],
+      "_note": "Boss fights, and any monster with preventsFlight (the Frozen Revenant). Smoke Bomb, Vanish and Teleport fail here too."
+    },
     "_reasons": "Every reason a button can be dimmed for that is not a condition. A condition dims a button under its own name from strings.json.",
     "reasons": [
       "notEnoughFp",
@@ -140,19 +229,33 @@
       "unknown"
     ]
   },
-
   "roundStartOrder": {
     "_source": "06 section 3 steps 3-5, which is a finer order than the example column of section 16.",
-    "hooks": ["grimoirePage", "ghastStench", "basiliskGaze", "fallenTroll", "bossPhase"]
+    "hooks": [
+      "grimoirePage",
+      "ghastStench",
+      "basiliskGaze",
+      "fallenTroll",
+      "bossPhase"
+    ]
   },
-
   "roundEndOrder": {
     "_source": "06 section 3 step 8.",
-    "hooks": ["shriek", "regrowth", "reassemble", "summons", "sickened"]
+    "hooks": [
+      "shriek",
+      "regrowth",
+      "reassemble",
+      "summons",
+      "sickened"
+    ]
   },
-
   "reactionFlags": {
     "_source": "06 section 3 step 2. Reset at the start of every round, for any unit that has them.",
-    "flags": ["riposte", "arcaneShield", "shieldBlock", "guardian"]
+    "flags": [
+      "riposte",
+      "arcaneShield",
+      "shieldBlock",
+      "guardian"
+    ]
   }
 }

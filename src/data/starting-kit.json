@@ -1,0 +1,15 @@
+{
+  "_source": "01 section 3's four kits, with the fighting numbers from 04 sections 2 and 3. A stand-in until items.json (Phase 5) makes these real items: only what a fight reads is here — a weapon's dice and type, and an armour's DEF. Everything else about these items (slots, price, the staff's +2 max FP, rations, lockpicks, the pole) arrives with the pack.",
+  "weapons": {
+    "long_sword": { "name": "long sword", "kind": "melee", "damage": "1d8 slash" },
+    "short_sword": { "name": "short sword", "kind": "melee", "damage": "1d6 slash" },
+    "mace": { "name": "mace", "kind": "melee", "damage": "1d6 crush" },
+    "staff": { "name": "staff", "kind": "melee", "damage": "1d6 crush" },
+    "dagger": { "name": "dagger", "kind": "melee", "damage": "1d4 pierce" },
+    "club": { "name": "club", "kind": "melee", "damage": "1d4 crush" }
+  },
+  "armor": {
+    "leather_armor": { "name": "leather armour", "def": 2 },
+    "robe": { "name": "robe", "def": 0 }
+  }
+}

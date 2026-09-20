@@ -67,15 +67,31 @@ function openable(run, stop, bashBonus) {
   return bashTn(stop.door, run.floor.floor) - bashBonus <= 20;
 }
 
-/** Turns to face a heading, then steps; opens what is in the way first. */
+/**
+ * Turns to face a heading, then steps; opens what is in the way first.
+ *
+ * Every press is offered to `notes.onEvents`, which is how the climb answers
+ * a wandering monster check: the walk stops where it stands, the fight
+ * happens, and the walk goes on from the same tile.
+ */
 function walkTo(run, to, notes, tries) {
   const { ex } = run;
+  const press = (command) => {
+    const result = run.press(command);
+    if (notes.onEvents?.(result.events, run) === 'stop') notes.stopped = true;
+    return result;
+  };
+
   const heading = DELTA.findIndex(([dx, dy]) => ex.pos[0] + dx === to[0] && ex.pos[1] + dy === to[1]);
   if (heading < 0) return `route jumped from ${ex.pos} to ${to}`;
-  while (ex.facing !== heading) run.press(turnBy(ex.facing, 1) === heading ? 'turnRight' : 'turnLeft');
+  while (ex.facing !== heading && !notes.stopped) {
+    press(turnBy(ex.facing, 1) === heading ? 'turnRight' : 'turnLeft');
+  }
+  if (notes.stopped) return null;
 
   for (let tried = 0; tried < tries; tried += 1) {
-    const { outcome } = run.press('forward');
+    const { outcome } = press('forward');
+    if (notes.stopped) return null;
     if (outcome.moved) return null;
 
     // Blocked: clear it the way a player would, with the context key.
@@ -94,17 +110,27 @@ function walkTo(run, to, notes, tries) {
  * Walks one floor from arrival to the arena door.
  * @param {number} masterSeed
  * @param {number} floorNumber
- * @param {{ bashBonus?: number, tries?: number }} [hero]
+ * @param {object} [hero]
+ * @param {number} [hero.bashBonus]
+ * @param {number} [hero.tries]
+ * @param {object} [hero.run] a run already under way, instead of a fresh one
+ * @param {(events: object[], run: object) => ('stop' | void)} [hero.onEvents]
+ *   called after every press; `'stop'` ends the walk where it stands
  */
-export function walkFloor(masterSeed, floorNumber, { bashBonus = 0, tries = BASH_TRIES } = {}) {
-  const run = createRun({ masterSeed, floor: floorNumber });
+export function walkFloor(
+  masterSeed,
+  floorNumber,
+  { bashBonus = 0, tries = BASH_TRIES, run: given, onEvents } = {},
+) {
+  const run = given ?? createRun({ masterSeed, floor: floorNumber });
   run.hero.bashBonus = bashBonus;
-  const notes = { opened: 0, bashesFailed: 0, keys: 0 };
+  const notes = { opened: 0, bashesFailed: 0, keys: 0, onEvents, stopped: false };
   const target = run.floor.arena.door;
 
   // The route is re-planned after each leg, because opening a door can reveal
   // a shorter way and a key may lie off to one side.
   for (let leg = 0; leg < 64; leg += 1) {
+    if (notes.stopped) return { ok: false, stopped: true, why: 'stopped', steps: run.ex.steps, run };
     if (key(...run.ex.pos) === key(...target)) {
       return { ok: true, steps: run.ex.steps, checks: run.ex.checks, ...notes, run };
     }
@@ -122,6 +148,7 @@ export function walkFloor(masterSeed, floorNumber, { bashBonus = 0, tries = BASH
     for (const step of route) {
       const problem = walkTo(run, step, notes, tries);
       if (problem) return { ok: false, why: problem, run };
+      if (notes.stopped) break;
     }
     if (goingFor) notes.keys += 1;
   }

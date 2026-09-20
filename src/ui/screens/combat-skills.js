@@ -6,10 +6,11 @@
  * Tall: the fight stays visible and dimmed above it; title and FP, the list,
  * then CANCEL and USE. Wide ("panel"): the same sheet as a right-hand panel.
  *
- * Skills are `01` section 6 and items are `04`, so today the list is empty and
- * says so. The sheet is built now because it is where the SKILL and ITEM
- * actions go, and a button that opens nothing is the one dead end a player
- * meets on every turn.
+ * A skill the hero has learned is used from here: the list is what they own,
+ * and the fight says which of them can be used this turn — a passive is
+ * always on, an active costs Focus, and a shape no phase has built yet is
+ * dimmed with the reason. Items are `04` and Phase 5, so that list is still
+ * empty and says so.
  */
 import { listRow, sheet } from '../parts/parts.js';
 import { button } from '../parts/button.js';
@@ -40,6 +41,9 @@ export const combatSkills = {
         ? hero.items ?? []
         : (hero.skills ?? []).map((row) => {
             const entry = skillFor(row.id);
+            // The engine answers for an active skill: enough Focus, a target
+            // in reach, nothing blocking it (`06` section 4).
+            const check = entry.type === 'passive' ? null : fight?.legality('skill', { skill: row.id });
             return {
               id: row.id,
               name: entry.name,
@@ -48,7 +52,9 @@ export const combatSkills = {
               reason:
                 entry.type === 'passive'
                   ? t('combat.skills.passive')
-                  : t('combat.skills.notYet'),
+                  : check && !check.legal
+                    ? t(`combat.illegal.${check.why}`)
+                    : undefined,
             };
           });
 
@@ -76,7 +82,7 @@ export const combatSkills = {
     const use = () => {
       const entry = entries.find((row) => row.id === chosen);
       if (!entry) return;
-      fight.act(mode, { id: entry.id, target: fight.target?.id });
+      fight.act(mode, { skill: entry.id, id: entry.id, target: fight.target?.id });
       close();
     };
 

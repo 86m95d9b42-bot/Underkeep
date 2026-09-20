@@ -232,7 +232,12 @@
       "unknown": "You can't do that.",
       "notYourTurn": "Not your turn.",
       "noSkills": "No skills yet.",
-      "noItems": "No items yet."
+      "noItems": "No items yet.",
+      "notAnAction": "That one is always on.",
+      "buffs": "Wards and marks are not built yet.",
+      "conditions": "Curing is not built yet.",
+      "exploration": "That one works out in the dungeon.",
+      "rows": "Whole-row skills are not built yet."
     },
     "defend": "You raise your guard.",
     "hiddenEnds": "You step back into the light.",
@@ -304,7 +309,10 @@
       "freed": "You tear free of the web.",
       "stillHeld": "The web holds you.",
       "start": "The fight begins.",
-      "levelUp": "You reach level {n}."
+      "levelUp": "You reach level {n}.",
+      "youHeal": "{skill}: {n} of the hurt closes.",
+      "youHealFull": "{skill}: nothing more will close.",
+      "youUseSkill": "You use {skill}."
     },
     "end": {
       "victory": "Nothing else is standing.",

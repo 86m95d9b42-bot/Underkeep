@@ -16,6 +16,7 @@
  */
 import { ATTRIBUTE_ORDER, CREATION, MAX_AT_CREATION, modsFor } from '../data/attributes.js';
 import { grantsOf, ORIGIN_ORDER } from '../data/origins.js';
+import { equipKit, kitOf } from './kit.js';
 import { creationStream } from '../engine/rng.js';
 import { derivedFor } from './derived.js';
 import { grantFree } from './skill-tree.js';
@@ -193,7 +194,10 @@ export function setName(draft, name) {
  */
 export function previewOf(draft) {
   const scores = draft.origin ? grantsOf(draft.scores, draft.origin).attributes : draft.scores;
-  const derived = derivedFor(scores);
+  // Once an origin is picked its armour counts, which is part of what the
+  // choice is (`01` section 3).
+  const gear = draft.origin ? (kitOf(draft.origin).armor?.def ?? 0) : 0;
+  const derived = derivedFor(scores, { gear });
   return { scores, mods: modsFor(scores), hp: derived.maxHp, fp: derived.maxFp, def: derived.def };
 }
 
@@ -218,7 +222,10 @@ export function finish(draft) {
   if (why) throw new Error(`the hero is not ready: ${why}`);
 
   const grants = grantsOf(draft.scores, draft.origin);
-  const derived = derivedFor(grants.attributes);
+  // `01` section 3 hands the kit over at creation, and its armour is part of
+  // DEF from the first step (`01` section 4: 10 + AGI mod + armor).
+  const worn = kitOf(draft.origin);
+  const derived = derivedFor(grants.attributes, { gear: worn.armor?.def ?? 0 });
 
   const hero = {
     name: draft.name.trim(),
@@ -259,6 +266,7 @@ export function finish(draft) {
     difficulty: draft.difficulty,
   };
 
+  equipKit(hero);
   // The origin's skill is the hero's from the first step (`01` section 3).
   return grantFree(hero, grants.freeSkill);
 }

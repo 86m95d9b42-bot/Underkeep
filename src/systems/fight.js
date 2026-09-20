@@ -13,6 +13,7 @@
  */
 import { createCombat, countedEnemies, isTargetable, onField } from '../engine/field.js';
 import { createHooks } from '../engine/hooks.js';
+import { actionForSkill, resolveSkillAction } from '../engine/skill-actions.js';
 import { registerRules } from '../engine/rules.js';
 import { beginCombat, endRound, peekTurn, startRound, takeNextTurn } from '../engine/round.js';
 import { takeTurn } from '../engine/turn.js';
@@ -110,6 +111,16 @@ export function lineFor(step, unit) {
  */
 function lineForAction(step, unit, who, mine) {
   const result = step.result;
+  // A skill that healed says what it was worth, not what it hit.
+  if (result?.healed !== undefined) {
+    const name = t(`skills.${result.skill}.name`);
+    return {
+      text: result.healed > 0
+        ? t('combat.log.youHeal', { skill: name, n: result.healed })
+        : t('combat.log.youHealFull', { skill: name }),
+      tone: 'accent',
+    };
+  }
   // A multi-attack action hands back a list; each attack spoke for itself.
   if (!result || result.hit === undefined) return null;
   const target = result.targetName ?? result.target ?? '';
@@ -197,7 +208,9 @@ export function createFight({
   const services = {
     script: chooseAction,
     resolveAction: (fight, unit, action) => {
-      const result = resolveAction(fight, unit, action);
+      // A skill action is resolved by the skill rules; everything else is
+      // section 6's.
+      const result = resolveSkillAction(fight, unit, action, services) ?? resolveAction(fight, unit, action);
       // The log wants a name, and the engine deals in ids.
       if (result && !Array.isArray(result) && result.target) {
         result.targetName = unitById(result.target)?.name ?? result.target;
@@ -363,9 +376,11 @@ export function createFight({
     },
 
     /** Whether an action is legal now, and why not — for a dimmed button. */
-    legality(id) {
+    legality(id, options = {}) {
       if (phase !== 'hero') return { legal: false, why: 'notYourTurn' };
-      return legalityOf(combat, combat.hero, actionFor(id));
+      const action = actionFor(id, target, options);
+      if (action.ready === false && action.why) return { legal: false, why: action.why };
+      return legalityOf(combat, combat.hero, action);
     },
 
     /** True while a telegraph is pending, which makes DEFEND the primary. */
@@ -383,7 +398,8 @@ export function createFight({
       if (phase !== 'hero') return { acted: false, why: 'notYourTurn' };
       if (options.target) fight.pick(options.target);
 
-      const action = actionFor(id, target);
+      const action = actionFor(id, target, options);
+      if (action.ready === false && action.why) return { acted: false, why: action.why };
       const check = legalityOf(combat, combat.hero, action);
       if (!check.legal) return { acted: false, why: check.why };
 
@@ -413,11 +429,20 @@ export function createFight({
     },
   };
 
-  /** Builds the action the engine resolves from one of the six buttons. */
-  function actionFor(id, at = target) {
+  /**
+   * Builds the action the engine resolves from one of the six buttons. SKILL
+   * carries which skill was tapped; the sheet is what picks it.
+   */
+  function actionFor(id, at = target, options = {}) {
     const weapon = combat.hero.attack ?? {};
     if (id === 'attack') {
       return { id: 'attack', kind: weapon.kind ?? 'melee', ...weapon, target: at ?? undefined };
+    }
+    if (id === 'skill' && options.skill) {
+      const built = actionForSkill(combat.hero, options.skill, { target: at ?? undefined });
+      // A skill whose shape no phase has built yet is offered and refused by
+      // name, the way every other dimmed button is.
+      return built.action ?? { id: 'skill', skill: options.skill, ready: false, why: built.why };
     }
     return { id };
   }

@@ -63,7 +63,7 @@ Work top to bottom. Check a box when the task is done and tested. Each phase end
 - [x] XP curve, level-up gains, attribute points at 4/8/12/16/20
 - [x] Hero: Stats and Hero: Skill Tree screens
 - [x] Victory & Loot (XP and gold only for now) and Level Up screens
-- [ ] **Done when:** a new level 1 hero can reach level 5 on floors 1–2
+- [x] **Done when:** a new level 1 hero can reach level 5 on floors 1–2
 
 ## Phase 5 — Loot
 

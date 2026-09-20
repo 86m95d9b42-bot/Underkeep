@@ -165,6 +165,47 @@ export function place(combat, unit, { overflow = false } = {}) {
  * @param {'hero' | 'monsters'} side
  * @param {number} ordinal how many of this type came before it
  */
+/**
+ * What one fight leaves on a unit, and what the next one must not inherit.
+ * A monster is built fresh from its template every time, so this is really
+ * about the hero: they are their own object (see `toUnit`), and they walk
+ * into the next fight carrying their wounds, their poison and their
+ * experience — but not last fight's initiative, telegraph or flight.
+ *
+ * Everything the hero keeps is left alone: hit points, Focus, conditions
+ * (`06` section 10's After Combat table has already pruned them), and
+ * everything the run owns.
+ */
+export const COMBAT_LEFTOVERS = [
+  'fled',
+  'fleeing',
+  'removed',
+  'defending',
+  'defeated',
+  'fallen',
+  'burned',
+  'burnedSinceTurn',
+  'surprised',
+  'telegraph',
+  'lostTurns',
+  'turn',
+  'actedInRound',
+  'controlImmunity',
+  'freshImmunity',
+  'moraleChecks',
+  'usedRelentless',
+  'reassembled',
+  'stolenGold',
+  'lastDamageTypes',
+];
+
+/** Clears the last fight off a unit that is about to start another one. */
+export function clearCombatState(unit) {
+  for (const field of COMBAT_LEFTOVERS) delete unit[field];
+  unit.alive = true;
+  return unit;
+}
+
 function toUnit(template, side, ordinal) {
   const type = template.type ?? template.id ?? 'monster';
   const fields = {
@@ -180,6 +221,9 @@ function toUnit(template, side, ordinal) {
   // Every field above is read off the template first, so the monster's copy
   // and the hero's own object end up carrying exactly the same things.
   const unit = side === 'hero' ? Object.assign(template, fields) : { ...template, ...fields };
+  // The hero is reused from fight to fight, so the last one is cleared off
+  // them here rather than trusted to have tidied up after itself.
+  if (side === 'hero') clearCombatState(unit);
   return prepare(unit);
 }
 

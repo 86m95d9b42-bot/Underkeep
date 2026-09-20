@@ -21,8 +21,10 @@ import {
   parsePart,
   resolveDamage,
   typeMultiplier,
+  weaponMod,
 } from '../src/engine/damage.js';
 import { applyCondition, has } from '../src/engine/conditions.js';
+import { modFor } from '../src/data/attributes.js';
 
 const heroTemplate = (extra = {}) => ({
   id: 'hero',
@@ -122,6 +124,43 @@ describe('step 4: flat bonuses land on the main part only', () => {
     );
     // main 4 + 3, property 4.
     expect(result.parts.map((part) => part.amount)).toEqual([7, 4]);
+  });
+});
+
+describe('step 4: the attacker\u2019s own modifier', () => {
+  it('adds MIG to a melee weapon (01 section 8)', () => {
+    const combat = fight({ hero: { attributes: { might: 16, agility: 10 } } });
+    everyDie(combat, 4);
+    const result = calcDamage(combat, hit(combat, { damage: '1d8 slash', kind: 'melee' }));
+    // 4 rolled + the +3 a Might of 16 gives.
+    expect(result.total).toBe(4 + modFor(16));
+    expect(weaponMod(combat.hero, { kind: 'melee' })).toBe(modFor(16));
+  });
+
+  it('adds AGI to a thrown weapon and nothing to a bow or a spell', () => {
+    const who = { attributes: { might: 16, agility: 14, intellect: 8 } };
+    expect(weaponMod(who, { kind: 'thrown' })).toBe(modFor(14));
+    expect(weaponMod(who, { kind: 'ranged' })).toBe(0);
+    expect(weaponMod(who, { kind: 'spell' })).toBe(0);
+  });
+
+  it('takes the attribute a skill names instead, when it names one', () => {
+    const who = { attributes: { might: 16, intellect: 14 } };
+    expect(weaponMod(who, { kind: 'spell', damageAttribute: 'intellect' })).toBe(modFor(14));
+  });
+
+  it('adds nothing for a monster, whose damage line already carries its flat', () => {
+    const combat = fight();
+    everyDie(combat, 3);
+    const rat = combat.units[1];
+    expect(weaponMod(rat, { kind: 'melee' })).toBe(0);
+    const result = calcDamage(combat, {
+      attacker: rat,
+      target: combat.hero,
+      attack: { damage: '1d6+1 pierce', kind: 'melee' },
+      result: {},
+    });
+    expect(result.total).toBe(4);
   });
 });
 

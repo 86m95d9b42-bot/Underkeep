@@ -20,6 +20,7 @@
  */
 import { LEVELING, levelForXp, modFor, xpForLevel } from '../data/attributes.js';
 import { derivedFor, hpGain } from './derived.js';
+import { gearDef } from './kit.js';
 import { applySkillSheet } from '../engine/skill-hooks.js';
 
 /** The level a hero cannot climb past (`01` section 5). */
@@ -63,7 +64,13 @@ export function rebuildSheet(hero) {
   // The hit points a hero has rolled over their levels are the base; the
   // sheet they are showing may already have a skill's bonus folded into it.
   const rolledHp = hero.baseSheet?.maxHp ?? hero.maxHp;
-  const derived = derivedFor(hero.attributes, { level: hero.level, maxHp: rolledHp });
+  // The gear is read again rather than remembered, so armour is never folded
+  // into DEF twice (the same reasoning as the skill sheet's base).
+  const derived = derivedFor(hero.attributes, {
+    level: hero.level,
+    maxHp: rolledHp,
+    gear: gearDef(hero),
+  });
   hero.mods = derived.mods;
   hero.maxFp = derived.maxFp;
   hero.ba = derived.ba;

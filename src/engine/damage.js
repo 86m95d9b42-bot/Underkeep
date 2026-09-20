@@ -30,6 +30,7 @@
  * fire-immune unit ignores Burning.
  */
 import data from '../data/combat.json' with { type: 'json' };
+import { modFor } from '../data/attributes.js';
 import { has, spec } from './conditions.js';
 
 export const DAMAGE = data.damage;
@@ -150,6 +151,26 @@ export function damageReduction(target, parts, extra = 0) {
  * @returns {{ parts: object[], subtotal: number, dr: number, total: number,
  *   crit: boolean, immuneAll: boolean }}
  */
+/**
+ * Step 4's attribute modifier: *"weapon damage = weapon die + MIG mod for
+ * melee (AGI mod for thrown weapons; ranged bows add no attribute unless a
+ * skill says so)"* (`01` section 8, `06` section 7 step 4).
+ *
+ * Only a unit with attributes adds one. A monster's damage line already
+ * carries its flat — a Kobold's `1d6+1` is the whole of it — so reading a
+ * modifier off a monster would pay it twice.
+ *
+ * @param {object} attacker
+ * @param {object} attack
+ */
+export function weaponMod(attacker, attack = {}) {
+  if (!attacker?.attributes) return 0;
+  if (attack.noAttributeDamage) return 0;
+  // A skill may name another attribute: Duelist swings a Light weapon on AGI.
+  const attribute = attack.damageAttribute ?? DAMAGE.weaponAttribute[attack.kind ?? 'melee'];
+  return attribute ? modFor(attacker.attributes[attribute]) : 0;
+}
+
 export function calcDamage(combat, { attacker, target, attack = {}, result = {} }, options = {}) {
   const rng = combat.rng;
   const overTime = Boolean(options.overTime || attack.overTime);
@@ -168,11 +189,16 @@ export function calcDamage(combat, { attacker, target, attack = {}, result = {} 
     // and the property dice care about.
     weapon: attack.weapon ?? (attack.kind ?? 'melee') !== 'spell',
     parts: gatherParts(attack),
-    flat: attack.flat ?? 0,
+    // Step 4's flats, gathered before a hook can change them.
+    flat: (attack.flat ?? 0) + weaponMod(attacker, attack),
     crit: Boolean(result.crit),
     critDice: attack.mastery ? DAMAGE.critDiceWithMastery : DAMAGE.critDice,
     dr: 0,
-  }) ?? { parts: gatherParts(attack), flat: attack.flat ?? 0, crit: Boolean(result.crit) };
+  }) ?? {
+    parts: gatherParts(attack),
+    flat: (attack.flat ?? 0) + weaponMod(attacker, attack),
+    crit: Boolean(result.crit),
+  };
 
   const parts = (payload.parts ?? []).map((part) => ({ ...part }));
   const crit = Boolean(payload.crit) && !overTime;
