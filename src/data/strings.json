@@ -64,7 +64,10 @@
       "markLeft": "A mark glows on the stone where you stood.",
       "markRefused": "The arena will not hold a mark.",
       "attuned": "The waystone answers. You could return here.",
-      "waystoneTravel": "The waystone takes you up and out."
+      "waystoneTravel": "The waystone takes you up and out.",
+      "foundNothing": "You find nothing.",
+      "foundTrap": "It's trapped!",
+      "foundTrapExact": "It's trapped: {name}."
     },
     "title": "EXPLORE",
     "pad": {
@@ -119,7 +122,8 @@
       "shut": "No way through",
       "notOnStone": "Stand on the waystone.",
       "notAttuned": "This stone is not yours yet.",
-      "nowhere": "Not here."
+      "nowhere": "Not here.",
+      "tooDark": "Too dark to search."
     }
   },
   "pause": {
@@ -1238,6 +1242,98 @@
       "gear": "Gear",
       "valuable": "Valuable",
       "part": "Monster part"
+    }
+  },
+  "traps": {
+    "alarm_tile": {
+      "name": "Alarm Tile"
+    },
+    "pit": {
+      "name": "Pit"
+    },
+    "dart_plate": {
+      "name": "Dart Plate"
+    },
+    "swinging_blade": {
+      "name": "Swinging Blade"
+    },
+    "gas_vent": {
+      "name": "Gas Vent"
+    },
+    "spiked_pit": {
+      "name": "Spiked Pit"
+    },
+    "falling_block": {
+      "name": "Falling Block"
+    },
+    "chute": {
+      "name": "Chute"
+    },
+    "flame_jet": {
+      "name": "Flame Jet"
+    },
+    "teleport_glyph": {
+      "name": "Teleport Glyph"
+    },
+    "crushing_walls": {
+      "name": "Crushing Walls"
+    },
+    "soul_glyph": {
+      "name": "Soul Glyph"
+    },
+    "frost_glyph": {
+      "name": "Frost Glyph"
+    },
+    "alarm_chime": {
+      "name": "Alarm Chime"
+    },
+    "needle_lock": {
+      "name": "Needle Lock"
+    },
+    "scything_door": {
+      "name": "Scything Door"
+    },
+    "warding_rune": {
+      "name": "Warding Rune"
+    },
+    "sealing_glyph": {
+      "name": "Sealing Glyph"
+    },
+    "poison_needle": {
+      "name": "Poison Needle"
+    },
+    "spring_blade": {
+      "name": "Spring Blade"
+    },
+    "stink_bomb": {
+      "name": "Stink Bomb"
+    },
+    "crossbow_bolt": {
+      "name": "Crossbow Bolt"
+    },
+    "alarm_bell": {
+      "name": "Alarm Bell"
+    },
+    "gas_cloud": {
+      "name": "Gas Cloud"
+    },
+    "acid_spray": {
+      "name": "Acid Spray"
+    },
+    "fire_rune": {
+      "name": "Fire Rune"
+    },
+    "stunner": {
+      "name": "Stunner"
+    },
+    "teleport_glyph_chest": {
+      "name": "Teleport Glyph"
+    },
+    "curse_sigil": {
+      "name": "Curse Sigil"
+    },
+    "soul_leech": {
+      "name": "Soul Leech"
     }
   }
 }

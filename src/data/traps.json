@@ -1,0 +1,796 @@
+{
+  "_source": "03 sections 2 to 5, and section 11's XP. The tier TNs are locks.json's, because 03 section 2 gives traps and locks one table between them.",
+  "floorDice": {
+    "_source": "03 section 2, Floor Dice: 1d6 per 2 floors, minimum 1d6.",
+    "die": 6,
+    "perFloors": 2,
+    "minimum": 1
+  },
+  "detection": {
+    "_source": "03 section 3.",
+    "passivePenalty": -4,
+    "attribute": "wits",
+    "arcaneAttributes": [
+      "wits",
+      "intellect"
+    ],
+    "carefulSteps": 20,
+    "searchSteps": 5,
+    "exactBy": 5,
+    "unknownTypePenalty": -2,
+    "bonuses": {
+      "keenSenses": {
+        "explore": "search",
+        "perRank": 3
+      },
+      "trapfinding": {
+        "explore": "trap",
+        "perRank": 2,
+        "noPassivePenaltyFromRank": 2
+      },
+      "lore": {
+        "explore": "magicTrap",
+        "value": 3,
+        "magicalOnly": true,
+        "exactOnAnySuccess": true
+      }
+    },
+    "darkness": {
+      "canSearch": false,
+      "arcaneNoticedWithoutPenalty": true
+    }
+  },
+  "disarm": {
+    "_source": "03 section 4.",
+    "mechanical": {
+      "attribute": "agility",
+      "needs": "lockpicks",
+      "bonus": "disarm"
+    },
+    "arcane": {
+      "attribute": "intellect",
+      "withDispel": 4,
+      "withoutDispel": "disadvantage"
+    },
+    "salvageBy": 10,
+    "failBy": 5,
+    "retrySteps": 5,
+    "steps": 5
+  },
+  "pole": {
+    "_source": "03 section 4, Spring It with a Ten-Foot Pole.",
+    "breaksOneIn": 6,
+    "breaksOn": [
+      "blade",
+      "crush"
+    ],
+    "noXp": true
+  },
+  "trigger": {
+    "_source": "03 section 4, When a Trap Goes Off.",
+    "attackBonus": {
+      "perFloor": 1,
+      "flat": 3
+    },
+    "undetected": {
+      "saveDisadvantage": true,
+      "attackBonus": 2
+    }
+  },
+  "xp": {
+    "_source": "03 section 11.",
+    "disarm": {
+      "perFloor": 10
+    },
+    "pickLock": {
+      "perFloor": 5
+    },
+    "sealed": {
+      "perFloor": 15
+    },
+    "secretDoor": {
+      "perFloor": 10
+    },
+    "hazard": {
+      "perFloor": 5
+    },
+    "tierMultiplier": {
+      "masterwork": 2,
+      "arcane": 3
+    },
+    "none": [
+      "pole",
+      "bash",
+      "key"
+    ]
+  },
+  "mechanicalTierRoll": {
+    "_source": "03 section 5: d10 + F. 1-5 Crude, 6-11 Standard, 12+ Masterwork, capped to the tiers a trap lists.",
+    "dice": "d10",
+    "bands": [
+      {
+        "upTo": 5,
+        "tier": "crude"
+      },
+      {
+        "upTo": 11,
+        "tier": "standard"
+      },
+      {
+        "upTo": 999,
+        "tier": "masterwork"
+      }
+    ]
+  },
+  "chestTrapRoll": {
+    "_source": "03 section 5, Chest Traps: floors 1-3 roll d6, 4-7 d10, 8-10 d12.",
+    "dieByFloor": [
+      {
+        "upToFloor": 3,
+        "die": 6
+      },
+      {
+        "upToFloor": 7,
+        "die": 10
+      },
+      {
+        "upToFloor": 10,
+        "die": 12
+      }
+    ],
+    "table": [
+      {
+        "roll": 1,
+        "id": "poison_needle"
+      },
+      {
+        "roll": 2,
+        "id": "spring_blade"
+      },
+      {
+        "roll": 3,
+        "id": "stink_bomb"
+      },
+      {
+        "roll": 4,
+        "id": "crossbow_bolt"
+      },
+      {
+        "roll": 5,
+        "id": "alarm_bell"
+      },
+      {
+        "roll": 6,
+        "id": "gas_cloud"
+      },
+      {
+        "roll": 7,
+        "id": "acid_spray"
+      },
+      {
+        "roll": 8,
+        "id": "fire_rune"
+      },
+      {
+        "roll": 9,
+        "id": "stunner"
+      },
+      {
+        "roll": 10,
+        "id": "teleport_glyph_chest"
+      },
+      {
+        "roll": 11,
+        "id": "curse_sigil"
+      },
+      {
+        "roll": 12,
+        "id": "soul_leech"
+      }
+    ]
+  },
+  "salvage": {
+    "_source": "03 section 4, Salvage (success by 10+).",
+    "default": "trap_parts",
+    "by": {
+      "poison_needle": "poison_vial",
+      "dart_plate": "poison_vial",
+      "gas_cloud": "sleep_bomb",
+      "gas_vent": "sleep_bomb",
+      "fire_rune": "fire_pot",
+      "flame_jet": "fire_pot",
+      "crossbow_bolt": "crossbow_parts"
+    }
+  },
+  "traps": {
+    "_source": "03 section 5's three tables, in the JSON shape section 13 gives.",
+    "alarm_tile": {
+      "name": "Alarm Tile",
+      "placement": [
+        "floor"
+      ],
+      "minFloor": 1,
+      "tiers": [
+        "crude"
+      ],
+      "poleable": false,
+      "family": "alarm",
+      "effect": {
+        "encounter": {
+          "extra": 1
+        }
+      }
+    },
+    "pit": {
+      "name": "Pit",
+      "placement": [
+        "floor"
+      ],
+      "minFloor": 1,
+      "tiers": [
+        "crude"
+      ],
+      "poleable": true,
+      "family": "pit",
+      "effect": {
+        "save": "reflex",
+        "damage": "FD",
+        "damageType": "crush",
+        "onFail": {
+          "pit": true,
+          "climbSteps": 10
+        }
+      }
+    },
+    "dart_plate": {
+      "name": "Dart Plate",
+      "placement": [
+        "floor"
+      ],
+      "minFloor": 1,
+      "tiers": [
+        "standard"
+      ],
+      "poleable": true,
+      "family": "needle",
+      "effect": {
+        "attack": true,
+        "damage": "1d4+F",
+        "damageType": "pierce",
+        "then": {
+          "save": "body",
+          "condition": "poisoned"
+        }
+      }
+    },
+    "swinging_blade": {
+      "name": "Swinging Blade",
+      "placement": [
+        "floor"
+      ],
+      "minFloor": 2,
+      "tiers": [
+        "standard"
+      ],
+      "poleable": true,
+      "family": "blade",
+      "effect": {
+        "save": "reflex",
+        "damage": "FD",
+        "damageType": "slash",
+        "onFail": {
+          "condition": "bleeding"
+        }
+      }
+    },
+    "gas_vent": {
+      "name": "Gas Vent",
+      "placement": [
+        "floor"
+      ],
+      "minFloor": 3,
+      "tiers": [
+        "standard"
+      ],
+      "poleable": false,
+      "family": "gas",
+      "effect": {
+        "save": "mind",
+        "condition": "asleep",
+        "durationSteps": 10,
+        "then": {
+          "wanderingCheck": true,
+          "enemySurprise": true
+        }
+      }
+    },
+    "spiked_pit": {
+      "name": "Spiked Pit",
+      "placement": [
+        "floor"
+      ],
+      "minFloor": 3,
+      "tiers": [
+        "standard"
+      ],
+      "poleable": true,
+      "family": "pit",
+      "effect": {
+        "save": "reflex",
+        "damage": "FD",
+        "damageType": "crush",
+        "onFail": {
+          "pit": true,
+          "climbSteps": 10,
+          "extraDamage": "1d6",
+          "extraDamageType": "pierce",
+          "condition": "bleeding"
+        }
+      }
+    },
+    "falling_block": {
+      "name": "Falling Block",
+      "placement": [
+        "floor"
+      ],
+      "minFloor": 4,
+      "tiers": [
+        "standard"
+      ],
+      "poleable": true,
+      "family": "crush",
+      "effect": {
+        "save": "reflex",
+        "damage": "FD+1d6",
+        "damageType": "crush"
+      }
+    },
+    "chute": {
+      "name": "Chute",
+      "placement": [
+        "floor"
+      ],
+      "minFloor": 4,
+      "tiers": [
+        "standard"
+      ],
+      "poleable": true,
+      "family": "pit",
+      "effect": {
+        "save": "reflex",
+        "onFail": {
+          "chute": true
+        }
+      }
+    },
+    "flame_jet": {
+      "name": "Flame Jet",
+      "placement": [
+        "floor"
+      ],
+      "minFloor": 5,
+      "tiers": [
+        "standard"
+      ],
+      "poleable": true,
+      "family": "fire",
+      "effect": {
+        "save": "reflex",
+        "damage": "FD",
+        "damageType": "fire",
+        "halfOnSave": true,
+        "onFail": {
+          "condition": "burning"
+        }
+      }
+    },
+    "teleport_glyph": {
+      "name": "Teleport Glyph",
+      "placement": [
+        "floor"
+      ],
+      "minFloor": 6,
+      "tiers": [
+        "arcane"
+      ],
+      "poleable": false,
+      "family": "arcane",
+      "effect": {
+        "save": "mind",
+        "onFail": {
+          "teleport": "floor"
+        }
+      }
+    },
+    "crushing_walls": {
+      "name": "Crushing Walls",
+      "placement": [
+        "floor"
+      ],
+      "minFloor": 7,
+      "tiers": [
+        "masterwork"
+      ],
+      "poleable": false,
+      "family": "crush",
+      "effect": {
+        "escapeSteps": 3,
+        "save": "reflex",
+        "damage": "2FD",
+        "damageType": "crush",
+        "halfOnSave": true
+      }
+    },
+    "soul_glyph": {
+      "name": "Soul Glyph",
+      "placement": [
+        "floor"
+      ],
+      "minFloor": 8,
+      "tiers": [
+        "arcane"
+      ],
+      "poleable": false,
+      "family": "arcane",
+      "effect": {
+        "save": "body",
+        "condition": "drained"
+      }
+    },
+    "frost_glyph": {
+      "name": "Frost Glyph",
+      "placement": [
+        "floor"
+      ],
+      "minFloor": 9,
+      "tiers": [
+        "arcane"
+      ],
+      "poleable": false,
+      "family": "arcane",
+      "effect": {
+        "save": "reflex",
+        "damage": "FD",
+        "damageType": "cold",
+        "halfOnSave": true,
+        "onFail": {
+          "condition": "slowed"
+        }
+      }
+    },
+    "alarm_chime": {
+      "name": "Alarm Chime",
+      "placement": [
+        "door"
+      ],
+      "minFloor": 1,
+      "tiers": [
+        "crude"
+      ],
+      "poleable": false,
+      "family": "alarm",
+      "effect": {
+        "encounter": {}
+      }
+    },
+    "needle_lock": {
+      "name": "Needle Lock",
+      "placement": [
+        "door"
+      ],
+      "minFloor": 1,
+      "tiers": [
+        "standard"
+      ],
+      "poleable": false,
+      "family": "needle",
+      "effect": {
+        "damage": "1d4",
+        "damageType": "pierce",
+        "then": {
+          "save": "body",
+          "condition": "poisoned"
+        }
+      }
+    },
+    "scything_door": {
+      "name": "Scything Door",
+      "placement": [
+        "door"
+      ],
+      "minFloor": 3,
+      "tiers": [
+        "standard"
+      ],
+      "poleable": true,
+      "family": "blade",
+      "effect": {
+        "save": "reflex",
+        "damage": "FD",
+        "damageType": "slash",
+        "halfOnSave": true
+      }
+    },
+    "warding_rune": {
+      "name": "Warding Rune",
+      "placement": [
+        "door"
+      ],
+      "minFloor": 5,
+      "tiers": [
+        "arcane"
+      ],
+      "poleable": false,
+      "family": "arcane",
+      "effect": {
+        "save": "reflex",
+        "damage": "FD",
+        "damageType": [
+          "fire",
+          "cold"
+        ],
+        "halfOnSave": true
+      }
+    },
+    "sealing_glyph": {
+      "name": "Sealing Glyph",
+      "placement": [
+        "door"
+      ],
+      "minFloor": 8,
+      "tiers": [
+        "arcane"
+      ],
+      "poleable": false,
+      "family": "arcane",
+      "effect": {
+        "save": "mind",
+        "condition": "paralyzed",
+        "durationSteps": 10,
+        "then": {
+          "wanderingCheck": true,
+          "enemySurprise": true
+        }
+      }
+    },
+    "poison_needle": {
+      "name": "Poison Needle",
+      "placement": [
+        "chest"
+      ],
+      "minFloor": 1,
+      "tiers": [
+        "crude",
+        "standard",
+        "masterwork"
+      ],
+      "poleable": true,
+      "family": "needle",
+      "effect": {
+        "save": "body",
+        "condition": "poisoned"
+      },
+      "salvage": "poison_vial"
+    },
+    "spring_blade": {
+      "name": "Spring Blade",
+      "placement": [
+        "chest"
+      ],
+      "minFloor": 1,
+      "tiers": [
+        "crude",
+        "standard",
+        "masterwork"
+      ],
+      "poleable": true,
+      "family": "blade",
+      "effect": {
+        "save": "reflex",
+        "damage": "FD",
+        "damageType": "slash",
+        "halfOnSave": true
+      }
+    },
+    "stink_bomb": {
+      "name": "Stink Bomb",
+      "placement": [
+        "chest"
+      ],
+      "minFloor": 1,
+      "tiers": [
+        "crude"
+      ],
+      "poleable": "advantage",
+      "family": "gas",
+      "effect": {
+        "save": "body",
+        "condition": "sickened",
+        "forNextCombat": true,
+        "then": {
+          "wanderingCheck": true
+        }
+      }
+    },
+    "crossbow_bolt": {
+      "name": "Crossbow Bolt",
+      "placement": [
+        "chest"
+      ],
+      "minFloor": 1,
+      "tiers": [
+        "standard",
+        "masterwork"
+      ],
+      "poleable": true,
+      "family": "projectile",
+      "effect": {
+        "attack": true,
+        "damage": "1d10+F",
+        "damageType": "pierce"
+      },
+      "salvage": "crossbow_parts"
+    },
+    "alarm_bell": {
+      "name": "Alarm Bell",
+      "placement": [
+        "chest"
+      ],
+      "minFloor": 1,
+      "tiers": [
+        "crude",
+        "standard"
+      ],
+      "poleable": false,
+      "family": "alarm",
+      "effect": {
+        "encounter": {
+          "extra": 1
+        }
+      }
+    },
+    "gas_cloud": {
+      "name": "Gas Cloud",
+      "placement": [
+        "chest"
+      ],
+      "minFloor": 1,
+      "tiers": [
+        "standard",
+        "masterwork"
+      ],
+      "poleable": "advantage",
+      "family": "gas",
+      "effect": {
+        "save": "mind",
+        "condition": "asleep",
+        "durationSteps": 10,
+        "then": {
+          "wanderingCheck": true,
+          "enemySurprise": true
+        }
+      },
+      "salvage": "sleep_bomb"
+    },
+    "acid_spray": {
+      "name": "Acid Spray",
+      "placement": [
+        "chest"
+      ],
+      "minFloor": 1,
+      "tiers": [
+        "standard",
+        "masterwork"
+      ],
+      "poleable": "advantage",
+      "family": "acid",
+      "effect": {
+        "save": "reflex",
+        "damage": "FD",
+        "damageType": "acid",
+        "halfOnSave": true,
+        "onFail": {
+          "destroysCarried": 1
+        }
+      }
+    },
+    "fire_rune": {
+      "name": "Fire Rune",
+      "placement": [
+        "chest"
+      ],
+      "minFloor": 1,
+      "tiers": [
+        "arcane"
+      ],
+      "poleable": false,
+      "family": "fire",
+      "effect": {
+        "save": "reflex",
+        "damage": "FD+1d6",
+        "damageType": "fire",
+        "halfOnSave": true,
+        "onFail": {
+          "burnsScrollsInside": true
+        }
+      },
+      "salvage": "fire_pot"
+    },
+    "stunner": {
+      "name": "Stunner",
+      "placement": [
+        "chest"
+      ],
+      "minFloor": 1,
+      "tiers": [
+        "standard",
+        "masterwork"
+      ],
+      "poleable": false,
+      "family": "mechanism",
+      "effect": {
+        "save": "body",
+        "condition": "paralyzed",
+        "durationSteps": 10,
+        "then": {
+          "wanderingCheck": true,
+          "enemySurprise": true
+        }
+      }
+    },
+    "teleport_glyph_chest": {
+      "name": "Teleport Glyph",
+      "placement": [
+        "chest"
+      ],
+      "minFloor": 1,
+      "tiers": [
+        "arcane"
+      ],
+      "poleable": false,
+      "family": "arcane",
+      "effect": {
+        "save": "mind",
+        "onFail": {
+          "teleport": "floor",
+          "chestStays": true
+        }
+      }
+    },
+    "curse_sigil": {
+      "name": "Curse Sigil",
+      "placement": [
+        "chest"
+      ],
+      "minFloor": 1,
+      "tiers": [
+        "arcane"
+      ],
+      "poleable": false,
+      "family": "arcane",
+      "effect": {
+        "save": "mind",
+        "condition": "weakened",
+        "onFail": {
+          "loseFp": "1d6"
+        }
+      }
+    },
+    "soul_leech": {
+      "name": "Soul Leech",
+      "placement": [
+        "chest"
+      ],
+      "minFloor": 1,
+      "tiers": [
+        "arcane"
+      ],
+      "poleable": false,
+      "family": "arcane",
+      "effect": {
+        "save": "body",
+        "condition": "drained"
+      }
+    }
+  }
+}

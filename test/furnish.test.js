@@ -7,6 +7,7 @@
  * arrives, no spinner in a room, no darkness over more than a tenth of a floor.
  */
 import { describe, it, expect } from 'vitest';
+import { isArcane as isArcaneTrap, trap as trapSpec } from '../src/data/traps.js';
 import { buildFloor, TILE, isWalkable, distancesFrom } from '../src/dungeon/floor-builder.js';
 import { protectedTiles, everySlideEnds } from '../src/dungeon/furnish.js';
 import { layoutStream } from '../src/engine/rng.js';
@@ -80,8 +81,23 @@ describe('traps', () => {
       expect(trap.found).toBe(false);
       expect(trap.disarmed).toBe(false);
       expect(trap.sprung).toBe(false);
-      // The kind comes from traps.json in Phase 7.
-      expect(trap.kind).toBeNull();
+      expect(trap.searches).toEqual({ normal: false, careful: false });
+    }
+  });
+
+  it.each(floors)('floor %i gives every trap a kind deep enough to be there', (number, floor) => {
+    for (const entry of Object.values(floor.traps)) {
+      const spec = trapSpec(entry.kind);
+      expect([entry.kind, spec.placement]).toEqual([entry.kind, expect.arrayContaining([entry.on])]);
+      expect([entry.kind, spec.minFloor <= number]).toEqual([entry.kind, true]);
+      expect([entry.kind, spec.tiers]).toEqual([entry.kind, expect.arrayContaining([entry.tier])]);
+    }
+  });
+
+  it.each(floors)('floor %i keeps Arcane door traps off the route (05 section 4)', (number, floor) => {
+    for (const entry of Object.values(floor.traps)) {
+      if (entry.on !== 'door' || entry.arcaneAllowed) continue;
+      expect([entry.kind, isArcaneTrap(entry.kind, entry.tier)]).toEqual([entry.kind, false]);
     }
   });
 });

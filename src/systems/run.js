@@ -24,13 +24,17 @@ import {
   openDoor,
   COMMANDS,
 } from '../dungeon/movement.js';
-import { tick, inSafeZone, costOf, rollNoiseCheck, wanderingBonus } from '../dungeon/step-clock.js';
+import { tick, inSafeZone, inDarkness, costOf, rollNoiseCheck, wanderingBonus } from '../dungeon/step-clock.js';
 import { remember } from '../dungeon/automap.js';
 import { bestWay, waysToOpen, tryOpen, stepsFor, bashTn } from './locks.js';
 import { layoutStream, carriedStreams } from '../engine/rng.js';
 import { t } from '../data/strings.js';
 import { attune, whyNotLeaveByStone } from './travel.js';
 import { applyMemory, memoryFor, restockFloor } from './floor-memory.js';
+import { search as searchTrap } from './traps.js';
+
+/** A tile's key in the floor's side tables. */
+const key = (x, y) => `${x},${y}`;
 
 /**
  * A stand-in hero so the bars have something to show. Real attributes, derived
@@ -70,6 +74,14 @@ export function lineFor(event) {
       return { text: t('explore.log.attuned'), tone: 'accent' };
     case 'waystoneTravel':
       return { text: t('explore.log.waystoneTravel'), tone: 'accent' };
+    case 'searched':
+      if (!event.found) return { text: t('explore.log.foundNothing'), tone: 'muted' };
+      return {
+        text: event.exact
+          ? t('explore.log.foundTrapExact', { name: t(`traps.${event.trap.kind}.name`) })
+          : t('explore.log.foundTrap'),
+        tone: 'danger',
+      };
     case 'pit':
       return { text: t('explore.log.pit'), tone: 'danger' };
     case 'safeRoom':
@@ -269,7 +281,7 @@ export function createRun({
      * bashing it or turning its key (`03` section 6). Searching, waystones and
      * fountains arrive with Phase 6 and Phase 7.
      */
-    act() {
+    act({ careful = false } = {}) {
       const ahead = run.ahead;
       const at = ahead.at;
 
@@ -281,6 +293,33 @@ export function createRun({
         record([{ type: 'waystoneTravel', floor: floor.floor }]);
         leaveDungeon?.({ leaveMark: false, by: 'waystone' });
         return { events: [{ type: 'waystoneTravel', floor: floor.floor }], left: true };
+      }
+
+      // SEARCH (`03` section 3): the hero's own tile, the one ahead, and the
+      // door or chest in front of them. One Search and one Careful Search
+      // each, and what is found is marked on the floor.
+      if (run.context === 'search') {
+        const events = [];
+        const targets = [
+          floor.traps?.[key(...ex.pos)],
+          floor.traps?.[key(...at)],
+          ahead.chest?.trap,
+          floor.secrets?.[key(...at)],
+        ].filter(Boolean);
+
+        for (const entry of targets) {
+          if (!entry.kind) continue;
+          const found = searchTrap(rng.combat, hero, entry, floor.floor, {
+            careful: Boolean(careful),
+            dark: inDarkness(floor, ex.pos),
+          });
+          if (found.why) continue;
+          events.push({ type: 'searched', found: found.found, exact: found.exact, trap: entry });
+        }
+        if (events.length === 0) events.push({ type: 'searched', found: false, exact: false });
+        events.push(...spend(costOf(careful ? 'carefulSearch' : 'search'), 'search'));
+        record(events);
+        return { events };
       }
 
       if (run.context === 'burn') {
@@ -342,6 +381,9 @@ export function createRun({
         const why = whyNotLeaveByStone(town, run);
         return why ? t(`explore.reason.${why}`) : undefined;
       }
+      // SEARCH is always something the hero can do, even where there is
+      // nothing to find: `03` section 3 says a failure looks the same.
+      if (run.context === 'search') return inDarkness(floor, ex.pos) ? t('explore.reason.tooDark') : undefined;
       if (run.context === 'open' && run.doorAhead) {
         // A door with no way through says which one is missing, not "later".
         const way = run.openingWay;
@@ -352,6 +394,7 @@ export function createRun({
 
     /** What the context key's second line says. */
     get actHint() {
+      if (run.context === 'search') return t('explore.hint.search');
       if (run.context === 'touch') {
         return whyNotLeaveByStone(town, run) ? null : t('explore.hint.toTown');
       }

@@ -19,6 +19,7 @@
 import {
   SKILLS,
   amountOf,
+  exploreEffects,
   hookEffects,
   sheetEffects,
   skill,
@@ -97,6 +98,10 @@ export function applySkillSheet(hero) {
   const sheet = { ...base, attacks: { ...base.attacks }, saves: { ...base.saves } };
   for (const { id, rank = 1 } of learned) {
     for (const effect of sheetEffects(id, rank)) applySheetEffect(sheet, effect, rank, hero);
+    // A skill's `explore` effects belong on the sheet too: `03` and `05`'s
+    // systems — searching, picking, bashing — read one place for what the
+    // hero brings, whether it came from a skill or from the pack.
+    for (const effect of exploreEffects(id, rank)) applyExploreEffect(sheet, effect, rank);
   }
   // The gear goes on after the skills, because Armor Training is what cancels
   // the heavy penalties (`04` section 3). `hero.gear` is the pack's summary,
@@ -220,10 +225,7 @@ function applyGear(sheet, gear, hero) {
   // rather than folded here.
   for (const effect of gear.effects ?? []) {
     if (effect.sheet) applySheetEffect(sheet, effect, 1, hero);
-    else if (effect.explore) {
-      sheet.explore = { ...(sheet.explore ?? {}) };
-      sheet.explore[effect.explore] = effect.value ?? true;
-    }
+    else if (effect.explore) applyExploreEffect(sheet, effect, 1);
   }
 
   // The critical range follows the Luck modifier (`01` section 4), and a curse
@@ -234,6 +236,22 @@ function applyGear(sheet, gear, hero) {
     const rule = DERIVED.critRange;
     const base = luck >= rule.wideFromMod ? rule.wideNatural : rule.natural;
     sheet.critFrom = base - (sheet.critWiden ?? 0);
+  }
+}
+
+/**
+ * One `explore` effect, folded in. A number adds up across the skills and the
+ * gear that give it — two ranks of Trapfinding and a Thief's Glove are +6 to
+ * picking — and a flag is simply set.
+ */
+function applyExploreEffect(sheet, effect, rank = 1) {
+  sheet.explore = { ...(sheet.explore ?? {}) };
+  const amount = amountOf(effect, rank);
+  const current = sheet.explore[effect.explore];
+  if (effect.perRank !== undefined || effect.value !== undefined) {
+    sheet.explore[effect.explore] = typeof current === 'number' ? current + amount : amount;
+  } else {
+    sheet.explore[effect.explore] = true;
   }
 }
 

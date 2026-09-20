@@ -995,6 +995,73 @@ function checkShops(json, items, loot) {
   }
 }
 
+/**
+ * traps.json: `03` sections 2 to 5's three tables. A trap with no effect, an
+ * impossible tier or a salvage that is not an item would only show up the
+ * first time one went off.
+ */
+function checkTraps(json, items, conditions, locks, combat) {
+  const ids = Object.keys(json.traps ?? {}).filter((id) => !id.startsWith('_'));
+  if (ids.length !== 30) problems.push(`traps.json has ${ids.length} traps, and 03 section 5 lists 30`);
+
+  const tiers = Object.keys(locks?.tiers ?? {}).filter((id) => !id.startsWith('_'));
+  const conditionIds = Object.keys(conditions?.conditions ?? {});
+  const damageTypes = combat?.damage?.types ?? [];
+  const saves = ['body', 'reflex', 'mind'];
+
+  for (const id of ids) {
+    const spec = json.traps[id];
+    const where = `traps.json ${id}`;
+    if (!spec.name) problems.push(`${where} has no name`);
+    if (!spec.placement?.length) problems.push(`${where} goes nowhere`);
+    for (const place of spec.placement ?? []) {
+      if (!['floor', 'door', 'chest'].includes(place)) problems.push(`${where} is placed on a "${place}"`);
+    }
+    if (!(spec.minFloor >= 1 && spec.minFloor <= 10)) problems.push(`${where} starts on floor ${spec.minFloor}`);
+    if (!spec.tiers?.length) problems.push(`${where} has no tier`);
+    for (const tier of spec.tiers ?? []) {
+      if (!tiers.includes(tier)) problems.push(`${where} is "${tier}", which is not a tier`);
+    }
+    if (![true, false, 'advantage'].includes(spec.poleable)) {
+      problems.push(`${where} does not say whether a pole reaches it`);
+    }
+
+    const effect = spec.effect ?? {};
+    const does =
+      effect.save || effect.attack || effect.damage || effect.encounter || effect.condition || effect.escapeSteps;
+    if (!does) problems.push(`${where} does nothing`);
+    for (const save of [effect.save, effect.then?.save]) {
+      if (save && !saves.includes(save)) problems.push(`${where} saves against "${save}"`);
+    }
+    for (const id2 of [effect.condition, effect.onFail?.condition, effect.then?.condition]) {
+      if (id2 && !conditionIds.includes(id2)) problems.push(`${where} applies "${id2}", which is not a condition`);
+    }
+    for (const type of [effect.damageType].flat().filter(Boolean)) {
+      if (!damageTypes.includes(type)) problems.push(`${where} deals "${type}", which is not a damage type`);
+    }
+    if (spec.salvage && !items?.items?.[spec.salvage]) {
+      problems.push(`${where} salvages "${spec.salvage}", which has no item entry`);
+    }
+  }
+
+  // The chest table is a whole d12, and every roll names a chest trap.
+  for (let roll = 1; roll <= 12; roll += 1) {
+    const row = json.chestTrapRoll?.table?.find((entry) => entry.roll === roll);
+    if (!row) problems.push(`traps.json chest table has no entry for a roll of ${roll}`);
+    else if (!json.traps[row.id]) problems.push(`traps.json chest table rolls "${row.id}", which has no entry`);
+    else if (!json.traps[row.id].placement.includes('chest')) {
+      problems.push(`traps.json chest table rolls "${row.id}", which does not go on a chest`);
+    }
+  }
+  for (const [id, item] of Object.entries(json.salvage?.by ?? {})) {
+    if (!json.traps[id]) problems.push(`traps.json salvages from "${id}", which has no entry`);
+    if (!items?.items?.[item]) problems.push(`traps.json salvages "${item}", which has no item entry`);
+  }
+  if (!items?.items?.[json.salvage?.default]) problems.push('traps.json has no default salvage');
+  if (!(json.floorDice?.perFloors >= 1)) problems.push('traps.json has no floor dice rule (03 section 2)');
+  if (json.detection?.passivePenalty >= 0) problems.push('traps.json passive notice has no penalty');
+}
+
 const CHECKS = {
   'strings.json': checkStrings,
   // Checked against strings.json, so it is read first.
@@ -1013,6 +1080,14 @@ const CHECKS = {
     ),
   'loot.json': (json) => checkLoot(json, loaded['items.json']),
   'shops.json': (json) => checkShops(json, loaded['items.json'], loaded['loot.json']),
+  'traps.json': (json) =>
+    checkTraps(
+      json,
+      loaded['items.json'],
+      loaded['conditions.json'],
+      loaded['locks.json'],
+      loaded['combat.json'],
+    ),
   'origins.json': (json) =>
     checkOrigins(
       json,

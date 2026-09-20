@@ -11,6 +11,7 @@
  * table it cannot see yet will fill it in.
  */
 import floorsData from '../data/floors.json' with { type: 'json' };
+import { isArcane, rollTrap } from '../data/traps.js';
 import { TILE, isWalkable, distancesFrom } from './floor-builder.js';
 import { rollLockTier, capLock, tn, lockData } from './doors.js';
 
@@ -120,12 +121,16 @@ export function placeTraps(floor, rng) {
   const spots = openTiles(floor).filter(([x, y]) => !off.has(key(x, y)));
   const wanted = floor.spec.counts.floorTraps;
   for (const [x, y] of rng.shuffle(spots).slice(0, wanted)) {
+    // Which trap, and how good it is, are `03` section 5's own rolls.
+    const rolled = rollTrap(rng, 'floor', floor.floor);
     traps[key(x, y)] = {
       on: 'floor',
       pos: [x, y],
-      kind: null,
-      tier: null,
+      kind: rolled?.kind ?? null,
+      tier: rolled?.tier ?? null,
       found: false,
+      typeKnown: false,
+      searches: { normal: false, careful: false },
       disarmed: false,
       sprung: false,
     };
@@ -138,13 +143,23 @@ export function placeTraps(floor, rng) {
   for (const [at, door] of Object.entries(floor.doors)) {
     if (door.arenaEntrance) continue; // 05 section 5: never trapped
     if (!rng.chance(1 / oneIn)) continue;
+    // A door the hero has to get through may not carry an Arcane trap: they
+    // would need Dispel Ward to pass, and `05` section 4 promises a way.
+    const arcaneAllowed = !onPath.has(at);
+    let rolled = rollTrap(rng, 'door', floor.floor);
+    for (let tries = 0; tries < 6 && !arcaneAllowed && isArcane(rolled?.kind, rolled?.tier); tries += 1) {
+      rolled = rollTrap(rng, 'door', floor.floor);
+    }
+    if (!arcaneAllowed && isArcane(rolled?.kind, rolled?.tier)) continue;
     traps[at] = {
       on: 'door',
       pos: door.pos,
-      kind: null,
-      tier: null,
-      arcaneAllowed: !onPath.has(at),
+      kind: rolled?.kind ?? null,
+      tier: rolled?.tier ?? null,
+      arcaneAllowed,
       found: false,
+      typeKnown: false,
+      searches: { normal: false, careful: false },
       disarmed: false,
       sprung: false,
     };
