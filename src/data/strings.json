@@ -301,6 +301,27 @@
       "pick": "Pick a recipe first."
     }
   },
+  "stash": {
+    "title": "STASH",
+    "sub": "Things here are safe",
+    "pack": "PACK · {used} / {total} SLOTS",
+    "stash": "STASH · {used} / {total} SLOTS",
+    "toStash": "TO STASH",
+    "toPack": "TO PACK",
+    "moves": "Moves {name}",
+    "pick": "Pick something to move.",
+    "emptyPack": "Your pack is empty.",
+    "emptyStash": "Nothing stored yet.",
+    "why": {
+      "notCarried": "You are not carrying that.",
+      "notStored": "That is not in the stash.",
+      "worn": "Take it off first.",
+      "cursedInPlace": "It will not come off.",
+      "stashFull": "The stash is full.",
+      "packFull": "No room in your pack.",
+      "pick": "Pick something to move."
+    }
+  },
   "conditions": {
     "poisoned": {
       "name": "POISONED",

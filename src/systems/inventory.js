@@ -43,9 +43,12 @@ export const STASH_SLOTS = ITEM_RULES.stashSlots;
 export const UNARMED = ITEM_RULES.unarmed;
 
 /** A fresh, empty pack. */
-export function createPack({ capacity = ITEM_RULES.inventory.base } = {}) {
+export function createPack({ capacity = ITEM_RULES.inventory.base, prefix = 'itm' } = {}) {
   return {
     capacity,
+    // Ids are handed out per pack, so a second one — the Town Stash — takes a
+    // prefix of its own and an id can never mean two things at once.
+    prefix,
     items: [],
     equipped: Object.fromEntries(EQUIP_SLOTS.map((slot) => [slot, null])),
     quick: Array.from({ length: QUICK_SLOTS }, () => null),
@@ -60,7 +63,7 @@ export function capacityFor(hero) {
 
 /** The next instance id, in the shape `04` section 17 gives (`itm_0007`). */
 function nextInstanceId(pack) {
-  const id = `itm_${String(pack.nextId).padStart(4, '0')}`;
+  const id = `${pack.prefix ?? 'itm'}_${String(pack.nextId).padStart(4, '0')}`;
   pack.nextId += 1;
   return id;
 }

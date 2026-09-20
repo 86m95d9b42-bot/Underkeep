@@ -22,6 +22,7 @@ import { town as townScreen } from './ui/screens/town.js';
 import { shop as shopScreen } from './ui/screens/shop.js';
 import { inn, sage, temple } from './ui/screens/service.js';
 import { alchemist } from './ui/screens/alchemist.js';
+import { stash } from './ui/screens/stash.js';
 import { pack as packScreen } from './ui/screens/pack.js';
 import { itemDetail } from './ui/screens/item-detail.js';
 import { combat } from './ui/screens/combat.js';
@@ -125,6 +126,7 @@ const screens = {
   temple,
   sage,
   alchemist,
+  stash,
   pack: packScreen,
   itemDetail,
   combat,

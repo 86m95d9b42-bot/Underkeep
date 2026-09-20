@@ -13,7 +13,7 @@ import { el, ICONS } from '../parts/el.js';
 import { button } from '../parts/button.js';
 import { bar, chip, topBar } from '../parts/parts.js';
 import { t } from '../../data/strings.js';
-import { STASH_SLOTS } from '../../systems/inventory.js';
+import { stashUse } from '../../systems/stash.js';
 import {
   SERVICES,
   innCost,
@@ -51,8 +51,10 @@ export function hintFor(service, { town, hero }) {
       return t('town.hints.shop', { n: shopTier(town) });
     case 'sage':
       return t('town.hints.sage', { n: sageCost() });
-    case 'stash':
-      return t('town.hints.stash', { used: hero.stash?.items?.length ?? 0, total: STASH_SLOTS });
+    case 'stash': {
+      const { used, total } = stashUse(hero);
+      return t('town.hints.stash', { used, total });
+    }
     default:
       return t(`town.hints.${service}`);
   }

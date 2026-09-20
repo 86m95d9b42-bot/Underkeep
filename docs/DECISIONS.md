@@ -4,6 +4,12 @@ Rulings here override the other documents. Add new entries at the top of each li
 
 ## Decisions
 
+- **2026-09-20 — The Town Stash.** `src/systems/stash.js` and `src/ui/screens/stash.js` are `04` section 1's fifty safe slots and the outline's two-list screen. Four rulings:
+  - **A stash is a pack.** `createPack({ capacity: 50 })` and every slot, stack and "will not fit" rule is the one the hero's own pack already follows. What the stash adds is the two ways across and the refusals each way: nothing worn and nothing bound goes in.
+  - **Each pack numbers its own items, so the stash takes a prefix.** Two packs both counting from `itm_0001` would have made an id mean two things on the one screen that shows both lists. `createPack` now takes a prefix and the stash's ids read `sth_0001`; the screen keys its selection by side *and* id, so even a future third pack cannot confuse them.
+  - **An item crosses as itself.** The move carries every field — the curse, the bonus, the identification state — so an unknown potion put away is still unknown when it comes out. Only the instance id changes, because the id belongs to the pack it is in.
+  - **The button that applies is the primary one.** The outline asks for "whichever applies is primary, the other disabled", so picking in the pack makes TO STASH the amber one and TO PACK say why it is not, and picking in the stash swaps them. With nothing picked, neither is amber and both say so.
+
 - **2026-09-20 — The Alchemist.** `src/systems/alchemist.js` is `04` section 12's nine recipes and `src/ui/screens/alchemist.js` is the outline's own table, which is close to the service layout but not it: the recipe list wants the whole middle of the screen. Four rulings:
   - **The rows keep their "have / need", whatever the reason.** `00`'s table asks for *"ingredients as have / need in green or red"*, and that line **is** the reason a recipe cannot be brewed — it says which part is short. So a row is never dimmed with words that replace it; the BREW button carries the refusal, which is where the UI rule wants it.
   - **A locked shop still shows its recipes.** The Alchemist opens after the floor 2 boss, but knowing that three Dragon Scales make Dragonscale Mail is worth having on floor 1. The list is readable from the first day and the button says when the door opens.

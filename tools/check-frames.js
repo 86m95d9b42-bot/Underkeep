@@ -37,6 +37,7 @@ const SCREENS = [
   'temple',
   'sage',
   'alchemist',
+  'stash',
   'explore',
   'pause',
   'map',
