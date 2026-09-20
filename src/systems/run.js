@@ -26,12 +26,12 @@ import {
 } from '../dungeon/movement.js';
 import { tick, inSafeZone, inDarkness, costOf, rollNoiseCheck, wanderingBonus } from '../dungeon/step-clock.js';
 import { remember } from '../dungeon/automap.js';
-import { bestWay, waysToOpen, tryOpen, stepsFor, bashTn } from './locks.js';
+import { bestWay, waysToOpen, tryOpen, stepsFor, bashTn, searchSecret } from './locks.js';
 import { layoutStream, carriedStreams } from '../engine/rng.js';
 import { t } from '../data/strings.js';
 import { attune, whyNotLeaveByStone } from './travel.js';
 import { applyMemory, memoryFor, restockFloor } from './floor-memory.js';
-import { search as searchTrap } from './traps.js';
+import { search as searchTrap, trigger as fireTrap } from './traps.js';
 
 /** A tile's key in the floor's side tables. */
 const key = (x, y) => `${x},${y}`;
@@ -74,6 +74,24 @@ export function lineFor(event) {
       return { text: t('explore.log.attuned'), tone: 'accent' };
     case 'waystoneTravel':
       return { text: t('explore.log.waystoneTravel'), tone: 'accent' };
+    case 'secretFound':
+      return { text: t('explore.log.secretFound'), tone: 'accent' };
+    case 'jammed':
+      return { text: t('explore.log.jammed'), tone: 'danger' };
+    case 'picksBroke':
+      return { text: t('explore.log.picksBroke'), tone: 'danger' };
+    case 'backlash':
+      return { text: t('explore.log.backlash'), tone: 'danger' };
+    case 'earned':
+      return { text: t('explore.log.earned', { n: event.xp }), tone: 'accent' };
+    case 'trapSprung':
+      return {
+        text: t('explore.log.trapSprung', {
+          name: t(`traps.${event.trap?.kind ?? 'alarm_chime'}.name`),
+          n: event.trap?.damage ?? 0,
+        }),
+        tone: 'danger',
+      };
     case 'searched':
       if (!event.found) return { text: t('explore.log.foundNothing'), tone: 'muted' };
       return {
@@ -281,7 +299,7 @@ export function createRun({
      * bashing it or turning its key (`03` section 6). Searching, waystones and
      * fountains arrive with Phase 6 and Phase 7.
      */
-    act({ careful = false } = {}) {
+    act({ careful = false, method } = {}) {
       const ahead = run.ahead;
       const at = ahead.at;
 
@@ -308,6 +326,17 @@ export function createRun({
         ].filter(Boolean);
 
         for (const entry of targets) {
+          // A secret door is found with the traps' own roll against 12 + F
+          // (`03` section 6, Secret Doors).
+          if (entry.kind === undefined && entry.at !== undefined) {
+            if (entry.found || ex.secretsFound.has(key(...entry.at))) continue;
+            const seen = searchSecret(rng.combat, hero, entry, floor.floor, { careful: Boolean(careful) });
+            if (seen.found) {
+              ex.secretsFound.add(key(...entry.at));
+              events.push({ type: 'secretFound', at: entry.at, xp: seen.xp });
+            }
+            continue;
+          }
           if (!entry.kind) continue;
           const found = searchTrap(rng.combat, hero, entry, floor.floor, {
             careful: Boolean(careful),
@@ -338,7 +367,11 @@ export function createRun({
         rng: rng.combat,
         keysHeld: ex.keysTaken,
         has: hero.has ?? {},
-        bashBonus: hero.bashBonus ?? 0,
+        hero,
+        // `03` section 6: MIG mod + Brute Force + a crowbar. The walk harness
+        // sets its own on the stand-in hero, and keeps it.
+        bashBonus: hero.bashBonus ?? (hero.mods?.might ?? 0) + (hero.explore?.bash ?? 0),
+        method,
       });
       if (!outcome) return { events: [] };
 
@@ -347,13 +380,38 @@ export function createRun({
       if (outcome.opened) {
         openDoor(ex, at);
         events.push({ type: 'opened', at, method: outcome.method, roll: outcome.roll ?? null });
+        if (outcome.xp) events.push({ type: 'earned', xp: outcome.xp, why: outcome.method });
+        // A Skeleton Key is spent on the door it opens (`04` section 11).
+        if (outcome.usedUp) events.push({ type: 'usedUp', item: 'skeleton_key' });
       } else {
         events.push({ type: 'heldShut', at, roll: outcome.roll, tn: outcome.tn });
       }
+
+      // What went wrong with a pick, and what a ward does to the hero who
+      // fails to lift it (`03` section 6).
+      if (outcome.jammed) events.push({ type: 'jammed', at });
+      if (outcome.broke) events.push({ type: 'picksBroke' });
+      if (outcome.backlash) events.push({ type: 'backlash', ...outcome.backlash });
+
+      // `03` section 5: a door trap goes off when the door is opened, bashed,
+      // or when a pick fails by 5 or more.
+      const doorTrap = floor.traps?.[at];
+      const fires = outcome.springsTrap || (outcome.opened && outcome.method !== 'key');
+      if (doorTrap?.kind && !doorTrap.disarmed && !doorTrap.sprung && fires) {
+        const went = fireTrap(
+          { rng: rng.combat },
+          hero,
+          doorTrap,
+          floor.floor,
+          { detected: doorTrap.found },
+        );
+        events.push({ type: 'trapSprung', at, by: outcome.method, trap: went });
+      }
+
       // The time it took, then the noise it made: bashing is 2-in-6 to bring
-      // something along (`03` section 6).
+      // something along, Knock 1-in-6 (`03` section 6).
       events.push(...spend(outcome.steps, outcome.method));
-      if (outcome.noisy) events.push(rollNoiseCheck(rng.encounter, 'bash'));
+      if (outcome.noisy) events.push(rollNoiseCheck(rng.encounter, outcome.method));
 
       record(events);
       return { events };

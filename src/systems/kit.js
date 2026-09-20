@@ -23,6 +23,33 @@ import {
   gearSummary,
 } from './inventory.js';
 
+/**
+ * The means the hero has of getting through something shut (`03` section 6).
+ *
+ * A tool in the pack, a skill on the tree or a scroll they can read all count
+ * the same to a locked door, so this is one answer from all three — and it is
+ * what `locks.js` asks before it offers a way.
+ *
+ * @param {object} hero
+ * @returns {Record<string, boolean>}
+ */
+export function meansOf(hero) {
+  const carries = (baseId) => (hero.pack?.items ?? []).some((entry) => entry.baseId === baseId);
+  const knows = (id) => (hero.skills ?? []).some((row) => row.id === id);
+
+  return {
+    lockpicks: carries('lockpicks') || carries('masterwork_lockpicks'),
+    crowbar: carries('crowbar'),
+    pole: carries('ten_foot_pole'),
+    skeletonKey: carries('skeleton_key'),
+    // A scroll is as good as the skill, where the hero can read it
+    // (`04` section 9's requirement is checked when it is used).
+    knock: knows('knock') || carries('scroll_of_knock'),
+    dispelWard: knows('dispel_ward') || carries('scroll_of_dispel'),
+    lore: knows('lore'),
+  };
+}
+
 /** The weapon and armour an origin's kit equips, resolved from `04`. */
 export function kitOf(origin) {
   const entries = originOf(origin)?.kit ?? [];
@@ -68,6 +95,9 @@ export function wornScores(hero) {
 export function refreshGear(hero) {
   if (!hero.pack) return hero;
   hero.gear = gearSummary(hero.pack, hero);
+  // What the hero could try on a shut door, from the pack and the tree
+  // together (`03` section 6).
+  hero.has = meansOf(hero);
   hero.weapon = equippedItem(hero.pack, 'weapon');
   hero.armor = equippedItem(hero.pack, 'armor');
   hero.offHand = equippedItem(hero.pack, 'offHand');

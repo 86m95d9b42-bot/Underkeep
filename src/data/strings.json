@@ -67,7 +67,13 @@
       "waystoneTravel": "The waystone takes you up and out.",
       "foundNothing": "You find nothing.",
       "foundTrap": "It's trapped!",
-      "foundTrapExact": "It's trapped: {name}."
+      "foundTrapExact": "It's trapped: {name}.",
+      "secretFound": "A seam in the stone gives: a hidden door.",
+      "jammed": "The lock jams. Picks will not turn it now.",
+      "picksBroke": "A pick snaps in the lock.",
+      "backlash": "The ward bites back.",
+      "earned": "+{n} XP",
+      "trapSprung": "{name}! It catches you for {n}."
     },
     "title": "EXPLORE",
     "pad": {
@@ -123,7 +129,8 @@
       "notOnStone": "Stand on the waystone.",
       "notAttuned": "This stone is not yours yet.",
       "nowhere": "Not here.",
-      "tooDark": "Too dark to search."
+      "tooDark": "Too dark to search.",
+      "jammed": "Jammed; bash or Knock"
     }
   },
   "pause": {

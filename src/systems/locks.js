@@ -1,15 +1,22 @@
 /**
- * Opening what is shut: doors now, chests in Phase 7 (`03` section 6).
+ * Opening what is shut (`03` section 6).
  *
- * Phase 2 implements the two ways the **minimum hero** has — bashing and the
- * matching key — because those are what `05` section 4 assumes when it
- * promises a floor can be finished. Picking needs lockpicks (Phase 5), Knock
- * and Dispel Ward need skills or scrolls (Phase 4 and 5); each is listed here
- * with the reason it cannot be used yet, so the Door screen can show it.
+ * Six ways through a door, and this is all of them: the bash and the matching
+ * key Phase 2 built for the minimum hero, and now picking, Knock, Dispel Ward
+ * and the two keys that open things by themselves. Each says what it wants,
+ * what it rolls, what it costs in steps and what it risks — a jammed lock, a
+ * broken pick, a needle, a backlash.
  *
- * No DOM. Every roll comes from the stream it is handed.
+ * Secret doors are here too: `03` section 6 finds them with section 3's own
+ * detection rules, so the roll is the traps' and the answer is a door.
+ *
+ * Every roll is returned rather than acted on, so the caller can commit it
+ * before showing it (`05` section 11). No DOM.
  */
 import locks from '../data/locks.json' with { type: 'json' };
+import { modFor } from '../data/attributes.js';
+import { DETECTION } from '../data/traps.js';
+import { floorDice, xpFor } from '../data/traps.js';
 
 /** @param {{ base: number, perFloor: number }} rule @param {number} floor */
 export function tn(rule, floor) {
@@ -51,6 +58,11 @@ export function waysToOpen(door, { keysHeld = new Set(), has = {} } = {}) {
   const ways = [];
   const add = (method, usable, why) => ways.push({ method, usable, why });
 
+  // A jammed lock can no longer be picked: bashing, Knock or a Skeleton Key
+  // are what is left (`03` section 6, Jammed locks).
+  const canPick = Boolean(has.lockpicks) && !door.jammed;
+  const pickWhy = door.jammed ? 'jammed' : 'noLockpicks';
+
   switch (door.kind) {
     case 'stuck':
       add('bash', true);
@@ -58,17 +70,19 @@ export function waysToOpen(door, { keysHeld = new Set(), has = {} } = {}) {
       break;
     case 'locked':
       add('bash', true);
-      add('pick', Boolean(has.lockpicks), 'noLockpicks');
+      add('pick', canPick, pickWhy);
       add('knock', Boolean(has.knock), 'noKnock');
       add('skeletonKey', Boolean(has.skeletonKey), 'noSkeletonKey');
       break;
     case 'keyed':
       add('key', Boolean(door.keyId && keysHeld.has(door.keyId)), 'noKey');
-      add('pick', Boolean(has.lockpicks), 'noLockpicks');
+      add('pick', canPick, pickWhy);
+      add('knock', Boolean(has.knock), 'noKnock');
+      add('skeletonKey', Boolean(has.skeletonKey), 'noSkeletonKey');
       break;
     case 'sealed':
       add('dispelWard', Boolean(has.dispelWard), 'noDispel');
-      add('runeKey', Boolean(has.runeKey), 'noRuneKey');
+      add('runeKey', Boolean(door.keyId && keysHeld.has(door.keyId)), 'noRuneKey');
       break;
     case 'barred':
       // Only from the other side; there is nothing to try from here.
@@ -78,6 +92,31 @@ export function waysToOpen(door, { keysHeld = new Set(), has = {} } = {}) {
       break;
   }
   return ways;
+}
+
+/**
+ * The TN to pick this lock. A Keyed door is picked at Masterwork + 2, because
+ * its lock is meant to be opened with its key (`03` section 6).
+ * @param {object} door
+ * @param {number} floor
+ */
+export function pickTn(door, floor) {
+  const kind = locks.doorKinds[door.kind] ?? {};
+  const tier = locks.tiers[kind.tier ?? door.tier] ?? locks.tiers.standard;
+  const base = kind.pickTierBonus
+    ? tn(locks.tiers.masterwork.pickTn, floor) + kind.pickTierBonus
+    : tn(tier.pickTn, floor);
+  return base;
+}
+
+/** The TN to lift a Sealed door's ward: 14 + F (`03` section 6). */
+export function dispelTn(floor) {
+  return tn(locks.methods.dispelWard.tn, floor);
+}
+
+/** The TN to find a secret door: 12 + F (`03` section 6, Secret Doors). */
+export function secretTn(floor) {
+  return tn(locks.secretDoors.findTn, floor);
 }
 
 /** The best method the hero can actually use, or null. */
@@ -119,7 +158,155 @@ export function rollBash(rng, door, floor, bonus = 0) {
 
 /** Using the matching key: automatic, one step, no risk (`03` section 6). */
 export function useKey(door) {
-  return { method: 'key', opened: true, steps: stepsFor('key'), keyId: door.keyId, noisy: false };
+  const method = door.kind === 'sealed' ? 'runeKey' : 'key';
+  return { method, opened: true, steps: stepsFor(method), keyId: door.keyId, noisy: false };
+}
+
+/**
+ * Picking a lock: **d20 + AGI mod + Lockpicking vs. the lock's TN**, and four
+ * ways to go wrong (`03` section 6).
+ *
+ *   - any failure: 1 in 6 the picks break, unless Lockpicking rank 2 says not;
+ *   - a natural 1, or failing by 10 or more: the lock **jams**, and can never
+ *     be picked again;
+ *   - failing by 5 or more: a Needle Lock goes off, which the caller fires.
+ *
+ * @param {import('../engine/rng.js').Stream} rng the combat stream
+ * @param {object} door
+ * @param {number} floor
+ * @param {object} [hero]
+ */
+export function rollPick(rng, door, floor, hero = {}) {
+  const spec = locks.methods.pick;
+  const bonus = modFor(hero.attributes?.agility) + (hero.explore?.pick ?? 0);
+  const target = pickTn(door, floor);
+  const roll = rng.d20();
+  const total = roll + bonus;
+  const natural1 = roll === 1;
+  const opened = roll === 20 || (!natural1 && total >= target);
+  const by = total - target;
+
+  const out = {
+    method: 'pick',
+    roll,
+    bonus,
+    total,
+    tn: target,
+    opened,
+    steps: stepsFor('pick') - (hero.explore?.pickSteps ?? 0),
+    noisy: false,
+    xp: opened ? xpFor('pickLock', floor, door.tier) : 0,
+  };
+  if (opened) return out;
+
+  // A pick that never breaks never breaks (Lockpicking rank 2).
+  out.broke = !hero.explore?.picksNeverBreak && rng.chance(1 / spec.breakInSix);
+  out.jammed = natural1 || by <= -spec.jamOnFailBy;
+  if (out.jammed) door.jammed = true;
+  // "Failing by 5+ sets off a Needle Lock" — the trap is the caller's to fire.
+  out.springsTrap = by <= -5;
+  return out;
+}
+
+/**
+ * Knock: automatic on a Simple or Good lock, a roll on a Masterwork one, and
+ * a 1-in-6 noise check either way (`03` section 6).
+ */
+export function rollKnock(rng, door, floor, hero = {}) {
+  const spec = locks.methods.knock;
+  const order = locks.lockTierRoll.order;
+  const automatic = order.indexOf(door.lock) <= order.indexOf(spec.automaticUpTo);
+  const out = { method: 'knock', steps: stepsFor('knock'), noisy: true, opened: true };
+  if (automatic) return out;
+
+  const roll = rng.d20();
+  const bonus = modFor(hero.attributes?.intellect);
+  const target = pickTn(door, floor);
+  return {
+    ...out,
+    roll,
+    bonus,
+    total: roll + bonus,
+    tn: target,
+    opened: roll === 20 || (roll !== 1 && roll + bonus >= target),
+  };
+}
+
+/**
+ * Dispel Ward on a Sealed door: **d20 + INT mod + Lore + 4 vs. 14 + F**, and
+ * failing by 5 or more costs the hero floor dice of force damage that nothing
+ * turns aside (`03` section 6).
+ */
+export function rollDispel(rng, door, floor, hero = {}) {
+  const spec = locks.methods.dispelWard;
+  const roll = rng.d20();
+  const bonus = modFor(hero.attributes?.intellect) + (hero.explore?.magicTrap ?? 0) + spec.flat;
+  const target = dispelTn(floor);
+  const total = roll + bonus;
+  const opened = roll === 20 || (roll !== 1 && total >= target);
+  const out = {
+    method: 'dispelWard',
+    roll,
+    bonus,
+    total,
+    tn: target,
+    opened,
+    steps: stepsFor('dispelWard'),
+    noisy: false,
+    xp: opened ? xpFor('sealed', floor) : 0,
+  };
+  if (!opened && total - target <= -5) {
+    out.backlash = { damage: floorDice(floor), damageType: 'force', unresistable: true };
+  }
+  return out;
+}
+
+/** The Skeleton Key: any lock but Sealed, automatic, and used up. */
+export function useSkeletonKey(door) {
+  return {
+    method: 'skeletonKey',
+    opened: true,
+    steps: stepsFor('skeletonKey'),
+    usedUp: true,
+    noisy: false,
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Secret doors (`03` section 6)                                              */
+/* -------------------------------------------------------------------------- */
+
+/** What the hero's own sheet adds to finding a secret door. */
+export function secretBonus(hero) {
+  return hero?.explore?.search ?? 0;
+}
+
+/**
+ * Looking for a secret door: the traps' own roll against 12 + F, with the
+ * same −4 when it is the game looking rather than the hero
+ * (`03` sections 3 and 6).
+ *
+ * @param {import('../engine/rng.js').Stream} rng
+ * @param {object} hero
+ * @param {object} secret the floor's entry, marked when it is found
+ * @param {number} floor
+ * @param {{ passive?: boolean, careful?: boolean }} [how]
+ */
+export function searchSecret(rng, hero, secret, floor, { passive = false, careful = false } = {}) {
+  const roll = rng.d20({ advantage: careful && !passive });
+  const penalty = passive ? locks.secretDoors.passiveNoticePenalty : 0;
+  const total = roll + modFor(hero?.attributes?.wits) + secretBonus(hero) + penalty;
+  const target = secretTn(floor);
+  const found = roll === 20 || (roll !== 1 && total >= target);
+  if (found) secret.found = true;
+  return {
+    roll,
+    total,
+    tn: target,
+    found,
+    passive,
+    xp: found ? xpFor('secretDoor', floor) : 0,
+  };
 }
 
 /**
@@ -134,13 +321,30 @@ export function useKey(door) {
  * @param {Record<string, boolean>} [options.has]
  * @param {number} [options.bashBonus]
  */
-export function tryOpen({ door, floor, rng, keysHeld, has, bashBonus = 0 }) {
-  const way = bestWay(door, { keysHeld, has });
+export function tryOpen({ door, floor, rng, keysHeld, has, hero = {}, bashBonus = 0, method }) {
+  const way = method
+    ? waysToOpen(door, { keysHeld, has }).find((one) => one.method === method && one.usable)
+    : bestWay(door, { keysHeld, has });
   if (!way) return null;
-  if (way.method === 'key') return useKey(door);
-  if (way.method === 'bash') return rollBash(rng, door, floor, bashBonus);
-  // Every other method arrives with the phase that gives the hero the means.
-  return null;
+
+  switch (way.method) {
+    case 'key':
+    case 'runeKey':
+      return useKey(door);
+    case 'skeletonKey':
+      return useSkeletonKey(door);
+    case 'bash':
+      return rollBash(rng, door, floor, bashBonus);
+    case 'pick':
+      return rollPick(rng, door, floor, hero);
+    case 'knock':
+      return rollKnock(rng, door, floor, hero);
+    case 'dispelWard':
+      return rollDispel(rng, door, floor, hero);
+    /* c8 ignore next 2 -- every way in the table is above */
+    default:
+      return null;
+  }
 }
 
 export { locks as lockData };

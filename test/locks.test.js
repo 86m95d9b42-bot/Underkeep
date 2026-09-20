@@ -154,7 +154,9 @@ describe('opening a door in a run', () => {
     expect(run.ex.steps).toBe(steps + 2);
     // Bashing is loud: a noise check follows every attempt (03 section 6).
     expect(events.some((e) => e.type === 'noiseCheck')).toBe(true);
-    expect(run.log.at(-1).text).toBe(t('explore.log.bashOpen'));
+    // A door trap may speak after the door does (`03` section 5), so the
+    // line is in the log rather than last in it.
+    expect(run.log.some((line) => line.text === t('explore.log.bashOpen'))).toBe(true);
 
     // And the way is now open.
     expect(run.press('forward').outcome.moved).toBe(true);

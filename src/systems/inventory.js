@@ -449,7 +449,7 @@ export function gearSummary(pack, hero = null) {
     }
   }
 
-  summary.effects = wornEffects(worn);
+  summary.effects = [...wornEffects(worn), ...carriedToolEffects(pack)];
 
   // A score a charm raises is raised before the sheet is derived from it: the
   // Lucky Coin's +1 LCK is a +1 to the score, capped where the charm says
@@ -519,6 +519,25 @@ function wornEffects(worn) {
     if (gear.curse) {
       const curse = CURSES.table.find((row) => row.id === gear.curse);
       from(curse?.effects ?? [], 'curse');
+    }
+  }
+  return out;
+}
+
+/**
+ * What the tools in the pack are worth. A crowbar, a set of lockpicks and a
+ * ten-foot pole have no slot to be worn in — `04` section 1 gives the hero
+ * four, and none of them is "tool" — so carrying one is using one, and its
+ * `explore` effects count while it is in the pack.
+ */
+function carriedToolEffects(pack) {
+  const out = [];
+  for (const entry of pack.items) {
+    if (isEquipped(pack, entry.instanceId)) continue;
+    const base = item(entry.baseId);
+    if (base.category !== 'gear') continue;
+    for (const effect of base.effects ?? []) {
+      if (effect.explore) out.push({ ...effect, source: 'carried', item: entry.instanceId });
     }
   }
   return out;

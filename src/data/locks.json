@@ -229,6 +229,14 @@
       "steps": 1,
       "usedUp": true
     },
+    "runeKey": {
+      "works": [
+        "sealed"
+      ],
+      "automatic": true,
+      "steps": 1,
+      "usedUp": false
+    },
     "knock": {
       "works": [
         "locked",

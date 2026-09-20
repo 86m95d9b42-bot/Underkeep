@@ -91,7 +91,7 @@ Work top to bottom. Check a box when the task is done and tested. Each phase end
 ## Phase 7 — Depth
 
 - [x] `traps.json`; detection, disarm, pole, trigger, salvage (`03` sections 3–5)
-- [ ] Doors and locks, including keyed, sealed, barred, one-way, secret (`03` section 6, `05` section 3 step 7)
+- [x] Doors and locks, including keyed, sealed, barred, one-way, secret (`03` section 6, `05` section 3 step 7)
 - [ ] Chest generation and the chest sequence; Chest / Door screen (`03` section 7)
 - [ ] Hazards and theme features (`03` section 8, `05` sections 3 and 6)
 - [ ] Remaining monsters, floors 3–10, and all encounter tables
