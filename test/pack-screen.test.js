@@ -31,7 +31,7 @@ function makeHero() {
   );
 }
 
-function mount(screen, { frame = 'tall', run, params = {} } = {}) {
+function mount(screen, { frame = 'tall', run, params = {}, leaveDungeon } = {}) {
   const router = {
     has: () => true,
     go: vi.fn(),
@@ -39,7 +39,7 @@ function mount(screen, { frame = 'tall', run, params = {} } = {}) {
     openSheet: vi.fn(),
     closeSheet: vi.fn(),
   };
-  const built = screen.build({ router, params, frame, run, settings: { all: {} } });
+  const built = screen.build({ router, params, frame, run, leaveDungeon, settings: { all: {} } });
   return { built, router, placed: placeRegions(screen, frame) };
 }
 
@@ -259,6 +259,21 @@ describe('the Item Detail sheet', () => {
     buttons(built).get(t('pack.detail.use')).click();
     expect(where.hero.hp).toBeGreaterThan(where.hero.maxHp - 10);
     expect(entry.count).toBe(1);
+  });
+
+  it('reads a Scroll of Return by leaving the dungeon (05 section 9)', () => {
+    const where = run();
+    const scroll = addItem(where.hero.pack, 'scroll_of_return').entry;
+    const leaveDungeon = vi.fn();
+    const { built } = mount(itemDetail, {
+      run: where,
+      params: { item: scroll.instanceId },
+      leaveDungeon,
+    });
+    buttons(built).get(t('pack.detail.use')).click();
+    expect(leaveDungeon).toHaveBeenCalledWith({ leaveMark: true });
+    // And the scroll is spent by reading it.
+    expect(where.hero.pack.items.some((entry) => entry.baseId === 'scroll_of_return')).toBe(false);
   });
 
   it('will not drop what is bound to the hero', () => {

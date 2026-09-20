@@ -386,6 +386,10 @@ export function createFight({
     get outcome() {
       return summary?.outcome ?? outcomeOf(combat);
     },
+    /** Set when a Scroll of Return ended the fight by ending the trip. */
+    get leftDungeon() {
+      return combat.leftDungeon ?? null;
+    },
     get summary() {
       return summary;
     },
@@ -502,8 +506,12 @@ export function createFight({
       if (spent) consumeItem(combat.hero, spent);
       pickTargetIfGone();
       phase = advance();
-      // A Smoke Bomb flees the fight outright (`04` section 10).
+      // A Smoke Bomb flees the fight outright (`04` section 10), and a
+      // Scroll of Return takes the hero out of the dungeon with it.
       const used = step.result?.steps?.find((one) => one.result?.flee);
+      if (used?.result?.returnToTown) {
+        combat.leftDungeon = { leaveMark: Boolean(used.result.leavesMark) };
+      }
       if (used) {
         const ran = heroFlees(combat, { automatic: true });
         say({

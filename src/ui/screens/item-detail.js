@@ -139,7 +139,7 @@ export const itemDetail = {
   pattern: 'panel',
   regions: REGIONS,
 
-  build({ router, run, params = {} }) {
+  build({ router, run, params = {}, leaveDungeon }) {
     const hero = run.hero;
     const held = hero.pack;
     const instance = held ? entryOf(held, params.item) : null;
@@ -238,12 +238,19 @@ export const itemDetail = {
             onTap: () => {
               const built = actionForItem(hero, instance.instanceId, { inCombat: false });
               if (!built.action) return;
-              resolveItemAction(
+              const done = resolveItemAction(
                 { rng: run.rng.combat, hooks: null, units: [], floor: run.floor.floor },
                 hero,
                 built.action,
               );
               consumeItem(hero, instance.instanceId);
+              // A Scroll of Return ends the trip where it is read
+              // (`04` section 9, `05` section 9).
+              if (done?.returnToTown && leaveDungeon) {
+                close();
+                leaveDungeon({ leaveMark: done.leavesMark });
+                return;
+              }
               refresh();
             },
           })

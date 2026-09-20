@@ -102,7 +102,7 @@ export const combat = {
     return true;
   },
 
-  build({ router, fight, haptics }) {
+  build({ router, fight, haptics, leaveDungeon }) {
     const hero = fight.hero;
 
     /* -- the rows ------------------------------------------------------- */
@@ -219,11 +219,17 @@ export const combat = {
      */
     const leave = () => {
       const outcome = fight.outcome;
-      const to = outcome === 'victory' ? 'loot' : outcome === 'fled' ? 'explore' : 'death';
+      // A Scroll of Return read in the fight does not put the hero back in
+      // the corridor: it puts them in town (`05` section 9).
+      const left = fight.leftDungeon;
+      const to = left ? 'town' : outcome === 'victory' ? 'loot' : outcome === 'fled' ? 'explore' : 'death';
       return {
         label: t(`combat.after.${outcome}`),
         reason: router.has?.(to) ? undefined : t('common.comingSoon'),
-        onTap: () => router.go(to),
+        onTap: () => {
+          if (left && leaveDungeon) return leaveDungeon({ leaveMark: left.leaveMark });
+          return router.go(to);
+        },
       };
     };
 

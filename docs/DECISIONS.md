@@ -4,6 +4,16 @@ Rulings here override the other documents. Add new entries at the top of each li
 
 ## Decisions
 
+- **2026-09-20 — The Scroll of Return, the Return Mark, and the first way out of the dungeon.** `src/systems/travel.js` is `05` section 9's mark and the trip home. The Waystone half of that section — attuning, travelling between stones — is still its own task, and will leave and arrive through these same two functions. Six rulings:
+  - **The mark lives on the town.** The town is what offers it and what remembers the day it was left, and it is one thing at a time for the whole game rather than one per hero state. A second scroll replaces it, as section 9 says.
+  - **"Not inside a boss arena" is read as the arena's safe zone.** `inSafeZone` already covers the arena, its Safe Room and the stairs behind it, and none of those is somewhere a scroll should be allowed to plant a shortcut past a boss.
+  - **The engine reports the trip; it does not take it.** `resolveItemAction` cannot leave a floor, so a Scroll of Return comes back as `{ returnToTown, leavesMark, flee }` and the caller acts — exactly how a Smoke Bomb's `flee` already worked. Read in a fight it ends the fight *and* the trip, and the Combat screen's way out goes to the Town rather than back into the corridor.
+  - **Coming back is not going down.** `returnToTown` turns the day over and leaves the trip count alone, because the trip was counted on the way in.
+  - **A run can be told where to begin.** `createRun({ startAt })` puts the hero on the marked tile, facing the way they faced, instead of in the arrival room — the same floor, rebuilt from the same seed.
+  - **The mark is spent by descending, not by arriving.** `useMark` hands back where it led and clears it in one move, so "the Dungeon Gate offers it once" holds even if the player backs out of the gate screen.
+
+  **Where it shows:** the Town Hub's gate hint reads "Return to your mark on floor N" while one exists. The Dungeon Gate's own Return Mark card is the previous task, which is still open.
+
 - **2026-09-20 — The Town Stash.** `src/systems/stash.js` and `src/ui/screens/stash.js` are `04` section 1's fifty safe slots and the outline's two-list screen. Four rulings:
   - **A stash is a pack.** `createPack({ capacity: 50 })` and every slot, stack and "will not fit" rule is the one the hero's own pack already follows. What the stash adds is the two ways across and the refusals each way: nothing worn and nothing bound goes in.
   - **Each pack numbers its own items, so the stash takes a prefix.** Two packs both counting from `itm_0001` would have made an id mean two things on the one screen that shows both lists. `createPack` now takes a prefix and the stash's ids read `sth_0001`; the screen keys its selection by side *and* id, so even a future third pack cannot confuse them.

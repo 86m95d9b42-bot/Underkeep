@@ -14,6 +14,7 @@ import { button } from '../parts/button.js';
 import { bar, chip, topBar } from '../parts/parts.js';
 import { t } from '../../data/strings.js';
 import { stashUse } from '../../systems/stash.js';
+import { markOf } from '../../systems/travel.js';
 import {
   SERVICES,
   innCost,
@@ -103,10 +104,16 @@ export const town = {
     // The gate is the one primary button on the screen (`00`, UI rules). The
     // Dungeon Gate screen and its waystones are the next tasks; until then it
     // opens the floor the hero would arrive on.
+    const mark = markOf(here);
     const gate = el('div', { class: 'region keyslot' }, [
       button({
         label: t('town.gate'),
-        hint: t('town.gateHint', { n: run.floor?.floor ?? 1 }),
+        // A Return Mark is where the next trip begins, and the Dungeon Gate
+        // screen will offer it properly (`05` section 9); until then the Hub
+        // says where the hero is headed.
+        hint: mark
+          ? t('town.gateMark', { n: mark.floor })
+          : t('town.gateHint', { n: run.floor?.floor ?? 1 }),
         kind: 'primary',
         onTap: () => {
           descend?.();

@@ -20,7 +20,6 @@ export const NOT_YET = {
   light: 'Light and torches are Phase 7.',
   revealFloor: 'The automap has nothing to reveal from a scroll yet (Phase 7).',
   teleportOnFloor: 'Moving the hero on the floor from a fight is Phase 7.',
-  returnToTown: 'The Return Mark and the town are Phase 6.',
   safeCamp: 'Camping is Phase 6.',
   camp: 'Camping is Phase 6.',
   reveal: 'Dust of Revealing needs the traps and secret doors of Phase 7.',
@@ -138,6 +137,9 @@ export function actionForItem(hero, instanceId, { target, inCombat = true, floor
       name,
       use,
       target,
+      // Nothing in the pack costs Focus to use (`04` sections 8 to 11), and
+      // saying so keeps every item action the same shape as a scroll's.
+      fp: 0,
       // Save DCs for bombs are 10 + the floor (`04` section 10).
       dc: ITEM_RULES.bombSaveDc.base + ITEM_RULES.bombSaveDc.perFloor * floor,
       needsTarget: Boolean(use.thrown && use.target !== 'row'),

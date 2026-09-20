@@ -116,11 +116,25 @@ export function firstReason(door, ex, hero) {
  * @param {number} [options.floor]
  * @param {object} [options.hero]
  * @param {ReturnType<typeof carriedStreams>} [options.streams] resumed streams
+ * @param {{ at: [number, number], facing?: string }} [options.startAt] a Return
+ *   Mark, or anywhere else a trip begins that is not the arrival room
  */
-export function createRun({ masterSeed, floor: floorNumber = 1, hero = { ...PLACEHOLDER_HERO }, streams }) {
+export function createRun({
+  masterSeed,
+  floor: floorNumber = 1,
+  hero = { ...PLACEHOLDER_HERO },
+  streams,
+  startAt,
+}) {
   const rng = streams ?? carriedStreams(masterSeed);
   let floor = buildFloor(floorNumber, masterSeed, layoutStream);
   let ex = createExploration(floor);
+  // A trip that begins at a Return Mark begins where the scroll was read
+  // (`05` section 9), not in the arrival room.
+  if (startAt?.at) {
+    ex.pos = [...startAt.at];
+    if (startAt.facing) ex.facing = startAt.facing;
+  }
   let wasSafe = inSafeZone(floor, ex.pos);
 
   /** @type {{ text: string, tone?: string }[]} oldest first */

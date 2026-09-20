@@ -151,6 +151,14 @@ export function resolveItemAction(combat, unit, action, services = {}) {
   if (use.regen) out.regen = use.regen;
 
   if (use.flee) out.flee = true;
+  // A Scroll of Return takes the hero out of the dungeon altogether
+  // (`04` section 9, `05` section 9). The engine cannot leave a floor, so it
+  // says so and the caller does it — the same way a Smoke Bomb's flee works.
+  if (use.returnToTown) {
+    out.returnToTown = true;
+    out.leavesMark = Boolean(use.leavesMark);
+    out.flee = true;
+  }
   return out;
 }
 

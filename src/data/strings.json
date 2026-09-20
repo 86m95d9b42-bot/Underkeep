@@ -59,7 +59,10 @@
       "keyTaken": "You pick up a key.",
       "keyOpen": "The key turns and the door swings open.",
       "bashOpen": "The door gives way.",
-      "bashFail": "The door holds."
+      "bashFail": "The door holds.",
+      "returned": "The scroll burns away and the town rises around you.",
+      "markLeft": "A mark glows on the stone where you stood.",
+      "markRefused": "The arena will not hold a mark."
     },
     "title": "EXPLORE",
     "pad": {
@@ -153,6 +156,7 @@
     "gold": "{n} GP",
     "gate": "DUNGEON GATE",
     "gateHint": "Floor {n}",
+    "gateMark": "Return to your mark on floor {n}",
     "gateWaystones": "Waystones 1–{n} attuned",
     "services": {
       "inn": "INN",

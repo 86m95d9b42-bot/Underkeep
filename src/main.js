@@ -32,6 +32,7 @@ import { levelUp } from './ui/screens/levelup.js';
 import { createRun, PLACEHOLDER_HERO } from './systems/run.js';
 import { createTown, descend as descendTown } from './systems/town.js';
 import { openShop } from './systems/shop.js';
+import { returnToTown, useMark } from './systems/travel.js';
 import { createFight, standInHero } from './systems/fight.js';
 import { chooseOrigin, createDraft, finish, setName } from './systems/creation.js';
 import { awardXp, xpNeeded } from './systems/levelling.js';
@@ -202,12 +203,40 @@ router = createRouter({
     },
     /**
      * Taking the Dungeon Gate: the trip is counted before the hero is in the
-     * dungeon, so a trip they never come back from is still a trip.
+     * dungeon, so a trip they never come back from is still a trip. A trip
+     * that begins at a Return Mark begins where the scroll was read, and
+     * spends the mark (`05` section 9).
      */
     descend() {
+      if (!town) startRun();
+      const startAt = useMark(town);
+      if (startAt) {
+        run = createRun({
+          masterSeed: hero?.seed ?? DEMO_SEED,
+          floor: startAt.floor,
+          hero,
+          startAt,
+        });
+        fight = null;
+      }
       const current = run ?? startRun();
       descendTown(town);
       return current;
+    },
+
+    /**
+     * Coming back up. The Scroll of Return leaves a mark where it was read;
+     * everything else (a Waystone, and Phase 8's death) does not. The run is
+     * let go: the next trip builds its own.
+     */
+    leaveDungeon({ leaveMark = false } = {}) {
+      if (!town) startRun();
+      const left = returnToTown(town, { run, leaveMark });
+      run = null;
+      fight = null;
+      shelves = null;
+      router.go('town');
+      return left;
     },
   },
 });
