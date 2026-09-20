@@ -28,6 +28,7 @@ const SCREENS = [
   'map',
   'hero',
   'skillTree',
+  'pack',
   'combat',
   'combatSkills',
   'loot',

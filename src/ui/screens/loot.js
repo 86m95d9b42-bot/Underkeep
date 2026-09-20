@@ -7,16 +7,21 @@
  * on the right.
  *
  * Nothing here decides anything. `06` section 15 awards the XP, the gold and
- * the levels as combat ends, and `05` section 11 wants them committed before
- * they are shown — so this screen reports what has already happened. Items
- * arrive in Phase 5; until then a fight pays coin, and TAKE ALL says why it
- * has nothing to do.
+ * the levels as combat ends, the loot tables roll the drops as it ends, and
+ * `05` section 11 wants all of it committed before it is shown — so this
+ * screen reports what has already happened. Taking a drop is the one thing it
+ * does, and that is the pack's own rule about room.
  */
 import { el } from '../parts/el.js';
 import { button } from '../parts/button.js';
 import { bar, chip, listRow, scrollPanel } from '../parts/parts.js';
 import { t } from '../../data/strings.js';
 import { progress } from '../../systems/levelling.js';
+import { describe } from '../../systems/identification.js';
+import { slotsFor } from '../../data/items.js';
+import { slotsUsed } from '../../systems/inventory.js';
+import { takeAll as takeAllDrops, takeDrop } from '../../systems/loot.js';
+import { rarityColor } from './pack.js';
 
 /** @type {Record<string, import('../../shell/layout.js').RegionDef>} */
 export const REGIONS = {
@@ -79,30 +84,77 @@ export const loot = {
     ]);
 
     // The label sits in the region with its list, as every labelled panel does.
-    const drops = el('div', { class: 'region block' }, [
-      el('span', { class: 'block__label', text: t('loot.drops') }),
-      scrollPanel({
-        ariaLabel: t('loot.drops'),
-        children: reward.loot.length
-          ? reward.loot.map((item) =>
-              listRow({ name: item.name, sub: item.note, side: t('loot.take') }),
-            )
-          : [el('span', { class: 'hint', text: t('loot.noDrops') })],
-      }),
-    ]);
+    const drops = el('div', { class: 'region block' });
+    const warning = el('div', { class: 'region note' });
+    const takeAll = el('div', { class: 'region keyslot' });
 
-    // Row 16 is for a pack that cannot hold what is on the floor; with no
-    // items yet it says what the purse holds instead.
-    const warning = el('div', { class: 'region note' }, [
-      el('span', { class: 'hint', text: t('loot.purse', { n: who.gold ?? 0 }) }),
-    ]);
+    /** What is still on the floor: a drop keeps its count as it is taken. */
+    const left = () => reward.loot.filter((drop) => (drop.count ?? 0) > 0);
 
-    const takeAll = el('div', { class: 'region keyslot' }, [
-      button({
-        label: t('loot.takeAll'),
-        reason: reward.loot.length ? undefined : t('loot.nothingToTake'),
-      }),
-    ]);
+    const paint = () => {
+      const standing = left();
+      drops.replaceChildren(
+        el('span', { class: 'block__label', text: t('loot.drops') }),
+        scrollPanel({
+          ariaLabel: t('loot.drops'),
+          children: reward.loot.length
+            ? reward.loot.map((drop) => {
+                const card = describe(drop, who.identification);
+                const gone = (drop.count ?? 0) <= 0;
+                const room = !gone && slotsFor(drop.baseId, drop.count) <= roomLeft();
+                return listRow({
+                  name: card.count > 1 ? t('items.count', { name: card.name, n: card.count }) : card.name,
+                  sub: card.badge ? t('pack.detail.note.unknown') : undefined,
+                  color: rarityColor(card.rarity),
+                  side: gone ? t('loot.taken') : t('loot.takeOne'),
+                  reason: gone ? t('loot.taken') : room ? undefined : t('pack.why.packFull'),
+                  onTap: () => {
+                    takeDrop(who, drop);
+                    paint();
+                  },
+                });
+              })
+            : [el('span', { class: 'hint', text: t('loot.noDrops') })],
+        }),
+      );
+
+      // Row 16: what the pack has room for, and the purse when nothing is
+      // waiting on the floor.
+      const stuck = standing.length;
+      warning.replaceChildren(
+        el('span', {
+          class: 'hint',
+          text: stuck
+            ? t('loot.room', { used: slotsUsed(who.pack ?? { items: [] }), total: who.pack?.capacity ?? 0 })
+            : t('loot.purse', { n: who.gold ?? 0 }),
+          style: stuck && roomLeft() <= 0 ? { color: 'var(--danger)' } : undefined,
+        }),
+      );
+
+      takeAll.replaceChildren(
+        button({
+          label: t('loot.takeAll'),
+          reason: standing.length ? undefined : t('loot.nothingToTake'),
+          onTap: () => {
+            const { left: over } = takeAllDrops(who, reward.loot);
+            if (over.length > 0) {
+              warning.replaceChildren(
+                el('span', { class: 'hint', text: t('loot.full', { n: over.length }), style: { color: 'var(--danger)' } }),
+              );
+            }
+            paint();
+          },
+        }),
+      );
+    };
+
+    /** How many slots the pack has left, for the per-drop TAKE buttons. */
+    function roomLeft() {
+      if (!who.pack) return 0;
+      return who.pack.capacity - slotsUsed(who.pack);
+    }
+
+    paint();
 
     // CONTINUE goes to Level Up when the fight earned one, and back to the
     // dungeon when it did not (`00`, the screen flow).

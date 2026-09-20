@@ -16,6 +16,7 @@ import { createHooks } from '../engine/hooks.js';
 import { actionForSkill, resolveSkillAction } from '../engine/skill-actions.js';
 import { clearCombatBuffs, resolveItemAction } from '../engine/item-actions.js';
 import { actionForItem, consumeItem, usableItems } from './use-item.js';
+import { lootAfterCombat } from './loot.js';
 import { registerRules } from '../engine/rules.js';
 import { beginCombat, endRound, peekTurn, startRound, takeNextTurn } from '../engine/round.js';
 import { takeTurn } from '../engine/turn.js';
@@ -300,6 +301,23 @@ export function createFight({
       // The loot stream rolls the gold the defeated were carrying, so a
       // reload cannot re-roll the purse (`05` section 11).
       summary = endCombat(combat, { loot: rng.loot });
+
+      // `02` section 17 and `04` section 14: what the defeated were carrying,
+      // and the encounter's own roll. Rolled here, before the Victory screen
+      // is built, because `05` section 11 wants an outcome committed before
+      // it is shown.
+      if (summary.outcome === 'victory') {
+        const defeated = summary.defeated.map((id) => unitById(id)).filter(Boolean);
+        combat.hero.found ??= [];
+        const rolled = lootAfterCombat(rng.loot, defeated, {
+          floor: combat.floor,
+          hero: combat.hero,
+          found: combat.hero.found,
+        });
+        summary.loot = [...(summary.loot ?? []), ...rolled.drops];
+        summary.lootRolls = rolled.rolls;
+      }
+
       // What was drunk for one fight lasts one fight (`04` section 8).
       clearCombatBuffs(combat.hero);
 

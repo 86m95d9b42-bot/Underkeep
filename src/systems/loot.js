@@ -25,6 +25,8 @@ import {
   rareGearOn,
   rollFor,
 } from '../data/loot.js';
+import { addItem } from './inventory.js';
+import { onPickUp } from './identification.js';
 import {
   CURSES,
   MAGIC,
@@ -330,6 +332,45 @@ export function dropsFrom(unit, rng, context = {}) {
     else drops.push(makeDrop(rng, line.item, { count: line.count ?? 1 }, context));
   }
   return drops;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Picking it up                                                              */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Takes one drop into the pack (`04` sections 1 and 16). A hero with **Lore**
+ * knows what it is as they pick it up; everyone else carries it unknown.
+ *
+ * What will not fit is left on the floor rather than lost, which is what the
+ * loot card's "drop or swap" offer is about.
+ *
+ * @param {object} hero
+ * @param {object} drop `{ baseId, count, ... }` as the tables made it
+ * @returns {{ ok: boolean, why?: string, taken: number, left: number, entry?: object }}
+ */
+export function takeDrop(hero, drop) {
+  if (!hero?.pack) return { ok: false, why: 'noPack', taken: 0, left: drop.count ?? 1 };
+  const { count = 1, ...rest } = drop;
+  const { added, left, entry } = addItem(hero.pack, drop.baseId, { count, ...rest });
+  if (added === 0) return { ok: false, why: 'packFull', taken: 0, left };
+  if (entry) onPickUp(hero, entry);
+  drop.taken = (drop.taken ?? 0) + added;
+  drop.count = left;
+  return { ok: true, taken: added, left, entry };
+}
+
+/** Takes what will fit, and says what is still on the floor. */
+export function takeAll(hero, drops = []) {
+  const taken = [];
+  const left = [];
+  for (const drop of drops) {
+    if ((drop.count ?? 1) <= 0) continue;
+    const result = takeDrop(hero, drop);
+    if (result.taken > 0) taken.push(drop);
+    if (result.left > 0) left.push(drop);
+  }
+  return { taken, left };
 }
 
 /* -------------------------------------------------------------------------- */

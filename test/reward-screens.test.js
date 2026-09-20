@@ -171,11 +171,44 @@ describe('Victory and Loot', () => {
   });
 
   it('lists a drop with its own TAKE when there is one', () => {
-    const drops = [{ name: 'Spear', note: 'Polearm' }];
+    // A drop is what the loot tables make: a base item and what was rolled
+    // on it (`04` section 17).
+    const drops = [{ baseId: 'spear', count: 1, rarity: 'common', identified: true }];
     const { built } = mount(loot, { run: run(), fight: fightPaying({ loot: drops }) });
     expect(built.drops.textContent).toContain('Spear');
-    expect(built.drops.textContent).toContain(t('loot.take'));
+    expect(built.drops.textContent).toContain(t('loot.takeOne'));
     expect(buttons(built).get(t('loot.takeAll')).disabled).toBe(false);
+  });
+
+  it('takes a drop into the pack, and marks it taken', () => {
+    const drops = [{ baseId: 'healing_potion', count: 2, rarity: 'common', identified: true }];
+    const where = run();
+    const { built } = mount(loot, { run: where, fight: fightPaying({ loot: drops }) });
+    const take = [...built.drops.querySelectorAll('button')].find((node) =>
+      node.textContent.includes(t('loot.takeOne')),
+    );
+    take.click();
+    expect(where.hero.pack.items.some((entry) => entry.baseId === 'healing_potion')).toBe(true);
+    expect(drops[0].count).toBe(0);
+    expect(built.drops.textContent).toContain(t('loot.taken'));
+  });
+
+  it('shows an unknown drop by its look, not by its name', () => {
+    const drops = [{ baseId: 'focus_tonic', count: 1, rarity: 'uncommon', identified: false }];
+    const { built } = mount(loot, { run: run(), fight: fightPaying({ loot: drops }) });
+    expect(built.drops.textContent).not.toContain('Focus Tonic');
+    expect(built.drops.textContent).toContain('Potion');
+  });
+
+  it('says when the pack is too full to take what is there', () => {
+    const where = run();
+    where.hero.pack.capacity = 0;
+    const drops = [{ baseId: 'plate', count: 1, rarity: 'common', identified: true }];
+    const { built } = mount(loot, { run: where, fight: fightPaying({ loot: drops }) });
+    const take = [...built.drops.querySelectorAll('button')].find((node) =>
+      node.textContent.includes(t('pack.why.packFull')),
+    );
+    expect(take.disabled).toBe(true);
   });
 
   it('lets only the drop list scroll', () => {

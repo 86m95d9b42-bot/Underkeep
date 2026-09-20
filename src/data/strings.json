@@ -783,10 +783,10 @@
   "items": {
     "unknown": "Unknown {name}",
     "plain": "Plain {name}",
+    "property": "{property} {name}",
     "potion": "{look} Potion",
     "scroll": "Scroll labeled {title}",
     "bonus": "{name} {bonus}",
-    "property": "{property} {name}",
     "cursed": "Cursed {name}",
     "count": "{name} x{n}",
     "badge": {
@@ -803,6 +803,30 @@
       "worn": "You know what it does now.",
       "triggered": "It shows what it can do.",
       "curse": "It will not come off."
+    },
+    "propertyEffect": {
+      "flaming": "+1d6 fire damage",
+      "frost": "+1d4 cold damage; a critical hit Slows",
+      "holy": "+1d6 holy against undead and fiends",
+      "venomous": "a critical hit Poisons",
+      "keen": "+1 critical range",
+      "vampiric": "heal 2 HP on each hit",
+      "guarding": "+1 DEF while wielded",
+      "swift": "+2 initiative",
+      "mighty": "+2 damage",
+      "channeling": "+2 max FP",
+      "seeking": "ranged attacks ignore Half Cover",
+      "thundering": "a critical hit Stuns",
+      "fireproof": "resistant to fire",
+      "frostproof": "resistant to cold",
+      "fortified": "DR 1",
+      "shadowed": "no Stealth penalty",
+      "warded": "+1 to all saves",
+      "featherlight": "no requirement; one step lighter",
+      "spellwoven": "no spell fizzle",
+      "thorned": "melee attackers take 1d4",
+      "stalwart": "+5 max HP",
+      "dauntless": "immune to Feared"
     }
   },
   "loot": {
@@ -821,11 +845,20 @@
     "takeAll": "TAKE ALL",
     "nothingToTake": "Nothing to carry.",
     "continue": "CONTINUE",
-    "toLevel": "A level is waiting."
+    "toLevel": "A level is waiting.",
+    "takeOne": "TAKE",
+    "taken": "TAKEN",
+    "full": "No room: {n} left on the floor.",
+    "room": "Pack {used} / {total}."
   },
   "pack": {
     "title": "PACK",
-    "slots": "{used} / {total}",
+    "slots": {
+      "weapon": "WEAPON",
+      "offHand": "OFF-HAND",
+      "armor": "ARMOR",
+      "charm": "CHARM"
+    },
     "equipped": "WORN",
     "quick": "QUICK",
     "empty": "Nothing here yet.",
@@ -842,6 +875,68 @@
       "alreadyPinned": "Already pinned.",
       "quickFull": "All four quick slots are taken.",
       "noSuchSlot": "No such slot."
+    },
+    "slotsUsed": "{used} / {total}",
+    "filters": {
+      "all": "ALL",
+      "gear": "GEAR",
+      "use": "USE",
+      "loot": "LOOT"
+    },
+    "none": "—",
+    "sort": "SORT",
+    "quickSlots": "QUICK SLOTS",
+    "pinning": "Tap an item to pin it to the combat bar.",
+    "done": "DONE",
+    "qs": "QS",
+    "slotCount": "{n} slot",
+    "slotCountMany": "{n} slots",
+    "detail": {
+      "title": "ITEM",
+      "equipped": "Equipped",
+      "thisItem": "This",
+      "unknownValue": "?",
+      "compare": "COMPARE",
+      "notes": "NOTES",
+      "drop": "DROP",
+      "quick": "QUICK SLOT",
+      "unpin": "UNPIN",
+      "equip": "EQUIP",
+      "takeOff": "TAKE OFF",
+      "use": "USE",
+      "stats": {
+        "damage": "Damage",
+        "def": "DEF",
+        "toHit": "To hit",
+        "maxAgi": "Max AGI",
+        "stealth": "Stealth",
+        "slots": "Slots",
+        "value": "Value",
+        "cost": "Sells for"
+      },
+      "note": {
+        "unknown": "Unknown. Wearing it, drinking it or the Sage will tell you.",
+        "curseRisk": "Unidentified magic can be cursed.",
+        "cursed": "Cursed: {curse}. It will not come off.",
+        "bound": "Bound to you until the curse is lifted.",
+        "property": "{property}: {effect}",
+        "equipped": "Worn now.",
+        "requires": "Needs {attribute} {score}.",
+        "twoHanded": "Two-handed: no shield with it.",
+        "school": "{school} scroll. {attribute} 11 to read."
+      }
+    },
+    "type": {
+      "weapon": "Weapon",
+      "armor": "Armor",
+      "shield": "Shield",
+      "charm": "Charm",
+      "potion": "Potion",
+      "scroll": "Scroll",
+      "bomb": "Throwable",
+      "gear": "Gear",
+      "valuable": "Valuable",
+      "part": "Monster part"
     }
   }
 }

@@ -36,6 +36,8 @@ const SCREENS = [
   'map',
   'hero',
   'skillTree',
+  'pack',
+  'itemDetail',
   'combat',
   'combatSkills',
   'loot',

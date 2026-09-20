@@ -18,6 +18,8 @@ import { createStats } from './ui/screens/create-stats.js';
 import { createOrigin } from './ui/screens/create-origin.js';
 import { hero as heroScreen } from './ui/screens/hero.js';
 import { skillTree } from './ui/screens/skill-tree.js';
+import { pack as packScreen } from './ui/screens/pack.js';
+import { itemDetail } from './ui/screens/item-detail.js';
 import { combat } from './ui/screens/combat.js';
 import { combatSkills } from './ui/screens/combat-skills.js';
 import { loot } from './ui/screens/loot.js';
@@ -103,6 +105,8 @@ const screens = {
   map,
   hero: heroScreen,
   skillTree,
+  pack: packScreen,
+  itemDetail,
   combat,
   combatSkills,
   loot,

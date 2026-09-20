@@ -912,3 +912,58 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* Hero: Pack — the four equipped slots, side by side across rows 5-6. */
+.equipstrip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--gap);
+  min-height: 0;
+}
+.equipstrip .btn {
+  padding: calc(var(--u) * 0.08);
+  overflow: hidden;
+}
+.equipstrip .btn > .label {
+  font-size: var(--fs-micro);
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+.equipstrip .btn > .hint {
+  font-size: var(--fs-hint);
+  color: var(--bone);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+/* The head of a labelled block that also carries a counter chip. */
+.block__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--gap);
+}
+
+/* Item Detail: the name, and the three-column compare table under it. */
+.itemname {
+  font-family: var(--font-label);
+  font-size: var(--fs-body);
+  margin: 0;
+}
+.statline--head .statline__label,
+.statline--head .statline__value {
+  font-family: var(--font-label);
+  font-size: var(--fs-micro);
+  color: var(--muted);
+}
+.block .statline {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: var(--gap);
+}
+.block .statline__value {
+  min-width: calc(var(--u) * 1.2);
+  text-align: right;
+}
