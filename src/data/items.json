@@ -1,0 +1,378 @@
+{
+  "_source": "04-item-database.md, sections 1 to 13. Every base item in the game, in the JSON shape of section 17, plus the tables that turn a base item into a found one: the enhancement bonuses and properties of section 4, the identification rules of section 5, the curses of section 6, the gem table of section 12 and the Alchemist's recipes. Section 14's d12 tables are loot.json; section 15's shop stock is shops.json (Phase 6).",
+
+  "_effects": "An item's own numbers describe the attack it makes or the armour it is (damage, toHit, def, maxAgi). Its `effects` are what it adds to the hero while it is equipped or carried, written in skills.json's vocabulary: `sheet` for a number on the hero's sheet, `hook` for an event from 06 section 16, `explore` for a bonus the dungeon systems read, `action` for what using it does.",
+
+  "rules": {
+    "_source": "04 section 1.",
+    "equipSlots": ["weapon", "offHand", "armor", "charm"],
+    "twoHandedBlocksOffHand": true,
+    "equippedCostNoSlots": true,
+    "inventory": { "base": 10, "perMightMod": 2 },
+    "stashSlots": 50,
+    "quickSlots": 4,
+    "stacks": { "consumable": 5, "valuable": 10 },
+    "rarities": ["common", "uncommon", "rare", "unique", "cursed"],
+    "shop": {
+      "sellRate": 0.5,
+      "valuableSellRate": 1,
+      "unidentifiedSellsAsPlain": true,
+      "luckDiscountPerMod": 0.05
+    },
+    "durability": {
+      "_source": "04 section 1, No Durability: the only wear in the game is these four events.",
+      "corrosion": { "damage": -1, "repairCost": 10 },
+      "lockpickBreakInSix": 1,
+      "poleBreaks": true,
+      "destroyedByTrapsAndWater": ["potion", "scroll"]
+    },
+    "ammunition": false,
+    "thrownRecoveredAfterCombat": true,
+    "requirementNotMet": { "toHit": -2, "keepsDef": true },
+    "weaponProperties": {
+      "_source": "04 section 2, Properties.",
+      "light": "Works with the Duelist skill (AGI for attack and damage).",
+      "thrown": "Can be thrown as a ranged attack using AGI; recovered after combat.",
+      "reach": "Can hit the Back row in melee.",
+      "reload": "Fires every other turn.",
+      "ranged": "Bow-group weapons add no attribute to damage unless a skill says so.",
+      "twoHanded": "Also blocks the Off-Hand slot."
+    },
+    "stealthPenaltyApplies": ["pick", "disarm"],
+    "bombSaveDc": { "base": 10, "perFloor": 1 },
+    "scrollRequirements": { "arcane": { "intellect": 11 }, "spirit": { "wits": 11 } }
+  },
+
+  "items": {
+    "_source": "The id, name and cost of every base item. A found item is an instance that names one of these (04 section 17).",
+
+    "club": { "name": "Club", "category": "weapon", "group": "blunt", "rarity": "common", "damage": "1d4", "damageType": "crush", "properties": ["light"], "slots": 1, "cost": 1 },
+    "dagger": { "name": "Dagger", "category": "weapon", "group": "blade", "rarity": "common", "damage": "1d4", "damageType": "pierce", "properties": ["light", "thrown"], "slots": 1, "cost": 2 },
+    "hand_axe": { "name": "Hand Axe", "category": "weapon", "group": "blade", "rarity": "common", "damage": "1d6", "damageType": "slash", "properties": ["light", "thrown"], "slots": 1, "cost": 8 },
+    "short_sword": { "name": "Short Sword", "category": "weapon", "group": "blade", "rarity": "common", "damage": "1d6", "damageType": "slash", "properties": ["light"], "slots": 1, "cost": 10 },
+    "rapier": { "name": "Rapier", "category": "weapon", "group": "blade", "rarity": "common", "damage": "1d6", "damageType": "pierce", "properties": ["light"], "toHit": 1, "requires": { "agility": 12 }, "slots": 1, "cost": 25 },
+    "long_sword": { "name": "Long Sword", "category": "weapon", "group": "blade", "rarity": "common", "damage": "1d8", "damageType": "slash", "properties": [], "slots": 1, "cost": 15 },
+    "great_sword": { "name": "Great Sword", "category": "weapon", "group": "blade", "rarity": "common", "damage": "1d12", "damageType": "slash", "properties": ["twoHanded"], "requires": { "might": 13 }, "slots": 2, "cost": 50 },
+    "mace": { "name": "Mace", "category": "weapon", "group": "blunt", "rarity": "common", "damage": "1d6", "damageType": "crush", "properties": [], "damageVs": { "undead": 1 }, "slots": 1, "cost": 8 },
+    "flail": { "name": "Flail", "category": "weapon", "group": "blunt", "rarity": "common", "damage": "1d8", "damageType": "crush", "properties": [], "requires": { "might": 11 }, "slots": 1, "cost": 20 },
+    "warhammer": { "name": "Warhammer", "category": "weapon", "group": "blunt", "rarity": "common", "damage": "1d10", "damageType": "crush", "properties": ["twoHanded"], "requires": { "might": 12 }, "slots": 2, "cost": 30 },
+    "staff": { "name": "Staff", "category": "weapon", "group": "blunt", "rarity": "common", "damage": "1d6", "damageType": "crush", "properties": ["twoHanded"], "effects": [{ "sheet": "maxFp", "value": 2 }], "slots": 2, "cost": 5 },
+    "spear": { "name": "Spear", "category": "weapon", "group": "polearm", "rarity": "common", "damage": "1d8", "damageType": "pierce", "properties": ["reach", "twoHanded"], "slots": 2, "cost": 5 },
+    "halberd": { "name": "Halberd", "category": "weapon", "group": "polearm", "rarity": "common", "damage": "1d10", "damageType": "slash", "properties": ["reach", "twoHanded"], "requires": { "might": 13 }, "slots": 2, "cost": 40 },
+    "sling": { "name": "Sling", "category": "weapon", "group": "bow", "rarity": "common", "damage": "1d4", "damageType": "crush", "properties": ["ranged"], "slots": 1, "cost": 3 },
+    "shortbow": { "name": "Shortbow", "category": "weapon", "group": "bow", "rarity": "common", "damage": "1d6", "damageType": "pierce", "properties": ["ranged", "twoHanded"], "slots": 2, "cost": 25 },
+    "longbow": { "name": "Longbow", "category": "weapon", "group": "bow", "rarity": "common", "damage": "1d8", "damageType": "pierce", "properties": ["ranged", "twoHanded"], "requires": { "might": 11 }, "slots": 2, "cost": 60 },
+    "crossbow": { "name": "Crossbow", "category": "weapon", "group": "bow", "rarity": "common", "damage": "1d10", "damageType": "pierce", "properties": ["ranged", "twoHanded", "reload"], "toHit": 1, "slots": 2, "cost": 50 },
+
+    "robe": { "name": "Robe", "category": "armor", "rarity": "common", "def": 0, "slots": 1, "cost": 2 },
+    "padded_armor": { "name": "Padded Armor", "category": "armor", "rarity": "common", "def": 1, "slots": 2, "cost": 5 },
+    "leather_armor": { "name": "Leather Armor", "category": "armor", "rarity": "common", "def": 2, "slots": 2, "cost": 10 },
+    "studded_leather": { "name": "Studded Leather", "category": "armor", "rarity": "common", "def": 3, "maxAgi": 3, "slots": 2, "cost": 45 },
+    "chain_mail": { "name": "Chain Mail", "category": "armor", "rarity": "common", "heavy": true, "def": 4, "maxAgi": 2, "requires": { "might": 11 }, "stealth": -2, "slots": 4, "cost": 75 },
+    "scale_mail": { "name": "Scale Mail", "category": "armor", "rarity": "common", "heavy": true, "def": 5, "maxAgi": 1, "requires": { "might": 12 }, "stealth": -3, "toHit": -1, "fizzle": 0.1, "slots": 4, "cost": 200 },
+    "plate": { "name": "Plate", "category": "armor", "rarity": "common", "heavy": true, "def": 6, "maxAgi": 1, "requires": { "might": 13 }, "stealth": -4, "toHit": -2, "fizzle": 0.2, "cancelsSneak": true, "slots": 4, "cost": 400 },
+    "dragonscale_mail": { "name": "Dragonscale Mail", "category": "armor", "rarity": "rare", "heavy": true, "def": 6, "maxAgi": 2, "requires": { "might": 12 }, "stealth": -2, "effects": [{ "sheet": "resist", "damageType": "fire" }], "slots": 4, "cost": null, "craftedOnly": true, "loot": false },
+
+    "shield": { "name": "Shield", "category": "shield", "rarity": "common", "def": 1, "slots": 2, "cost": 10 },
+    "tower_shield": { "name": "Tower Shield", "category": "shield", "rarity": "common", "def": 2, "requires": { "might": 13 }, "stealth": -2, "toHit": -1, "fizzle": 0.1, "slots": 3, "cost": 60 },
+
+    "mages_robe": { "name": "Mage's Robe", "category": "armor", "rarity": "uncommon", "magic": true, "base": "robe", "def": 0, "effects": [{ "sheet": "maxFp", "value": 2 }], "slots": 1, "cost": 150 },
+    "robe_of_warding": { "name": "Robe of Warding", "category": "armor", "rarity": "uncommon", "magic": true, "base": "robe", "def": 1, "effects": [{ "sheet": "saves", "save": "mind", "value": 1 }], "slots": 1, "cost": 200 },
+    "archons_vestments": { "name": "Archon's Vestments", "category": "armor", "rarity": "rare", "magic": true, "base": "robe", "def": 2, "effects": [{ "sheet": "maxFp", "value": 4 }, { "sheet": "resist", "damageType": "fire" }], "slots": 1, "cost": 900 },
+
+    "ring_of_protection": { "name": "Ring of Protection", "category": "charm", "rarity": "uncommon", "magic": true, "effects": [{ "sheet": "def", "value": 1 }], "slots": 1, "cost": 200 },
+    "amulet_of_vigor": { "name": "Amulet of Vigor", "category": "charm", "rarity": "uncommon", "magic": true, "effects": [{ "sheet": "maxHp", "value": 8 }], "slots": 1, "cost": 200 },
+    "ring_of_focus": { "name": "Ring of Focus", "category": "charm", "rarity": "uncommon", "magic": true, "effects": [{ "sheet": "maxFp", "value": 3 }], "slots": 1, "cost": 200 },
+    "wardstone": { "name": "Wardstone", "category": "charm", "rarity": "uncommon", "magic": true, "effects": [{ "sheet": "saves", "value": 1 }], "slots": 1, "cost": 200 },
+    "silver_locket": { "name": "Silver Locket", "category": "charm", "rarity": "uncommon", "magic": true, "effects": [{ "sheet": "saves", "save": "mind", "value": 2 }], "slots": 1, "cost": 200 },
+    "owl_feather": { "name": "Owl Feather", "category": "charm", "rarity": "uncommon", "magic": true, "effects": [{ "explore": "search", "value": 2 }, { "explore": "trap", "value": 2 }], "slots": 1, "cost": 200 },
+    "thiefs_glove": { "name": "Thief's Glove", "category": "charm", "rarity": "uncommon", "magic": true, "effects": [{ "explore": "pick", "value": 2 }, { "explore": "disarm", "value": 2 }], "slots": 1, "cost": 200 },
+    "rams_horn": { "name": "Ram's Horn", "category": "charm", "rarity": "uncommon", "magic": true, "effects": [{ "explore": "bash", "value": 3 }, { "sheet": "damage", "damageType": "crush", "value": 1 }], "slots": 1, "cost": 200 },
+    "hunters_tooth": { "name": "Hunter's Tooth", "category": "charm", "rarity": "uncommon", "magic": true, "effects": [{ "sheet": "attack", "attack": "ranged", "value": 1 }, { "sheet": "damage", "attack": "ranged", "value": 1 }], "slots": 1, "cost": 200 },
+    "salamander_scale": { "name": "Salamander Scale", "category": "charm", "rarity": "uncommon", "magic": true, "effects": [{ "sheet": "resist", "damageType": "fire" }], "slots": 1, "cost": 200 },
+    "ring_of_warmth": { "name": "Ring of Warmth", "category": "charm", "rarity": "uncommon", "magic": true, "effects": [{ "sheet": "resist", "damageType": "cold" }], "slots": 1, "cost": 200 },
+    "merchants_seal": { "name": "Merchant's Seal", "category": "charm", "rarity": "uncommon", "magic": true, "effects": [{ "shop": "buy", "value": -0.1 }, { "shop": "sell", "value": 0.1 }], "slots": 1, "cost": 200 },
+    "feather_token": { "name": "Feather Token", "category": "charm", "rarity": "uncommon", "magic": true, "effects": [{ "explore": "noFallHarm" }], "slots": 1, "cost": 200 },
+    "lucky_coin": { "name": "Lucky Coin", "category": "charm", "rarity": "uncommon", "magic": true, "effects": [{ "sheet": "attribute", "attribute": "luck", "value": 1, "max": 20 }], "slots": 1, "cost": 200 },
+
+    "greater_ring_of_protection": { "name": "Greater Ring of Protection", "category": "charm", "rarity": "rare", "magic": true, "effects": [{ "sheet": "def", "value": 2 }], "slots": 1, "cost": 800 },
+    "ring_of_free_action": { "name": "Ring of Free Action", "category": "charm", "rarity": "rare", "magic": true, "effects": [{ "sheet": "immune", "conditions": ["paralyzed", "webbed", "grabbed"] }], "slots": 1, "cost": 800 },
+    "basilisk_eye": { "name": "Basilisk Eye", "category": "charm", "rarity": "rare", "magic": true, "effects": [{ "sheet": "immune", "conditions": ["petrified"] }], "slots": 1, "cost": 800 },
+    "amulet_of_antivenom": { "name": "Amulet of Antivenom", "category": "charm", "rarity": "rare", "magic": true, "effects": [{ "sheet": "immune", "damageType": "poison", "conditions": ["poisoned"] }], "slots": 1, "cost": 800 },
+    "everburning_band": { "name": "Everburning Band", "category": "charm", "rarity": "rare", "magic": true, "effects": [{ "explore": "light", "forever": true, "snuffProof": true, "piercesDarkZone": false }], "slots": 1, "cost": 800 },
+    "bloodstone": { "name": "Bloodstone", "category": "charm", "rarity": "rare", "magic": true, "effects": [{ "hook": "combatEnd", "handler": "bloodstone", "heal": "1d6", "plus": "vigorMod" }], "slots": 1, "cost": 800 },
+    "stone_of_alertness": { "name": "Stone of Alertness", "category": "charm", "rarity": "rare", "magic": true, "effects": [{ "sheet": "initiative", "value": 2 }, { "sheet": "cannotBeSurprised" }], "slots": 1, "cost": 800 },
+    "ring_of_sustenance": { "name": "Ring of Sustenance", "category": "charm", "rarity": "rare", "magic": true, "effects": [{ "explore": "campNoRations" }], "slots": 1, "cost": 800 },
+    "periapt_of_mending": { "name": "Periapt of Mending", "category": "charm", "rarity": "rare", "magic": true, "effects": [{ "sheet": "itemHealing", "value": 0.5 }], "slots": 1, "cost": 800 },
+    "ring_of_regeneration": { "name": "Ring of Regeneration", "category": "charm", "rarity": "rare", "magic": true, "effects": [{ "hook": "turnStart", "handler": "regeneration", "heal": 1 }], "slots": 1, "cost": 800 },
+    "sigil_of_the_magus": { "name": "Sigil of the Magus", "category": "charm", "rarity": "rare", "magic": true, "effects": [{ "sheet": "spellAttack", "value": 1 }, { "sheet": "spellDc", "value": 1 }], "slots": 1, "cost": 800 },
+    "ring_of_spell_storing": { "name": "Ring of Spell Storing", "category": "charm", "rarity": "rare", "magic": true, "effects": [{ "action": "storeScroll", "limit": { "uses": 1, "per": "rest" } }], "slots": 1, "cost": 800 },
+
+    "healing_potion": { "name": "Healing Potion", "category": "potion", "rarity": "common", "alwaysKnown": true, "use": { "heal": "2d6+2" }, "slots": 1, "stack": 5, "cost": 25 },
+    "antidote": { "name": "Antidote", "category": "potion", "rarity": "common", "alwaysKnown": true, "use": { "cure": ["poisoned"] }, "slots": 1, "stack": 5, "cost": 10 },
+    "greater_healing_potion": { "name": "Greater Healing Potion", "category": "potion", "rarity": "uncommon", "use": { "heal": "4d6+4" }, "slots": 1, "stack": 5, "cost": 100 },
+    "focus_tonic": { "name": "Focus Tonic", "category": "potion", "rarity": "uncommon", "use": { "restoreFp": "2d4" }, "slots": 1, "stack": 5, "cost": 40 },
+    "potion_of_clarity": { "name": "Potion of Clarity", "category": "potion", "rarity": "uncommon", "use": { "cure": ["weakened", "sickened", "feared", "blinded"] }, "slots": 1, "stack": 5, "cost": 60 },
+    "potion_of_fire_resistance": { "name": "Potion of Fire Resistance", "category": "potion", "rarity": "uncommon", "use": { "resist": "fire", "forCombat": true, "steps": 100 }, "slots": 1, "stack": 5, "cost": 80 },
+    "potion_of_cold_resistance": { "name": "Potion of Cold Resistance", "category": "potion", "rarity": "uncommon", "use": { "resist": "cold", "forCombat": true, "steps": 100 }, "slots": 1, "stack": 5, "cost": 80 },
+    "draught_of_heroism": { "name": "Draught of Heroism", "category": "potion", "rarity": "uncommon", "use": { "attack": 2, "immune": ["feared"], "forCombat": true }, "slots": 1, "stack": 5, "cost": 120 },
+    "giants_draught": { "name": "Giant's Draught", "category": "potion", "rarity": "uncommon", "use": { "attributeMod": { "might": 2 }, "forCombat": true }, "slots": 1, "stack": 5, "cost": 150 },
+    "quicksilver": { "name": "Quicksilver", "category": "potion", "rarity": "uncommon", "use": { "actFirst": true, "def": 2, "forCombat": true }, "slots": 1, "stack": 5, "cost": 150 },
+    "elixir_of_life": { "name": "Elixir of Life", "category": "potion", "rarity": "rare", "use": { "fullHp": true, "cureAll": true, "except": ["drained"] }, "slots": 1, "stack": 5, "cost": 500 },
+    "greater_focus_tonic": { "name": "Greater Focus Tonic", "category": "potion", "rarity": "rare", "use": { "fullFp": true }, "slots": 1, "stack": 5, "cost": 250 },
+    "restoration_draught": { "name": "Restoration Draught", "category": "potion", "rarity": "rare", "use": { "removeDrained": 1 }, "slots": 1, "stack": 5, "cost": 400 },
+    "potion_of_invisibility": { "name": "Potion of Invisibility", "category": "potion", "rarity": "rare", "use": { "condition": "hidden", "countsAsBackstab": true, "whileExploring": "skipNextWanderingCheck" }, "slots": 1, "stack": 5, "cost": 200 },
+    "troll_blood": { "name": "Troll Blood", "category": "potion", "rarity": "rare", "use": { "regen": 3, "forCombat": true }, "slots": 1, "stack": 5, "cost": null, "sell": 100 },
+
+    "tainted_potion": { "name": "Tainted Potion", "category": "potion", "rarity": "common", "harmful": true, "loot": false, "use": { "condition": "poisoned" }, "slots": 1, "stack": 5, "cost": null },
+    "draught_of_slumber": { "name": "Draught of Slumber", "category": "potion", "rarity": "common", "harmful": true, "loot": false, "use": { "condition": "asleep", "steps": 10, "wanderingCheck": "surprise" }, "slots": 1, "stack": 5, "cost": null },
+    "potion_of_confusion": { "name": "Potion of Confusion", "category": "potion", "rarity": "common", "harmful": true, "loot": false, "use": { "randomFacing": true, "scrambleMapSteps": 20 }, "slots": 1, "stack": 5, "cost": null },
+    "potion_of_weakness": { "name": "Potion of Weakness", "category": "potion", "rarity": "common", "harmful": true, "loot": false, "use": { "condition": "weakened", "untilRest": true }, "slots": 1, "stack": 5, "cost": null },
+
+    "scroll_of_light": { "name": "Scroll of Light", "category": "scroll", "school": "arcane", "rarity": "common", "use": { "light": true, "steps": 300, "darkZoneSight": 1 }, "slots": 1, "stack": 5, "cost": 20 },
+    "scroll_of_identify": { "name": "Scroll of Identify", "category": "scroll", "school": "arcane", "rarity": "uncommon", "use": { "identifyPack": true }, "slots": 1, "stack": 5, "cost": 40 },
+    "scroll_of_magic_missile": { "name": "Scroll of Magic Missile", "category": "scroll", "school": "arcane", "rarity": "uncommon", "casts": "magic_missile", "slots": 1, "stack": 5, "cost": 50 },
+    "scroll_of_knock": { "name": "Scroll of Knock", "category": "scroll", "school": "arcane", "rarity": "uncommon", "casts": "knock", "slots": 1, "stack": 5, "cost": 50 },
+    "scroll_of_frost_shard": { "name": "Scroll of Frost Shard", "category": "scroll", "school": "arcane", "rarity": "uncommon", "casts": "frost_shard", "slots": 1, "stack": 5, "cost": 60 },
+    "scroll_of_mapping": { "name": "Scroll of Mapping", "category": "scroll", "school": "arcane", "rarity": "uncommon", "use": { "revealFloor": true, "notTrapsOrSecrets": true }, "slots": 1, "stack": 5, "cost": 60 },
+    "scroll_of_mend": { "name": "Scroll of Mend", "category": "scroll", "school": "spirit", "rarity": "uncommon", "casts": "mend", "slots": 1, "stack": 5, "cost": 60 },
+    "scroll_of_cleanse": { "name": "Scroll of Cleanse", "category": "scroll", "school": "spirit", "rarity": "uncommon", "casts": "cleanse", "slots": 1, "stack": 5, "cost": 60 },
+    "scroll_of_sleep": { "name": "Scroll of Sleep", "category": "scroll", "school": "arcane", "rarity": "uncommon", "casts": "sleep", "slots": 1, "stack": 5, "cost": 80 },
+    "scroll_of_arcane_shield": { "name": "Scroll of Arcane Shield", "category": "scroll", "school": "arcane", "rarity": "uncommon", "casts": "arcane_shield", "slots": 1, "stack": 5, "cost": 80 },
+    "scroll_of_dispel": { "name": "Scroll of Dispel", "category": "scroll", "school": "arcane", "rarity": "uncommon", "casts": "dispel_ward", "slots": 1, "stack": 5, "cost": 80 },
+    "scroll_of_teleport": { "name": "Scroll of Teleport", "category": "scroll", "school": "arcane", "rarity": "uncommon", "use": { "teleportOnFloor": true, "fleesCombat": true, "notBosses": true }, "slots": 1, "stack": 5, "cost": 80 },
+    "scroll_of_turn_undead": { "name": "Scroll of Turn Undead", "category": "scroll", "school": "spirit", "rarity": "uncommon", "casts": "turn_undead", "slots": 1, "stack": 5, "cost": 100 },
+    "scroll_of_sanctuary": { "name": "Scroll of Sanctuary", "category": "scroll", "school": "spirit", "rarity": "rare", "use": { "safeCamp": true }, "slots": 1, "stack": 5, "cost": 100 },
+    "scroll_of_return": { "name": "Scroll of Return", "category": "scroll", "school": "arcane", "rarity": "rare", "use": { "returnToTown": true, "leavesMark": true }, "slots": 1, "stack": 5, "cost": 100 },
+    "scroll_of_blink": { "name": "Scroll of Blink", "category": "scroll", "school": "arcane", "rarity": "rare", "casts": "blink", "slots": 1, "stack": 5, "cost": 120 },
+    "scroll_of_remove_curse": { "name": "Scroll of Remove Curse", "category": "scroll", "school": "spirit", "rarity": "rare", "use": { "removeCurses": "equipped" }, "slots": 1, "stack": 5, "cost": 150 },
+    "scroll_of_spirit_ward": { "name": "Scroll of Spirit Ward", "category": "scroll", "school": "spirit", "rarity": "rare", "casts": "spirit_ward", "slots": 1, "stack": 5, "cost": 150 },
+    "scroll_of_fireball": { "name": "Scroll of Fireball", "category": "scroll", "school": "arcane", "rarity": "rare", "casts": "fireball", "minimum": "5d6", "slots": 1, "stack": 5, "cost": 200 },
+
+    "oil_flask": { "name": "Oil Flask", "category": "bomb", "rarity": "common", "use": { "thrown": true, "damage": "1d4", "damageType": "fire", "condition": "burning" }, "fuel": true, "fireSource": true, "slots": 1, "stack": 5, "cost": 5 },
+    "holy_water": { "name": "Holy Water", "category": "bomb", "rarity": "common", "use": { "thrown": true, "damage": "2d6", "damageType": "holy", "only": ["undead", "fiend"] }, "slots": 1, "stack": 5, "cost": 25 },
+    "poison_vial": { "name": "Poison Vial", "category": "bomb", "rarity": "uncommon", "use": { "coatWeapon": true, "nextHit": "poisoned" }, "slots": 1, "stack": 5, "cost": 25 },
+    "fire_pot": { "name": "Fire Pot", "category": "bomb", "rarity": "uncommon", "use": { "thrown": true, "damage": "2d6", "damageType": "fire" }, "slots": 1, "stack": 5, "cost": 30 },
+    "flash_powder": { "name": "Flash Powder", "category": "bomb", "rarity": "uncommon", "use": { "thrown": true, "target": "row", "save": "reflex", "condition": "blinded" }, "slots": 1, "stack": 5, "cost": 30 },
+    "smoke_bomb": { "name": "Smoke Bomb", "category": "bomb", "rarity": "uncommon", "use": { "flee": true, "notBosses": true }, "slots": 1, "stack": 5, "cost": 40 },
+    "web_bomb": { "name": "Web Bomb", "category": "bomb", "rarity": "uncommon", "use": { "thrown": true, "target": "one", "save": "reflex", "condition": "webbed", "breakFreeOnSix": 5 }, "slots": 1, "stack": 5, "cost": 50 },
+    "sleep_bomb": { "name": "Sleep Bomb", "category": "bomb", "rarity": "uncommon", "use": { "thrown": true, "target": "row", "save": "mind", "condition": "asleep" }, "slots": 1, "stack": 5, "cost": 60 },
+
+    "torch": { "name": "Torch", "category": "gear", "rarity": "common", "use": { "light": true, "steps": 200 }, "fireSource": true, "slots": 1, "stack": 5, "cost": 1 },
+    "ration": { "name": "Ration", "category": "gear", "rarity": "common", "use": { "camp": true }, "slots": 1, "stack": 5, "cost": 2 },
+    "healing_herb": { "name": "Healing Herb", "category": "gear", "rarity": "common", "use": { "heal": "1d6" }, "slots": 1, "stack": 5, "cost": null },
+    "rope": { "name": "Rope", "category": "gear", "rarity": "common", "effects": [{ "explore": "climbOutSteps", "value": 2 }], "slots": 1, "cost": 3 },
+    "ten_foot_pole": { "name": "Ten-Foot Pole", "category": "gear", "rarity": "common", "effects": [{ "explore": "springTraps" }], "breaks": true, "slots": 2, "cost": 5 },
+    "crowbar": { "name": "Crowbar", "category": "gear", "rarity": "common", "effects": [{ "explore": "bash", "value": 2 }], "damage": "1d4", "damageType": "crush", "slots": 1, "cost": 10 },
+    "lockpicks": { "name": "Lockpicks", "category": "gear", "rarity": "common", "effects": [{ "explore": "picks" }], "breakInSix": 1, "slots": 1, "cost": 15 },
+    "camping_kit": { "name": "Camping Kit", "category": "gear", "rarity": "uncommon", "effects": [{ "explore": "campHealShare", "value": 0.75 }], "slots": 2, "cost": 25 },
+    "lantern": { "name": "Lantern", "category": "gear", "rarity": "uncommon", "effects": [{ "explore": "light", "steps": 500, "burns": "oil_flask", "snuffProof": true }], "slots": 1, "cost": 30 },
+    "lodestone_compass": { "name": "Lodestone Compass", "category": "gear", "rarity": "uncommon", "effects": [{ "explore": "showsFacing" }, { "explore": "spinnerProof" }], "slots": 1, "cost": 30 },
+    "dust_of_revealing": { "name": "Dust of Revealing", "category": "gear", "rarity": "uncommon", "use": { "reveal": ["trap", "secret", "hazard"], "within": 2 }, "slots": 1, "cost": 40 },
+    "masterwork_lockpicks": { "name": "Masterwork Lockpicks", "category": "gear", "rarity": "rare", "effects": [{ "explore": "picks" }, { "explore": "pick", "value": 2 }, { "explore": "disarm", "value": 2 }, { "explore": "picksNeverBreak" }], "slots": 1, "cost": 150 },
+    "skeleton_key": { "name": "Skeleton Key", "category": "gear", "rarity": "rare", "use": { "opensLock": "any", "except": ["sealed"], "usedUp": true }, "slots": 1, "cost": null },
+    "rune_key": { "name": "Rune Key", "category": "gear", "rarity": "common", "floorBound": true, "loot": false, "sellable": false, "use": { "opensLock": "sealed", "matching": true }, "slots": 1, "cost": null },
+    "floor_key": { "name": "Floor Key", "category": "gear", "rarity": "common", "floorBound": true, "loot": false, "sellable": false, "use": { "opensLock": "keyed", "matching": true }, "slots": 0, "cost": null },
+
+    "quartz": { "name": "Quartz", "category": "valuable", "rarity": "common", "value": 10, "slots": 1, "stack": 10, "cost": null },
+    "garnet": { "name": "Garnet", "category": "valuable", "rarity": "common", "value": 25, "slots": 1, "stack": 10, "cost": null },
+    "pearl": { "name": "Pearl", "category": "valuable", "rarity": "common", "value": 50, "slots": 1, "stack": 10, "cost": null },
+    "sapphire": { "name": "Sapphire", "category": "valuable", "rarity": "uncommon", "value": 100, "slots": 1, "stack": 10, "cost": null },
+    "emerald": { "name": "Emerald", "category": "valuable", "rarity": "uncommon", "value": 250, "slots": 1, "stack": 10, "cost": null },
+    "ruby": { "name": "Ruby", "category": "valuable", "rarity": "rare", "value": 500, "slots": 1, "stack": 10, "cost": null },
+    "diamond": { "name": "Diamond", "category": "valuable", "rarity": "rare", "value": 1000, "slots": 1, "stack": 10, "cost": null },
+    "silver_chalice": { "name": "Silver Chalice", "category": "valuable", "rarity": "common", "value": 30, "slots": 1, "stack": 10, "cost": null },
+    "jeweled_dagger": { "name": "Jeweled Dagger", "category": "valuable", "rarity": "uncommon", "value": 120, "decorative": true, "slots": 1, "stack": 10, "cost": null },
+    "gilded_idol": { "name": "Gilded Idol", "category": "valuable", "rarity": "uncommon", "value": 150, "slots": 1, "stack": 10, "cost": null },
+    "ancient_crown": { "name": "Ancient Crown", "category": "valuable", "rarity": "rare", "value": 400, "slots": 1, "stack": 10, "cost": null },
+
+    "rat_tail": { "name": "Rat Tail", "category": "part", "rarity": "common", "value": 1, "slots": 1, "stack": 10, "cost": null },
+    "spore_sac": { "name": "Spore Sac", "category": "part", "rarity": "common", "value": 5, "slots": 1, "stack": 10, "cost": null },
+    "worg_pelt": { "name": "Worg Pelt", "category": "part", "rarity": "common", "value": 10, "slots": 1, "stack": 10, "cost": null },
+    "spider_silk": { "name": "Spider Silk", "category": "part", "rarity": "common", "value": 15, "slots": 1, "stack": 10, "cost": null },
+    "magma_gland": { "name": "Magma Gland", "category": "part", "rarity": "common", "value": 30, "slots": 1, "stack": 10, "cost": null },
+    "ember_heart": { "name": "Ember Heart", "category": "part", "rarity": "common", "value": 40, "slots": 1, "stack": 10, "cost": null },
+    "rime_pelt": { "name": "Rime Pelt", "category": "part", "rarity": "common", "value": 40, "slots": 1, "stack": 10, "cost": null },
+    "ectoplasm": { "name": "Ectoplasm", "category": "part", "rarity": "common", "value": 50, "slots": 1, "stack": 10, "cost": null },
+    "dragon_scale": { "name": "Dragon Scale", "category": "part", "rarity": "common", "value": 100, "slots": 1, "stack": 10, "cost": null },
+    "trap_parts": { "name": "Trap Parts", "category": "part", "rarity": "common", "value": "floor * 5", "slots": 1, "stack": 10, "cost": null },
+    "crossbow_parts": { "name": "Crossbow Parts", "category": "part", "rarity": "common", "value": 50, "slots": 1, "stack": 10, "cost": null },
+
+    "ratcatchers_charm": { "name": "Ratcatcher's Charm", "category": "charm", "rarity": "unique", "magic": true, "boss": "rat_king", "effects": [{ "sheet": "immune", "tags": ["disease"] }, { "sheet": "attribute", "attribute": "luck", "value": 1, "max": 20 }], "slots": 1, "cost": null },
+    "wardens_mace": { "name": "Warden's Mace", "category": "weapon", "rarity": "unique", "magic": true, "boss": "bone_warden", "base": "mace", "bonus": 1, "effects": [{ "grants": "turn_undead" }], "cost": null },
+    "kingsplitter": { "name": "Kingsplitter", "category": "weapon", "rarity": "unique", "magic": true, "boss": "grukk", "base": "great_sword", "bonus": 1, "effects": [{ "grants": "cleave" }], "cost": null },
+    "silkweave_cloak": { "name": "Silkweave Cloak", "category": "armor", "rarity": "unique", "magic": true, "boss": "brood_mother", "base": "leather_armor", "def": 3, "noPenalties": true, "effects": [{ "grants": "evasion", "rank": 1 }], "cost": null },
+    "hydra_fang": { "name": "Hydra Fang", "category": "weapon", "rarity": "unique", "magic": true, "boss": "hydra", "base": "spear", "bonus": 2, "property": "venomous", "cost": null },
+    "pale_flame_staff": { "name": "Pale Flame Staff", "category": "weapon", "rarity": "unique", "magic": true, "boss": "veyra", "base": "staff", "bonus": 2, "effects": [{ "sheet": "maxFp", "value": 4 }, { "grants": "fireball" }], "cost": null },
+    "forgeheart_plate": { "name": "Forgeheart Plate", "category": "armor", "rarity": "unique", "magic": true, "boss": "forge_colossus", "base": "plate", "bonus": 2, "fizzle": 0, "effects": [{ "sheet": "dr", "value": 1 }], "cost": null },
+    "the_unbound_page": { "name": "The Unbound Page", "category": "charm", "rarity": "unique", "magic": true, "boss": "bound_grimoire", "effects": [{ "sheet": "maxFp", "value": 3 }, { "grants": "blink" }], "slots": 1, "cost": null },
+    "phylactery_shard": { "name": "Phylactery Shard", "category": "charm", "rarity": "unique", "magic": true, "boss": "malgorath", "effects": [{ "grants": "undying", "limit": { "uses": 1, "per": "trip" } }], "slots": 1, "cost": null },
+    "ashen_fang": { "name": "Ashen Fang", "category": "weapon", "rarity": "unique", "magic": true, "boss": "vyrmathrax", "base": "long_sword", "bonus": 3, "effects": [{ "sheet": "damage", "add": "1d6", "damageType": "fire" }], "cost": null },
+
+    "whisper": { "name": "Whisper", "category": "weapon", "rarity": "unique", "magic": true, "legendary": true, "base": "dagger", "bonus": 2, "effects": [{ "hook": "damageCalc", "handler": "whisper", "extraWeaponDice": 1, "while": "backstab" }, { "hook": "kill", "handler": "whisper", "condition": "hidden" }], "cost": null },
+    "dawnbreaker": { "name": "Dawnbreaker", "category": "weapon", "rarity": "unique", "magic": true, "legendary": true, "base": "mace", "bonus": 2, "effects": [{ "sheet": "damage", "add": "1d6", "damageType": "holy" }, { "grants": "turn_undead" }], "cost": null },
+    "stormstring": { "name": "Stormstring", "category": "weapon", "rarity": "unique", "magic": true, "legendary": true, "base": "longbow", "bonus": 2, "effects": [{ "sheet": "ignoresHalfCover" }, { "grants": "twin_shot" }], "cost": null },
+    "aegis_of_dawn": { "name": "Aegis of Dawn", "category": "shield", "rarity": "unique", "magic": true, "legendary": true, "base": "tower_shield", "bonus": 2, "noPenalties": true, "effects": [{ "sheet": "immune", "conditions": ["feared"] }, { "sheet": "saves", "value": 1 }], "cost": null },
+    "wanderers_coat": { "name": "Wanderer's Coat", "category": "armor", "rarity": "unique", "magic": true, "legendary": true, "base": "leather_armor", "bonus": 2, "effects": [{ "sheet": "inventorySlots", "value": 2 }, { "grants": "forager" }], "cost": null },
+    "eye_of_the_deep": { "name": "Eye of the Deep", "category": "charm", "rarity": "unique", "magic": true, "legendary": true, "effects": [{ "grants": "keen_senses", "rank": 2 }, { "explore": "search", "value": 2 }, { "explore": "trap", "value": 2 }], "slots": 1, "cost": null }
+  },
+
+  "magic": {
+    "_source": "04 section 4.",
+    "bonuses": [
+      { "bonus": 1, "rarity": "uncommon", "fromFloor": 1, "price": 150 },
+      { "bonus": 2, "rarity": "rare", "fromFloor": 4, "price": 600 },
+      { "bonus": 3, "rarity": "rare", "fromFloor": 8, "price": 2000 }
+    ],
+    "weaponProperties": {
+      "_source": "04 section 4, Weapon Properties. Roll d12; each adds 300 gp and goes in the name.",
+      "die": 12,
+      "price": 300,
+      "table": [
+        { "roll": 1, "id": "flaming" },
+        { "roll": 2, "id": "frost" },
+        { "roll": 3, "id": "holy" },
+        { "roll": 4, "id": "venomous" },
+        { "roll": 5, "id": "keen" },
+        { "roll": 6, "id": "vampiric" },
+        { "roll": 7, "id": "guarding" },
+        { "roll": 8, "id": "swift" },
+        { "roll": 9, "id": "mighty" },
+        { "roll": 10, "id": "channeling" },
+        { "roll": 11, "id": "seeking", "rerollFor": ["melee"] },
+        { "roll": 12, "id": "thundering" }
+      ],
+      "properties": {
+        "flaming": { "name": "Flaming", "effects": [{ "sheet": "damage", "add": "1d6", "damageType": "fire" }] },
+        "frost": { "name": "Frost", "effects": [{ "sheet": "damage", "add": "1d4", "damageType": "cold" }, { "hook": "hit", "handler": "onCritCondition", "onCrit": true, "condition": "slowed" }] },
+        "holy": { "name": "Holy", "effects": [{ "sheet": "damage", "add": "1d6", "damageType": "holy", "vs": ["undead", "fiend"] }] },
+        "venomous": { "name": "Venomous", "effects": [{ "hook": "hit", "handler": "onCritCondition", "onCrit": true, "condition": "poisoned" }] },
+        "keen": { "name": "Keen", "effects": [{ "sheet": "critFrom", "widen": 1 }] },
+        "vampiric": { "name": "Vampiric", "effects": [{ "hook": "hit", "handler": "vampiric", "heal": 2 }] },
+        "guarding": { "name": "Guarding", "effects": [{ "sheet": "def", "value": 1 }] },
+        "swift": { "name": "Swift", "effects": [{ "sheet": "initiative", "value": 2 }] },
+        "mighty": { "name": "Mighty", "effects": [{ "sheet": "damage", "value": 2 }] },
+        "channeling": { "name": "Channeling", "effects": [{ "sheet": "maxFp", "value": 2 }] },
+        "seeking": { "name": "Seeking", "effects": [{ "sheet": "ignoresHalfCover" }] },
+        "thundering": { "name": "Thundering", "effects": [{ "hook": "hit", "handler": "onCritCondition", "onCrit": true, "condition": "stunned" }] }
+      }
+    },
+    "armorProperties": {
+      "_source": "04 section 4, Armor and Shield Properties. Roll d10.",
+      "die": 10,
+      "price": 300,
+      "table": [
+        { "roll": 1, "id": "fireproof" },
+        { "roll": 2, "id": "frostproof" },
+        { "roll": 3, "id": "fortified" },
+        { "roll": 4, "id": "shadowed" },
+        { "roll": 5, "id": "warded" },
+        { "roll": 6, "id": "featherlight" },
+        { "roll": 7, "id": "spellwoven" },
+        { "roll": 8, "id": "thorned" },
+        { "roll": 9, "id": "stalwart" },
+        { "roll": 10, "id": "dauntless" }
+      ],
+      "properties": {
+        "fireproof": { "name": "Fireproof", "effects": [{ "sheet": "resist", "damageType": "fire" }] },
+        "frostproof": { "name": "Frostproof", "effects": [{ "sheet": "resist", "damageType": "cold" }] },
+        "fortified": { "name": "Fortified", "effects": [{ "sheet": "dr", "value": 1 }] },
+        "shadowed": { "name": "Shadowed", "effects": [{ "sheet": "noStealthPenalty" }] },
+        "warded": { "name": "Warded", "effects": [{ "sheet": "saves", "value": 1 }] },
+        "featherlight": { "name": "Featherlight", "effects": [{ "sheet": "noRequirement" }, { "sheet": "maxAgi", "value": 1 }] },
+        "spellwoven": { "name": "Spellwoven", "effects": [{ "sheet": "noFizzle" }] },
+        "thorned": { "name": "Thorned", "effects": [{ "hook": "damageTaken", "handler": "thorned", "damage": "1d4", "from": ["melee"] }] },
+        "stalwart": { "name": "Stalwart", "effects": [{ "sheet": "maxHp", "value": 5 }] },
+        "dauntless": { "name": "Dauntless", "effects": [{ "sheet": "immune", "conditions": ["feared"] }] }
+      }
+    }
+  },
+
+  "identification": {
+    "_source": "04 section 5. Looks and titles are shuffled once per save file and stored with it (section 17).",
+    "unidentified": ["magic gear", "potion", "scroll"],
+    "alwaysKnown": ["healing_potion", "antidote"],
+    "knownByType": true,
+    "potionLooks": [
+      "Murky", "Bubbling", "Silver", "Smoky", "Crimson", "Amber",
+      "Violet", "Glowing", "Milky", "Oily", "Fizzy", "Black",
+      "Cloudy", "Golden", "Inky", "Ashen", "Swirling", "Pale"
+    ],
+    "scrollWords": [
+      "VORN", "ESKEL", "THARN", "MOGRA", "SILTH", "UZAK", "KELVOS", "NIRRA",
+      "DRUUN", "PHAEL", "ORGUM", "VESTA", "KHIRR", "LOMAX", "ZEPHRA", "GULDAR"
+    ],
+    "scrollTitleWords": 2,
+    "gearShowsBaseType": true,
+    "methods": {
+      "sage": { "cost": 20, "per": "item", "always": true },
+      "lore": { "skill": "lore", "cost": 0, "when": "pickedUp" },
+      "scroll": { "item": "scroll_of_identify", "scope": "pack" },
+      "buying": { "identified": true },
+      "drinking": { "risky": true, "learnsType": true, "applies": true },
+      "reading": { "risky": true, "learnsType": true, "casts": true, "wastedOutOfCombat": true },
+      "equipping": { "risky": true, "bonusAfterCombats": 1, "propertyOnFirstTrigger": true, "curseRevealsAtOnce": true, "curseBinds": true },
+      "wearingCharm": { "risky": true, "afterSteps": 100, "orOnFirstTrigger": true }
+    }
+  },
+
+  "curses": {
+    "_source": "04 section 6.",
+    "appliesTo": ["weapon", "armor", "shield", "charm"],
+    "chance": [
+      { "floors": [1, 2], "chance": 0.05 },
+      { "floors": [3, 10], "chance": 0.1 }
+    ],
+    "bonus": [-1, -2],
+    "alsoPropertyShare": 0.5,
+    "cannotUnequip": true,
+    "removal": {
+      "scroll": "scroll_of_remove_curse",
+      "temple": { "goldPerFloor": 50, "destroysItem": true }
+    },
+    "die": 8,
+    "table": [
+      { "roll": 1, "id": "leaden", "name": "Leaden", "effects": [{ "sheet": "initiative", "value": -2 }] },
+      { "roll": 2, "id": "hungering", "name": "Hungering", "effects": [{ "explore": "campRations", "value": 2 }] },
+      { "roll": 3, "id": "beacon", "name": "Beacon", "effects": [{ "explore": "wanderingOn", "value": 2 }] },
+      { "roll": 4, "id": "clumsy", "name": "Clumsy", "effects": [{ "sheet": "def", "value": -1 }] },
+      { "roll": 5, "id": "gloom", "name": "Gloom", "effects": [{ "explore": "lightBurnRate", "value": 2 }] },
+      { "roll": 6, "id": "draining", "name": "Draining", "effects": [{ "sheet": "maxFp", "value": -3 }] },
+      { "roll": 7, "id": "bloodthirsty", "name": "Bloodthirsty", "effects": [{ "sheet": "damage", "value": 2 }, { "sheet": "cannot", "actions": ["defend", "flee"] }] },
+      { "roll": 8, "id": "unlucky", "name": "Unlucky", "effects": [{ "sheet": "attributeMod", "attribute": "luck", "value": -2 }] }
+    ]
+  },
+
+  "gems": {
+    "_source": "04 section 12, Gemstones. Roll d100 + (floor x 5).",
+    "roll": "d100",
+    "perFloor": 5,
+    "bands": [
+      { "upTo": 30, "item": "quartz" },
+      { "upTo": 55, "item": "garnet" },
+      { "upTo": 75, "item": "pearl" },
+      { "upTo": 88, "item": "sapphire" },
+      { "upTo": 96, "item": "emerald" },
+      { "upTo": 105, "item": "ruby" },
+      { "upTo": 999, "item": "diamond" }
+    ]
+  },
+
+  "artObjects": ["silver_chalice", "jeweled_dagger", "gilded_idol", "ancient_crown"],
+
+  "alchemy": {
+    "_source": "04 section 12, The Alchemist. Unlocked after the floor 2 boss (Phase 6 builds the shop; the recipes are here with the parts they take).",
+    "unlockedBy": { "boss": 2 },
+    "recipes": [
+      { "ingredients": [{ "item": "rat_tail", "count": 5 }], "fee": 5, "result": { "item": "antidote", "count": 1 } },
+      { "ingredients": [{ "item": "healing_herb", "count": 2 }], "fee": 5, "result": { "item": "healing_potion", "count": 1 } },
+      { "ingredients": [{ "item": "spore_sac", "count": 2 }], "fee": 10, "result": { "item": "sleep_bomb", "count": 1 } },
+      { "ingredients": [{ "item": "spider_silk", "count": 1 }], "fee": 20, "result": { "item": "web_bomb", "count": 1 } },
+      { "ingredients": [{ "item": "magma_gland", "count": 1 }], "fee": 20, "result": { "item": "fire_pot", "count": 2 } },
+      { "ingredients": [{ "item": "ember_heart", "count": 1 }], "fee": 30, "result": { "item": "potion_of_fire_resistance", "count": 1 } },
+      { "ingredients": [{ "item": "rime_pelt", "count": 1 }], "fee": 30, "result": { "item": "potion_of_cold_resistance", "count": 1 } },
+      { "ingredients": [{ "item": "ectoplasm", "count": 1 }], "fee": 100, "result": { "item": "restoration_draught", "count": 1 } },
+      { "ingredients": [{ "item": "dragon_scale", "count": 3 }], "fee": 500, "result": { "item": "dragonscale_mail", "count": 1 } }
+    ]
+  }
+}

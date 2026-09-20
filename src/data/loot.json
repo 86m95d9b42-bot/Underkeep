@@ -1,0 +1,93 @@
+{
+  "_source": "04 section 14's three d12 tables, with the category roll they hang off (02 section 17) and the Gear Details rules under them. What a row asks for is written here; rolling it out — the base type, the bonus, the property, the curse, the identification state — is loot generation, which reads this file.",
+
+  "categoryRoll": {
+    "_source": "02 section 17: one roll for the whole encounter, d100 + (LCK mod x 5), on top of each monster's own drops.",
+    "roll": "d100",
+    "perLuckMod": 5,
+    "bands": [
+      { "upTo": 50, "category": null },
+      { "upTo": 75, "category": "common" },
+      { "upTo": 92, "category": "uncommon" },
+      { "upTo": 99, "category": "rare" },
+      { "upTo": 999, "category": "rare", "rollAgain": true }
+    ]
+  },
+
+  "die": 12,
+
+  "tables": {
+    "common": [
+      { "upTo": 3, "item": "healing_potion" },
+      { "upTo": 4, "item": "antidote" },
+      { "upTo": 6, "item": "torch", "count": 2 },
+      { "upTo": 7, "item": "ration", "count": 2 },
+      { "upTo": 8, "item": "healing_herb" },
+      { "upTo": 9, "item": "oil_flask" },
+      { "upTo": 10, "item": "holy_water" },
+      { "upTo": 11, "pick": "base_gear" },
+      { "upTo": 12, "gem": { "capTo": "pearl", "onFloors": [1, 3] } }
+    ],
+    "uncommon": [
+      { "upTo": 2, "pick": "base_weapon", "bonus": 1 },
+      { "upTo": 3, "pick": "base_armor", "bonus": 1 },
+      { "upTo": 5, "pick": "uncommon_scroll" },
+      { "upTo": 6, "item": "focus_tonic" },
+      { "upTo": 7, "item": "greater_healing_potion" },
+      { "upTo": 8, "pick": "uncommon_potion" },
+      { "upTo": 9, "pick": "uncommon_bomb" },
+      { "upTo": 10, "pick": "uncommon_charm" },
+      { "upTo": 11, "pick": "uncommon_gear" },
+      { "upTo": 12, "gem": { "plus": 20 } }
+    ],
+    "rare": [
+      { "upTo": 3, "pick": "base_weapon", "rareGear": true },
+      { "upTo": 5, "pick": "base_armor", "rareGear": true },
+      { "upTo": 6, "pick": "rare_charm" },
+      { "upTo": 7, "pick": "rare_potion" },
+      { "upTo": 8, "pick": "rare_scroll" },
+      { "upTo": 10, "pick": "base_gear", "bonus": 1, "property": true },
+      { "upTo": 11, "oneOf": ["skeleton_key", "masterwork_lockpicks"] },
+      { "upTo": 12, "pick": "legendary", "fromFloor": 8, "else": { "pick": "base_weapon", "rareGear": true, "property": true } }
+    ]
+  },
+
+  "pools": {
+    "_source": "Which items a `pick` draws from. Each names a category and a rarity, and the pool is every item in items.json that matches and is not marked `loot: false` — so a new item joins its own table without an edit here.",
+    "base_weapon": { "category": ["weapon"], "rarity": ["common"] },
+    "base_armor": { "category": ["armor", "shield"], "rarity": ["common"] },
+    "base_gear": { "category": ["weapon", "armor", "shield"], "rarity": ["common"] },
+    "uncommon_scroll": { "category": ["scroll"], "rarity": ["uncommon"] },
+    "uncommon_potion": { "category": ["potion"], "rarity": ["uncommon"] },
+    "uncommon_bomb": { "category": ["bomb"], "rarity": ["uncommon"] },
+    "uncommon_charm": { "category": ["charm"], "rarity": ["uncommon"] },
+    "uncommon_gear": { "category": ["gear"], "rarity": ["uncommon"] },
+    "uncommon_robe": { "category": ["armor"], "rarity": ["uncommon"], "magic": true },
+    "rare_charm": { "category": ["charm"], "rarity": ["rare"] },
+    "rare_potion": { "category": ["potion"], "rarity": ["rare"] },
+    "rare_scroll": { "category": ["scroll"], "rarity": ["rare"] },
+    "legendary": { "legendary": true }
+  },
+
+  "gear": {
+    "_source": "04 section 14, Gear Details.",
+    "baseType": { "weightedToUsable": true, "rerollsOnUnmetRequirement": 1 },
+    "bonus": {
+      "uncommon": 1,
+      "rare": 2,
+      "rareOnFloors": [
+        { "fromFloor": 1, "upToFloor": 3, "bonus": 1, "property": true },
+        { "fromFloor": 4, "upToFloor": 7, "bonus": 2 },
+        { "fromFloor": 8, "bonus": 2, "upgrade": { "die": 6, "from": 5, "to": 3 } }
+      ]
+    },
+    "propertyChance": 0.5,
+    "unidentified": true,
+    "curseCheck": true
+  },
+
+  "gold": {
+    "_source": "02 section 17: a roll of 01-50 is gold only, and gold comes on top of every other row. What each monster carries is its own `gold` line in monsters.json.",
+    "alwaysOnTop": true
+  }
+}

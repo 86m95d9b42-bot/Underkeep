@@ -655,7 +655,7 @@ function checkSkills(json, strings, attributes) {
  * an armour needs a DEF — the moment `items.json` arrives this file goes, and
  * this check is what makes that a clean swap.
  */
-function checkStartingKit(json, origins, damageTypes) {
+function checkStartingKit(json, origins, damageTypes, items) {
   const wanted = { weapon: new Set(), armor: new Set() };
   for (const entry of Object.values(origins?.origins ?? {})) {
     for (const line of entry.kit ?? []) {
@@ -677,11 +677,21 @@ function checkStartingKit(json, origins, damageTypes) {
     if (damageTypes.length && !damageTypes.includes(type)) {
       problems.push(`starting-kit.json ${item} deals "${type}", which is not a damage type`);
     }
+    // The stand-in is 04's own numbers until the pack takes over, so it must
+    // not drift from items.json now that items.json exists.
+    const real = items?.items?.[item];
+    if (real && weapon.damage !== `${real.damage} ${real.damageType}`) {
+      problems.push(`starting-kit.json ${item} deals ${weapon.damage}, and items.json says ${real.damage} ${real.damageType}`);
+    }
   }
   for (const item of wanted.armor) {
     const armor = json.armor?.[item];
     if (!armor) problems.push(`starting-kit.json has no armour line for "${item}", which a kit equips`);
     else if (!(armor.def >= 0)) problems.push(`starting-kit.json ${item} has no DEF`);
+    const real = items?.items?.[item];
+    if (armor && real && armor.def !== real.def) {
+      problems.push(`starting-kit.json ${item} has DEF ${armor.def}, and items.json says ${real.def}`);
+    }
   }
 }
 
@@ -690,6 +700,252 @@ function checkStartingKit(json, origins, damageTypes) {
  * catches the most common failure: a trailing comma in hand-edited JSON.
  * @type {Record<string, (json: any) => void>}
  */
+/**
+ * items.json: `04` sections 1 to 13. Every base item in the game, plus the
+ * tables that turn one into a found item. The checks here are the ones a
+ * broken item would otherwise show as a crash mid-run: an effect written in a
+ * vocabulary nothing reads, a recipe that makes an item that does not exist,
+ * a property table with a hole in it.
+ */
+function checkItems(json, strings, combat, conditions, skills, attributes) {
+  const ids = Object.keys(json.items ?? {}).filter((id) => !id.startsWith('_'));
+  if (ids.length === 0) {
+    problems.push('items.json has no items');
+    return;
+  }
+
+  const rarities = json.rules?.rarities ?? [];
+  const categories = ['weapon', 'armor', 'shield', 'charm', 'potion', 'scroll', 'bomb', 'gear', 'valuable', 'part'];
+  const damageTypes = combat?.damage?.types ?? [];
+  const conditionIds = Object.keys(conditions?.conditions ?? {});
+  const skillIds = Object.keys(skills?.skills ?? {}).filter((id) => !id.startsWith('_'));
+  const weaponProperties = Object.keys(json.rules?.weaponProperties ?? {}).filter((id) => !id.startsWith('_'));
+  const saves = ['body', 'reflex', 'mind'];
+
+  /** An effect is one of the five shapes items and skills share. */
+  const checkEffect = (effect, where) => {
+    const kinds = ['sheet', 'hook', 'explore', 'action', 'shop', 'grants'].filter((kind) => effect[kind]);
+    if (kinds.length !== 1) {
+      problems.push(`${where} has an effect that is none of sheet, hook, explore, action, shop or grants`);
+      return;
+    }
+    if (effect.hook) {
+      if (!EVENTS.includes(effect.hook)) {
+        problems.push(`${where} hangs on "${effect.hook}", which is not an event 06 section 16 fires`);
+      }
+      if (!effect.handler) problems.push(`${where} hangs on an event with no handler`);
+    }
+    if (effect.grants && !skillIds.includes(effect.grants)) {
+      problems.push(`${where} grants "${effect.grants}", which is not a skill`);
+    }
+    if (effect.damageType && !damageTypes.includes(effect.damageType)) {
+      problems.push(`${where} names damage type "${effect.damageType}", which does not exist`);
+    }
+    if (effect.save && !saves.includes(effect.save)) {
+      problems.push(`${where} names save "${effect.save}", which does not exist`);
+    }
+    if (effect.attribute && !attributes?.order?.includes(effect.attribute)) {
+      problems.push(`${where} names attribute "${effect.attribute}", which does not exist`);
+    }
+    for (const id of effect.conditions ?? []) {
+      if (!conditionIds.includes(id)) problems.push(`${where} names condition "${id}", which does not exist`);
+    }
+  };
+
+  for (const id of ids) {
+    const entry = json.items[id];
+    const where = `items.json ${id}`;
+
+    if (!entry.name) problems.push(`${where} has no name`);
+    if (!categories.includes(entry.category)) problems.push(`${where} is a "${entry.category}", which is not a category`);
+    if (!rarities.includes(entry.rarity)) problems.push(`${where} is "${entry.rarity}", which is not a rarity`);
+    if (entry.cost !== null && !(entry.cost >= 0)) problems.push(`${where} costs ${entry.cost}`);
+    if (entry.base && !json.items[entry.base]) problems.push(`${where} is based on "${entry.base}", which has no entry`);
+
+    // Slots: everything carried takes at least one, and equipment sizes are
+    // the ones 04 section 1 lists. The Floor Key is the documented 0.
+    const resolved = { ...(entry.base ? json.items[entry.base] : {}), ...entry };
+    if (resolved.slots === undefined) problems.push(`${where} has no slot size`);
+    if (entry.stack !== undefined && ![json.rules?.stacks?.consumable, json.rules?.stacks?.valuable].includes(entry.stack)) {
+      problems.push(`${where} stacks ${entry.stack} to a slot, which is neither stack size in 04 section 1`);
+    }
+
+    if (resolved.category === 'weapon') {
+      if (!resolved.damage) problems.push(`${where} is a weapon with no damage`);
+      if (!damageTypes.includes(resolved.damageType)) {
+        problems.push(`${where} deals "${resolved.damageType}", which is not a damage type`);
+      }
+      for (const property of resolved.properties ?? []) {
+        if (!weaponProperties.includes(property)) problems.push(`${where} is "${property}", which 04 section 2 does not list`);
+      }
+    }
+    if (['armor', 'shield'].includes(resolved.category) && !(resolved.def >= 0)) {
+      problems.push(`${where} is armour with no DEF`);
+    }
+    for (const attribute of Object.keys(entry.requires ?? {})) {
+      if (!attributes?.order?.includes(attribute)) {
+        problems.push(`${where} requires "${attribute}", which is not an attribute`);
+      }
+    }
+    for (const effect of entry.effects ?? []) checkEffect(effect, where);
+    if (entry.use?.condition && !conditionIds.includes(entry.use.condition)) {
+      problems.push(`${where} applies "${entry.use.condition}", which is not a condition`);
+    }
+    for (const id2 of entry.use?.cure ?? []) {
+      if (!conditionIds.includes(id2)) problems.push(`${where} cures "${id2}", which is not a condition`);
+    }
+    if (entry.casts && !skillIds.includes(entry.casts)) {
+      problems.push(`${where} casts "${entry.casts}", which is not a skill`);
+    }
+    if (entry.category === 'scroll' && !['arcane', 'spirit'].includes(entry.school)) {
+      problems.push(`${where} is a scroll of no school (04 section 9)`);
+    }
+  }
+
+  // Section 13: ten boss rewards and six legendary finds, each once per game.
+  const uniques = ids.filter((id) => json.items[id].rarity === 'unique');
+  const bossRewards = uniques.filter((id) => json.items[id].boss);
+  const legendaries = uniques.filter((id) => json.items[id].legendary);
+  if (bossRewards.length !== 10) problems.push(`items.json has ${bossRewards.length} boss rewards, and 04 section 13 lists 10`);
+  if (legendaries.length !== 6) problems.push(`items.json has ${legendaries.length} legendary finds, and 04 section 13 lists 6`);
+
+  // Section 4: both property tables have to be whole, and every roll has to
+  // name a property with an entry.
+  for (const [name, block] of [
+    ['weaponProperties', json.magic?.weaponProperties],
+    ['armorProperties', json.magic?.armorProperties],
+  ]) {
+    const rolls = (block?.table ?? []).map((row) => row.roll);
+    for (let roll = 1; roll <= (block?.die ?? 0); roll += 1) {
+      if (!rolls.includes(roll)) problems.push(`items.json ${name} has no entry for a roll of ${roll}`);
+    }
+    for (const row of block?.table ?? []) {
+      const property = block.properties?.[row.id];
+      if (!property) problems.push(`items.json ${name} rolls "${row.id}", which has no entry`);
+      else for (const effect of property.effects ?? []) checkEffect(effect, `items.json ${name} ${row.id}`);
+    }
+  }
+
+  // Section 6: eight curses, a chance per floor band, and a way off the item.
+  const curseRolls = (json.curses?.table ?? []).map((row) => row.roll);
+  for (let roll = 1; roll <= (json.curses?.die ?? 0); roll += 1) {
+    if (!curseRolls.includes(roll)) problems.push(`items.json curses have no entry for a roll of ${roll}`);
+  }
+  for (const row of json.curses?.table ?? []) {
+    for (const effect of row.effects ?? []) checkEffect(effect, `items.json curse ${row.id}`);
+  }
+  if (!json.items?.[json.curses?.removal?.scroll]) problems.push('items.json curses name no scroll that removes them');
+
+  // Section 12: the gem bands rise, and each names a real item.
+  let last = 0;
+  for (const band of json.gems?.bands ?? []) {
+    if (band.upTo <= last) problems.push('items.json gem bands are out of order');
+    last = band.upTo;
+    if (!json.items[band.item]) problems.push(`items.json gem band names "${band.item}", which has no entry`);
+  }
+  for (const id of json.artObjects ?? []) {
+    if (!json.items[id]) problems.push(`items.json art object "${id}" has no entry`);
+  }
+
+  // Section 12: every recipe takes real parts and makes a real item.
+  for (const recipe of json.alchemy?.recipes ?? []) {
+    for (const line of recipe.ingredients ?? []) {
+      if (!json.items[line.item]) problems.push(`items.json recipe takes "${line.item}", which has no entry`);
+      if (!(line.count >= 1)) problems.push(`items.json recipe takes ${line.count} of "${line.item}"`);
+    }
+    if (!json.items[recipe.result?.item]) problems.push(`items.json recipe makes "${recipe.result?.item}", which has no entry`);
+    if (!(recipe.fee >= 0)) problems.push('items.json recipe has no fee');
+  }
+
+  // Section 5: every potion and scroll that is found unknown needs an
+  // appearance of its own, and no two share one.
+  const unknownPotions = ids.filter(
+    (id) => json.items[id].category === 'potion' && !json.items[id].alwaysKnown,
+  );
+  const looks = json.identification?.potionLooks ?? [];
+  if (looks.length < unknownPotions.length) {
+    problems.push(`items.json has ${looks.length} potion appearances for ${unknownPotions.length} unknown potions`);
+  }
+  if (new Set(looks).size !== looks.length) problems.push('items.json repeats a potion appearance');
+  const words = json.identification?.scrollWords ?? [];
+  const titles = words.length * (words.length - 1);
+  const scrolls = ids.filter((id) => json.items[id].category === 'scroll').length;
+  if (titles < scrolls) problems.push(`items.json cannot make ${scrolls} different scroll titles from ${words.length} words`);
+  for (const id of json.identification?.alwaysKnown ?? []) {
+    if (!json.items[id]) problems.push(`items.json knows "${id}" from the start, and it has no entry`);
+  }
+
+  // The rules block 04 section 1 gives.
+  if (!(json.rules?.inventory?.base >= 1)) problems.push('items.json has no inventory size');
+  if (!(json.rules?.stashSlots >= 1)) problems.push('items.json has no stash size');
+  if (!(json.rules?.quickSlots >= 1)) problems.push('items.json has no quick slots');
+  for (const slot of json.rules?.equipSlots ?? []) {
+    if (!['weapon', 'offHand', 'armor', 'charm'].includes(slot)) {
+      problems.push(`items.json has an equipment slot "${slot}" that 04 section 1 does not`);
+    }
+  }
+}
+
+/**
+ * loot.json: `04` section 14's three d12 tables and `02` section 17's category
+ * roll. Every row has to be reachable and has to name something real, or a
+ * kill would hand back nothing.
+ */
+function checkLoot(json, items) {
+  const die = json.die;
+  if (!(die >= 2)) problems.push('loot.json has no die');
+
+  for (const [category, table] of Object.entries(json.tables ?? {})) {
+    let last = 0;
+    for (const row of table) {
+      const where = `loot.json ${category} ${row.upTo}`;
+      if (!(row.upTo > last)) problems.push(`loot.json ${category} rows are out of order`);
+      last = row.upTo;
+      if (row.item && !items?.items?.[row.item]) problems.push(`${where} drops "${row.item}", which has no item entry`);
+      for (const id of row.oneOf ?? []) {
+        if (!items?.items?.[id]) problems.push(`${where} drops "${id}", which has no item entry`);
+      }
+      if (row.pick && !json.pools?.[row.pick]) problems.push(`${where} picks from "${row.pick}", which is not a pool`);
+      if (row.else?.pick && !json.pools?.[row.else.pick]) {
+        problems.push(`${where} falls back to "${row.else.pick}", which is not a pool`);
+      }
+      if (row.gem?.capTo && !items?.items?.[row.gem.capTo]) {
+        problems.push(`${where} caps the gem at "${row.gem.capTo}", which has no item entry`);
+      }
+      if (!row.item && !row.pick && !row.gem && !row.oneOf) problems.push(`${where} drops nothing`);
+    }
+    if (last !== die) problems.push(`loot.json ${category} ends at ${last}, and the die is a d${die}`);
+  }
+
+  // Every pool has to hold something, or a roll on it would find nothing.
+  for (const [name, filter] of Object.entries(json.pools ?? {})) {
+    if (name.startsWith('_')) continue;
+    const matches = Object.entries(items?.items ?? {}).filter(([id, entry]) => {
+      if (id.startsWith('_') || entry.loot === false || entry.harmful) return false;
+      if (filter.legendary) return Boolean(entry.legendary);
+      if (entry.legendary || entry.rarity === 'unique') return false;
+      if (filter.category && !filter.category.includes(entry.category)) return false;
+      if (filter.rarity && !filter.rarity.includes(entry.rarity)) return false;
+      if (filter.magic !== undefined && Boolean(entry.magic) !== filter.magic) return false;
+      return true;
+    });
+    if (matches.length === 0) problems.push(`loot.json pool "${name}" matches no item`);
+  }
+
+  let last = 0;
+  for (const band of json.categoryRoll?.bands ?? []) {
+    if (band.upTo <= last) problems.push('loot.json category bands are out of order');
+    last = band.upTo;
+    if (band.category && !['common', 'uncommon', 'rare'].includes(band.category)) {
+      problems.push(`loot.json category band "${band.category}" is not a loot table`);
+    }
+  }
+  for (const row of json.gear?.bonus?.rareOnFloors ?? []) {
+    if (!(row.bonus >= 1)) problems.push('loot.json rare gear has no bonus on some floors');
+  }
+  if (!(json.gear?.propertyChance > 0)) problems.push('loot.json rare gear never rolls a property');
+}
+
 const CHECKS = {
   'strings.json': checkStrings,
   // Checked against strings.json, so it is read first.
@@ -697,8 +953,16 @@ const CHECKS = {
   'ai.json': checkAi,
   'attributes.json': (json) => checkAttributes(json, loaded['strings.json']),
   'skills.json': (json) => checkSkills(json, loaded['strings.json'], loaded['attributes.json']),
-  // items.json and skills.json arrive in Phases 5 and 4; until then the kit
-  // and the free skills are checked for shape alone.
+  'items.json': (json) =>
+    checkItems(
+      json,
+      loaded['strings.json'],
+      loaded['combat.json'],
+      loaded['conditions.json'],
+      loaded['skills.json'],
+      loaded['attributes.json'],
+    ),
+  'loot.json': (json) => checkLoot(json, loaded['items.json']),
   'origins.json': (json) =>
     checkOrigins(
       json,
@@ -708,7 +972,12 @@ const CHECKS = {
       loaded['skills.json'],
     ),
   'starting-kit.json': (json) =>
-    checkStartingKit(json, loaded['origins.json'], loaded['combat.json']?.damage?.types ?? []),
+    checkStartingKit(
+      json,
+      loaded['origins.json'],
+      loaded['combat.json']?.damage?.types ?? [],
+      loaded['items.json'],
+    ),
   'monsters.json': (json) => checkMonsters(json, loaded['ai.json'], loaded['combat.json']),
   'encounters.json': (json) => checkEncounters(json, loaded['monsters.json']),
   'floors.json': checkFloors,
