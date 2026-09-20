@@ -19,6 +19,7 @@ import { createOrigin } from './ui/screens/create-origin.js';
 import { hero as heroScreen } from './ui/screens/hero.js';
 import { skillTree } from './ui/screens/skill-tree.js';
 import { town as townScreen } from './ui/screens/town.js';
+import { shop as shopScreen } from './ui/screens/shop.js';
 import { pack as packScreen } from './ui/screens/pack.js';
 import { itemDetail } from './ui/screens/item-detail.js';
 import { combat } from './ui/screens/combat.js';
@@ -27,6 +28,7 @@ import { loot } from './ui/screens/loot.js';
 import { levelUp } from './ui/screens/levelup.js';
 import { createRun, PLACEHOLDER_HERO } from './systems/run.js';
 import { createTown, descend as descendTown } from './systems/town.js';
+import { openShop } from './systems/shop.js';
 import { createFight, standInHero } from './systems/fight.js';
 import { chooseOrigin, createDraft, finish, setName } from './systems/creation.js';
 import { awardXp, xpNeeded } from './systems/levelling.js';
@@ -66,6 +68,9 @@ let run = null;
 let hero = null;
 /** The town the hero comes back to: the day, the trip, and what is open. */
 let town = null;
+/** The shop's shelves for this stay, and what has been bought out for good. */
+let shelves = null;
+const sold = [];
 
 /**
  * Starts a run. The Town is Phase 6, so a new hero goes straight to the first
@@ -113,6 +118,7 @@ const screens = {
   hero: heroScreen,
   skillTree,
   town: townScreen,
+  shop: shopScreen,
   pack: packScreen,
   itemDetail,
   combat,
@@ -173,6 +179,18 @@ router = createRouter({
     get town() {
       if (!town) startRun();
       return town;
+    },
+    /**
+     * The shop as it stands on this visit. It is built once per stay, so
+     * walking out and back in shows the same shelves: the rotating lines
+     * reroll when the hero comes back from the dungeon (`04` section 15).
+     */
+    get shop() {
+      if (!town) startRun();
+      if (!shelves || shelves.day !== town.day) {
+        shelves = { day: town.day, ...openShop({ town, masterSeed: hero?.seed ?? DEMO_SEED, sold }) };
+      }
+      return shelves;
     },
     /**
      * Taking the Dungeon Gate: the trip is counted before the hero is in the

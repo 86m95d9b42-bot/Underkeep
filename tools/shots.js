@@ -24,6 +24,7 @@ const SCREENS = [
   'createStats',
   'createOrigin',
   'town',
+  'shop',
   'explore',
   'pause',
   'map',

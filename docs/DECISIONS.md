@@ -4,6 +4,17 @@ Rulings here override the other documents. Add new entries at the top of each li
 
 ## Decisions
 
+- **2026-09-20 — The Shop, and the line under an item's name.** `src/data/shops.json` is `04` section 15's whole table, `src/systems/shop.js` is the shelves and the prices, and `src/ui/screens/shop.js` is the outline's three tabs. Seven rulings:
+  - **A tier is its own list plus every tier below it.** The Shop stocks what its tier and all the earlier ones name, so a hero who has beaten the floor 4 boss can still buy torches. "All base weapons" is a filter rather than seventeen ids, so a new common weapon joins the shelf by existing.
+  - **The rotating lines reroll on the day, not on the visit.** `04` section 15 rerolls them "every time the hero returns from the dungeon", and a day *is* a return (`05` section 12), so the stock is rolled from `restockStream(masterSeed, day)`. Walking out of the Shop and back in shows the same shelves; coming back from the dungeon does not.
+  - **A rotating line is one item; fixed stock is not.** Buying the +1 sword takes it off the shelf until the next restock; buying a torch does not, because a shop always has torches.
+  - **"Archon's Vestments (once)" is once in a game.** The shop carries a `sold` list, and a `once` line that has been bought is never rolled again — which is what "once" has to mean for an item that is otherwise on the tier 5 shelf every day.
+  - **Tier 5's Restoration Draught is fixed stock.** `04` section 15 prints it under "Rotating", beside a rolled +2 item and a once-only robe, but there is nothing to roll about it: it is one named item, so it sits in `items` and is simply always there at tier 5.
+  - **The Merchant's Seal reaches the till as an effect.** `04` section 1 says Luck lowers prices and "the Merchant's Seal charm also helps"; the charm declares `{ shop: "buy" }` and `{ shop: "sell" }`, and `buyDiscount` and `sellBonus` read the hero's gear summary. Nothing in the Shop knows the charm by name.
+  - **An item's one-line summary is worked out, not written.** The Shop's list, the Pack and the loot card all want *"Heal 2d6+2"* or *"1d8+1 slash"* under the name, so `src/ui/parts/item-line.js` derives it from the item's own numbers — its dice, its DEF, what its `use` block does, what its effects say — and falls back to `items.summary.<id>` for the fifty or so that no table can phrase (a crowbar, a lantern, a Scroll of Return).
+
+  **Not yet wired:** nothing corrodes a weapon, so the REPAIR tab is correct and always empty until the slimes of Phase 7 arrive. The Shop is also reachable only from the Town Hub, because the way back up from the dungeon is the Waystone task.
+
 - **2026-09-20 — The Town Hub, and what a day is.** `src/systems/town.js` keeps the two counters every town screen shows and knows which services are open; `src/ui/screens/town.js` is the outline's Town Hub table. Creation now ends in the Town rather than underground, which is `00`'s own screen flow. Six rulings:
   - **A day is a stay in town, and a trip is a descent.** `05` section 12 counts "days in the dungeon (town visits)", so the hero arrives on day 1 and every return turns the day over. The two move at different moments: the gate counts a trip on the way down, arriving counts a day on the way back.
   - **The Hub shows the trip it would begin.** The mockup reads *"Day 7 · Return trip 8"* — seven stays, seven trips taken, and the eighth waiting — so the subtitle is `trips + 1`, and the first one says "Trip 1" rather than calling itself a return.

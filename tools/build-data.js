@@ -922,7 +922,7 @@ function checkLoot(json, items) {
  * shops.json: `04` section 15's tier table. The stock arrives with the Shop
  * screen; what is here is what unlocks each tier, and the town reads it.
  */
-function checkShops(json, items) {
+function checkShops(json, items, loot) {
   const tiers = json.tiers ?? [];
   if (tiers.length !== 5) problems.push(`shops.json has ${tiers.length} tiers, and 04 section 15 lists 5`);
   let lastBoss = 0;
@@ -938,6 +938,33 @@ function checkShops(json, items) {
     else if (boss <= lastBoss) problems.push(`${where} opens no deeper than the tier before it`);
     lastBoss = boss ?? lastBoss;
   }
+  // Everything a tier lists has to be a real item the shop could price, and
+  // 04 section 15 forbids three things outright.
+  for (const row of tiers) {
+    const where = `shops.json tier ${row.tier}`;
+    for (const id of row.items ?? []) {
+      const entry = items?.items?.[id];
+      if (!entry) problems.push(`${where} stocks "${id}", which has no item entry`);
+      else if (entry.cost === null) problems.push(`${where} stocks "${id}", which has no price`);
+      else if (entry.rarity === 'unique') problems.push(`${where} stocks a unique item`);
+    }
+    for (const line of row.rotating ?? []) {
+      if (line.item && !items?.items?.[line.item]) {
+        problems.push(`${where} rotates "${line.item}", which has no item entry`);
+      }
+      if (line.pick && !loot?.pools?.[line.pick]) {
+        problems.push(`${where} rotates from "${line.pick}", which is not a loot pool`);
+      }
+      if (!line.item && !line.pick) problems.push(`${where} has a rotating line that rolls nothing`);
+      if ((line.bonus ?? 0) > (json.rules?.maxBonus ?? 2)) {
+        problems.push(`${where} rotates a +${line.bonus}, and 04 section 15 says shops never sell those`);
+      }
+      if (!(line.count >= 1) && !line.item) problems.push(`${where} rotates ${line.count} of something`);
+    }
+  }
+  if (!(json.rules?.sellRate > 0)) problems.push('shops.json has no sell rate (04 section 1)');
+  if (!(json.rules?.repair?.cost > 0)) problems.push('shops.json has no repair fee (04 section 1)');
+
   for (const [name, spec] of Object.entries(json.services ?? {})) {
     if (name.startsWith('_')) continue;
     for (const [key, value] of Object.entries(spec)) {
@@ -967,7 +994,7 @@ const CHECKS = {
       loaded['attributes.json'],
     ),
   'loot.json': (json) => checkLoot(json, loaded['items.json']),
-  'shops.json': (json) => checkShops(json, loaded['items.json']),
+  'shops.json': (json) => checkShops(json, loaded['items.json'], loaded['loot.json']),
   'origins.json': (json) =>
     checkOrigins(
       json,

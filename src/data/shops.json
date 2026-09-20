@@ -1,13 +1,133 @@
 {
-  "_source": "04 section 15, the tier table's first two columns: what unlocks each tier of the Shop's stock. The stock itself — what each tier adds, and which lines are rotating — arrives with the Shop screen. The Alchemist's own unlock is items.json's alchemy block, because the recipes are 04 section 12.",
+  "_source": "04 section 15's tier table, with 04 section 1's buying and selling under it. A tier's `items` are always in stock; its `rotating` lines are rerolled every time the hero comes back from the dungeon (04 section 15, 05 section 8), on the restock stream.",
 
   "tiers": [
-    { "tier": 1, "unlockedBy": null },
-    { "tier": 2, "unlockedBy": { "boss": 2 } },
-    { "tier": 3, "unlockedBy": { "boss": 4 } },
-    { "tier": 4, "unlockedBy": { "boss": 6 } },
-    { "tier": 5, "unlockedBy": { "boss": 8 } }
+    {
+      "tier": 1,
+      "unlockedBy": null,
+      "_adds": "All base weapons; Robe through Chain Mail; Shield. Healing Potion, Antidote, Torch, Ration, Rope, Oil Flask, Holy Water, Lockpicks, Ten-Foot Pole, Crowbar. Scroll of Light",
+      "pools": [{ "category": ["weapon"], "rarity": ["common"] }],
+      "items": [
+        "robe",
+        "padded_armor",
+        "leather_armor",
+        "studded_leather",
+        "chain_mail",
+        "shield",
+        "healing_potion",
+        "antidote",
+        "torch",
+        "ration",
+        "rope",
+        "oil_flask",
+        "holy_water",
+        "lockpicks",
+        "ten_foot_pole",
+        "crowbar",
+        "scroll_of_light"
+      ],
+      "rotating": []
+    },
+    {
+      "tier": 2,
+      "unlockedBy": { "boss": 2 },
+      "_adds": "Scale Mail, Plate, Tower Shield. Greater Healing Potion, Focus Tonic, Fire Pot, Poison Vial. Scrolls of Identify, Magic Missile, Mend, Knock, Mapping. Lantern, Camping Kit, Lodestone Compass. The Alchemist opens",
+      "pools": [],
+      "items": [
+        "scale_mail",
+        "plate",
+        "tower_shield",
+        "greater_healing_potion",
+        "focus_tonic",
+        "fire_pot",
+        "poison_vial",
+        "scroll_of_identify",
+        "scroll_of_magic_missile",
+        "scroll_of_mend",
+        "scroll_of_knock",
+        "scroll_of_mapping",
+        "lantern",
+        "camping_kit",
+        "lodestone_compass"
+      ],
+      "rotating": []
+    },
+    {
+      "tier": 3,
+      "unlockedBy": { "boss": 4 },
+      "_adds": "Rotating: 2 random +1 weapons, 1 random +1 armor or shield, 1 random Uncommon charm, 1 random Magic Robe (Uncommon). Utility potions, Smoke Bomb, Flash Powder. Scrolls of Frost Shard, Cleanse, Sleep, Arcane Shield, Dispel, Teleport, Turn Undead, Return. Dust of Revealing, Masterwork Lockpicks",
+      "pools": [],
+      "items": [
+        "potion_of_clarity",
+        "potion_of_fire_resistance",
+        "potion_of_cold_resistance",
+        "draught_of_heroism",
+        "giants_draught",
+        "quicksilver",
+        "smoke_bomb",
+        "flash_powder",
+        "scroll_of_frost_shard",
+        "scroll_of_cleanse",
+        "scroll_of_sleep",
+        "scroll_of_arcane_shield",
+        "scroll_of_dispel",
+        "scroll_of_teleport",
+        "scroll_of_turn_undead",
+        "scroll_of_return",
+        "dust_of_revealing",
+        "masterwork_lockpicks"
+      ],
+      "rotating": [
+        { "count": 2, "pick": "base_weapon", "bonus": 1 },
+        { "count": 1, "pick": "base_armor", "bonus": 1 },
+        { "count": 1, "pick": "uncommon_charm" },
+        { "count": 1, "pick": "uncommon_robe" }
+      ]
+    },
+    {
+      "tier": 4,
+      "unlockedBy": { "boss": 6 },
+      "_adds": "Rotating: 1 random +2 item, 1 random Rare charm (at 1.5x price). Greater Focus Tonic, Elixir of Life, Web Bomb, Sleep Bomb. Scrolls of Sanctuary, Blink, Remove Curse, Spirit Ward, Fireball",
+      "pools": [],
+      "items": [
+        "greater_focus_tonic",
+        "elixir_of_life",
+        "web_bomb",
+        "sleep_bomb",
+        "scroll_of_sanctuary",
+        "scroll_of_blink",
+        "scroll_of_remove_curse",
+        "scroll_of_spirit_ward",
+        "scroll_of_fireball"
+      ],
+      "rotating": [
+        { "count": 1, "pick": "base_gear", "bonus": 2 },
+        { "count": 1, "pick": "rare_charm", "priceMultiplier": 1.5 }
+      ]
+    },
+    {
+      "tier": 5,
+      "unlockedBy": { "boss": 8 },
+      "_adds": "Rotating: 1 random +2 item with a property, Archon's Vestments (once), Restoration Draught",
+      "pools": [],
+      "items": ["restoration_draught"],
+      "rotating": [
+        { "count": 1, "pick": "base_gear", "bonus": 2, "property": true },
+        { "count": 1, "item": "archons_vestments", "once": true }
+      ]
+    }
   ],
+
+  "rules": {
+    "_source": "04 section 1, Buying and Selling, and No Durability.",
+    "sellRate": 0.5,
+    "valuableSellRate": 1,
+    "unidentifiedSellsAsPlain": true,
+    "luckDiscountPerMod": 0.05,
+    "maxBonus": 2,
+    "neverSells": ["unique"],
+    "repair": { "cost": 10, "fixes": "corroded" }
+  },
 
   "services": {
     "_source": "01 section 3 and the Temple prices in DECISIONS. Each is what the Town Hub shows before the service's own screen is built.",
