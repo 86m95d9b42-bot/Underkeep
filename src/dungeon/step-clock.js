@@ -105,6 +105,17 @@ export function encounterRange(floorNumber, { dark = false, bonus = 0 } = {}) {
 }
 
 /**
+ * What a curse adds to the check. The Beacon curse says wandering monsters
+ * "appear on a 1-2 instead of a 1" (`04` section 6), so the data names the
+ * range it wants and this is the difference.
+ * @param {object} [hero]
+ */
+export function wanderingBonus(hero) {
+  const upTo = hero?.explore?.wanderingOn ?? 0;
+  return Math.max(0, upTo - data.encounterUpTo);
+}
+
+/**
  * One wandering monster check: d6 against the range.
  *
  * `05` section 11 wants random outcomes committed before they are shown, so

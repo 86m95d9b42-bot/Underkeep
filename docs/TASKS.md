@@ -71,7 +71,7 @@ Work top to bottom. Check a box when the task is done and tested. Each phase end
 - [x] Inventory rules: slots, stacking, equipment slots, quick slots
 - [x] Loot generation (`04` section 14) including properties, curses, and identification state
 - [x] Per-game potion looks and scroll titles; identification methods
-- [ ] Cursed item binding and effects
+- [x] Cursed item binding and effects
 - [ ] Item effects through hooks (weapon properties, armor properties, charms, potions, scrolls, bombs)
 - [ ] Hero: Pack screen and Item Detail sheet; drops on Victory & Loot
 - [ ] **Done when:** unknown potions, scrolls, and cursed gear behave exactly as `04` describes

@@ -96,6 +96,11 @@ export function legalityOf(combat, unit, action) {
     return { legal: false, why: 'noEscape' };
   }
 
+  // What the gear forbids: the Bloodthirsty curse takes Defend and Flee away
+  // (`04` section 6). The sheet carries the list, so nothing here knows what
+  // a curse is.
+  if ((unit.cannot ?? []).some((id) => tags.has(id))) return { legal: false, why: 'cursedGrip' };
+
   if (action.ready === false) return { legal: false, why: 'notReady' };
 
   const cost = action.fp ?? 0;

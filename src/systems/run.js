@@ -24,7 +24,7 @@ import {
   openDoor,
   COMMANDS,
 } from '../dungeon/movement.js';
-import { tick, inSafeZone, costOf, rollNoiseCheck } from '../dungeon/step-clock.js';
+import { tick, inSafeZone, costOf, rollNoiseCheck, wanderingBonus } from '../dungeon/step-clock.js';
 import { remember } from '../dungeon/automap.js';
 import { bestWay, waysToOpen, tryOpen, stepsFor, bashTn } from './locks.js';
 import { layoutStream, carriedStreams } from '../engine/rng.js';
@@ -149,7 +149,9 @@ export function createRun({ masterSeed, floor: floorNumber = 1, hero = { ...PLAC
 
   /** Winds the clock by what an action cost, from where the hero now stands. */
   function spend(steps, cause) {
-    return steps > 0 ? tick(floor, ex, rng.encounter, steps, { cause }) : [];
+    // A Beacon curse widens the wandering check (`04` section 6).
+    const bonus = wanderingBonus(hero);
+    return steps > 0 ? tick(floor, ex, rng.encounter, steps, { cause, bonus }) : [];
   }
 
   // The hero is standing on the up stairs and its waystone, so the log opens

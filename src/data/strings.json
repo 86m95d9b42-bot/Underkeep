@@ -223,6 +223,7 @@
     "illegal": {
       "notEnoughFp": "Not enough Focus.",
       "notReady": "Not ready yet.",
+      "cursedGrip": "The curse will not let you.",
       "noTarget": "Nothing you can reach.",
       "badTarget": "That one is out of reach.",
       "antiMagic": "The air here swallows magic.",

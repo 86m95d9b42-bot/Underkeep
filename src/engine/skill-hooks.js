@@ -24,7 +24,7 @@ import {
   skill,
   skillIds,
 } from '../data/skills.js';
-import { modFor } from '../data/attributes.js';
+import { DERIVED, modFor } from '../data/attributes.js';
 
 /**
  * Handlers whose systems have not been built yet. Each says what it is waiting
@@ -81,7 +81,7 @@ export function applySkillSheet(hero) {
   // The gear goes on after the skills, because Armor Training is what cancels
   // the heavy penalties (`04` section 3). `hero.gear` is the pack's summary,
   // so nothing here has to know what an item is.
-  applyGear(sheet, hero.gear);
+  applyGear(sheet, hero.gear, hero);
 
   hero.maxHp = sheet.maxHp;
   hero.maxFp = sheet.maxFp;
@@ -101,6 +101,11 @@ export function applySkillSheet(hero) {
   // armour that caused it.
   hero.spellFizzle = sheet.spellFizzle ?? 0;
   hero.stealth = sheet.stealth ?? 0;
+  hero.init = sheet.initiative ?? hero.init;
+  hero.mods = { ...sheet.mods };
+  hero.damageBonus = sheet.damageBonus ?? 0;
+  hero.cannot = sheet.cannot ?? [];
+  hero.explore = sheet.explore ?? {};
 
   // Anything the engine does not read itself — the pack's and the dungeon's
   // own flags — is copied across under its own name for that system to find.
@@ -143,8 +148,10 @@ function snapshot(hero) {
     maxFp: hero.maxFp,
     def: hero.def,
     critFrom: hero.critFrom,
+    initiative: hero.init ?? 0,
     saves: { ...hero.saves },
     attacks: { ...hero.attacks },
+    mods: { ...(hero.mods ?? {}) },
     attacksPerAction: 1,
   };
 }
@@ -161,7 +168,7 @@ function snapshot(hero) {
  * @param {object} sheet
  * @param {object} [gear] the pack's summary, or nothing while there is no pack
  */
-function applyGear(sheet, gear) {
+function applyGear(sheet, gear, hero) {
   if (!gear) return;
   const heavy = sheet.noHeavyArmorPenalty ? 0 : (gear.heavyToHit ?? 0);
   const worn = heavy + (gear.toHit ?? 0);
@@ -169,6 +176,28 @@ function applyGear(sheet, gear) {
   sheet.attacks.ranged += worn + (gear.weaponToHit?.ranged ?? 0);
   if (gear.fizzle) sheet.spellFizzle = sheet.noHeavyArmorPenalty ? 0 : gear.fizzle;
   if (gear.stealth) sheet.stealth = (sheet.stealth ?? 0) + gear.stealth;
+
+  // What the gear itself does — a charm's bonus, a property, a curse — in the
+  // same vocabulary a skill uses, so none of it gets a code path of its own
+  // (`04` sections 4, 6 and 7). The hook effects are registered on a fight
+  // rather than folded here.
+  for (const effect of gear.effects ?? []) {
+    if (effect.sheet) applySheetEffect(sheet, effect, 1, hero);
+    else if (effect.explore) {
+      sheet.explore = { ...(sheet.explore ?? {}) };
+      sheet.explore[effect.explore] = effect.value ?? true;
+    }
+  }
+
+  // The critical range follows the Luck modifier (`01` section 4), and a curse
+  // can move that modifier: it is recomputed from where Luck ended up, with
+  // whatever Weapon Mastery widened still on top.
+  const luck = sheet.mods?.[DERIVED.critRange.mod];
+  if (luck !== undefined) {
+    const rule = DERIVED.critRange;
+    const base = luck >= rule.wideFromMod ? rule.wideNatural : rule.natural;
+    sheet.critFrom = base - (sheet.critWiden ?? 0);
+  }
 }
 
 /** One `sheet` effect, folded in. */
@@ -194,6 +223,26 @@ function applySheetEffect(sheet, effect, rank, hero) {
       break;
     case 'critFrom':
       sheet.critFrom -= effect.widen ?? 0;
+      // Kept so the gear step can rebuild the range from the Luck a curse
+      // may have moved, without losing what a skill widened.
+      sheet.critWiden = (sheet.critWiden ?? 0) + (effect.widen ?? 0);
+      break;
+    case 'initiative':
+      sheet.initiative = (sheet.initiative ?? 0) + amount;
+      break;
+    case 'damage':
+      // A flat bonus to every hit. Anything narrower — a die of fire, a type
+      // or a kind of attack — is a hook, because it needs the hit to know.
+      if (!effect.add && !effect.damageType && !effect.attack && !effect.vs) {
+        sheet.damageBonus = (sheet.damageBonus ?? 0) + amount;
+      }
+      break;
+    case 'attributeMod':
+      sheet.mods = { ...(sheet.mods ?? {}) };
+      sheet.mods[effect.attribute] = (sheet.mods[effect.attribute] ?? 0) + amount;
+      break;
+    case 'cannot':
+      sheet.cannot = [...new Set([...(sheet.cannot ?? []), ...(effect.actions ?? [])])];
       break;
     case 'critDice':
       sheet.critDice = effect.value;

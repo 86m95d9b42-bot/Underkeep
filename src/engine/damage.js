@@ -171,6 +171,19 @@ export function weaponMod(attacker, attack = {}) {
   return attribute ? modFor(attacker.attributes[attribute]) : 0;
 }
 
+/**
+ * A flat bonus the gear puts on every hit — the Mighty property's +2, the
+ * Bloodthirsty curse's +2 (`04` sections 4 and 6). It sits on the sheet, like
+ * DR, so the pipeline reads it rather than asking what is worn. Spells are not
+ * weapon damage and do not take it.
+ * @param {object} attacker
+ * @param {object} attack
+ */
+export function gearDamage(attacker, attack = {}) {
+  if (!attacker?.damageBonus) return 0;
+  return (attack.kind ?? 'melee') === 'spell' ? 0 : attacker.damageBonus;
+}
+
 export function calcDamage(combat, { attacker, target, attack = {}, result = {} }, options = {}) {
   const rng = combat.rng;
   const overTime = Boolean(options.overTime || attack.overTime);
@@ -190,13 +203,13 @@ export function calcDamage(combat, { attacker, target, attack = {}, result = {} 
     weapon: attack.weapon ?? (attack.kind ?? 'melee') !== 'spell',
     parts: gatherParts(attack),
     // Step 4's flats, gathered before a hook can change them.
-    flat: (attack.flat ?? 0) + weaponMod(attacker, attack),
+    flat: (attack.flat ?? 0) + weaponMod(attacker, attack) + gearDamage(attacker, attack),
     crit: Boolean(result.crit),
     critDice: attack.mastery ? DAMAGE.critDiceWithMastery : DAMAGE.critDice,
     dr: 0,
   }) ?? {
     parts: gatherParts(attack),
-    flat: (attack.flat ?? 0) + weaponMod(attacker, attack),
+    flat: (attack.flat ?? 0) + weaponMod(attacker, attack) + gearDamage(attacker, attack),
     crit: Boolean(result.crit),
   };
 

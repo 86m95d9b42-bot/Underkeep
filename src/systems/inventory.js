@@ -28,7 +28,7 @@
  * Nothing here rolls and nothing here touches the DOM. Every refusal comes
  * back as a `why` key for `strings.json`, the way `locks.js` answers.
  */
-import { ITEM_RULES, item, itemOf, slotsFor, stackOf } from '../data/items.js';
+import { CURSES, ITEM_RULES, MAGIC, item, itemOf, slotsFor, stackOf } from '../data/items.js';
 
 /** The four equipment slots, in the document's order. */
 export const EQUIP_SLOTS = ITEM_RULES.equipSlots;
@@ -294,6 +294,9 @@ export function equip(pack, instanceId) {
     pack.equipped.offHand = null;
   }
   pack.equipped[slot] = instanceId;
+  // A cursed item binds itself the moment it goes on (`04` section 6), and
+  // `unequip` is what refuses to take a bound item off.
+  if (entry.curse) entry.bound = true;
   // Worn gear is not a pinned consumable.
   for (const [index, pinned] of pack.quick.entries()) if (pinned === instanceId) pack.quick[index] = null;
   return { ok: true, slot, replaced };
@@ -311,6 +314,7 @@ export function equipNew(pack, baseId, options = {}) {
   pack.items.push(entry);
   if (pack.equipped[slot]) unequip(pack, slot);
   pack.equipped[slot] = entry.instanceId;
+  if (entry.curse) entry.bound = true;
   if (slot === 'weapon' && isTwoHanded(baseId) && pack.equipped.offHand) unequip(pack, 'offHand');
   return entry;
 }
@@ -435,6 +439,8 @@ export function gearSummary(pack, hero = null) {
     }
   }
 
+  summary.effects = wornEffects(worn);
+
   const weapon = worn.weapon;
   if (weapon) {
     const kind = weapon.group === 'bow' ? 'ranged' : 'melee';
@@ -446,6 +452,38 @@ export function gearSummary(pack, hero = null) {
     }
   }
   return summary;
+}
+
+/**
+ * Every effect the worn gear brings: the item's own, the property it rolled
+ * and the curse it carries (`04` sections 4 and 6). They are gathered here
+ * because the pack is what knows what is on; what each one *does* is the
+ * sheet's and the hooks' business.
+ *
+ * An unidentified item's effects still work — `04` section 5 reveals a charm
+ * after a hundred steps *or when it first triggers*, which it can only do if
+ * it has been working all along.
+ */
+function wornEffects(worn) {
+  const out = [];
+  for (const [slot, gear] of Object.entries(worn)) {
+    if (!gear) continue;
+    const from = (effects, source) =>
+      out.push(...effects.map((effect) => ({ ...effect, slot, source, item: gear.instanceId })));
+
+    from(gear.effects ?? [], 'item');
+    if (gear.property) {
+      const table = ['armor', 'shield'].includes(gear.category)
+        ? MAGIC.armorProperties
+        : MAGIC.weaponProperties;
+      from(table.properties[gear.property]?.effects ?? [], 'property');
+    }
+    if (gear.curse) {
+      const curse = CURSES.table.find((row) => row.id === gear.curse);
+      from(curse?.effects ?? [], 'curse');
+    }
+  }
+  return out;
 }
 
 /** The attack the hero makes with what they are holding, or bare hands. */
