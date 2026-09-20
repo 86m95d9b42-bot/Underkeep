@@ -229,7 +229,9 @@ describe('Create: Origin', () => {
     const { built } = mount(createOrigin, { params: { draft: draftFor() } });
     expect(built.kit.textContent).toContain(t('create.chooseOne'));
     buttons(built).get(t('origins.cutpurse.name')).click();
-    expect(built.kit.textContent).toContain('lockpicks');
+    // The items are named from `04` now, not spelled out from their ids.
+    expect(built.kit.textContent).toContain('Lockpicks');
+    expect(built.kit.textContent).toContain('Dagger x3');
     expect(built.kit.textContent).toContain('25 gp');
   });
 

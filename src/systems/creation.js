@@ -21,6 +21,7 @@ import { creationStream } from '../engine/rng.js';
 import { derivedFor } from './derived.js';
 import { grantFree } from './skill-tree.js';
 import { rebuildSheet } from './levelling.js';
+import { createIdentification, identify } from './identification.js';
 import { LEVELING } from '../data/attributes.js';
 
 /** The two modes, and the one the New Game screen starts on. */
@@ -270,7 +271,13 @@ export function finish(draft) {
   // The kit goes on, and the sheet is rebuilt over it: what is worn decides
   // DEF, the Max AGI it lets through and the to-hit it costs (`04` section 3),
   // and `rebuildSheet` is the one place that composes those.
+  // What one game calls a Murky Potion another calls a Fizzy one: the looks
+  // and titles are shuffled once, here, and kept with the save
+  // (`04` sections 5 and 17).
+  hero.identification = createIdentification(draft.seed);
   equipKit(hero);
+  // The kit is the hero's own: they know what all of it is, types included.
+  for (const entry of hero.pack.items) identify(hero.identification, entry);
   rebuildSheet(hero);
   // The origin's skill is the hero's from the first step (`01` section 3).
   return grantFree(hero, grants.freeSkill);

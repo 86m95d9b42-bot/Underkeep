@@ -754,6 +754,11 @@ function checkItems(json, strings, combat, conditions, skills, attributes) {
     if (entry.category === 'scroll' && !['arcane', 'spirit'].includes(entry.school)) {
       problems.push(`${where} is a scroll of no school (04 section 9)`);
     }
+    // 04 section 5: an unknown charm shows as "Plain Ring", so every charm
+    // needs the plain word it hides behind.
+    if (entry.category === 'charm' && !entry.plain) {
+      problems.push(`${where} is a charm with no plain name to be found under (04 section 5)`);
+    }
   }
 
   // Section 13: ten boss rewards and six legendary finds, each once per game.

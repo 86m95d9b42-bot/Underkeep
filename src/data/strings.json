@@ -765,6 +765,31 @@
     "noPaths": "Nothing spent yet",
     "xpLabel": "XP"
   },
+  "items": {
+    "unknown": "Unknown {name}",
+    "plain": "Plain {name}",
+    "potion": "{look} Potion",
+    "scroll": "Scroll labeled {title}",
+    "bonus": "{name} {bonus}",
+    "property": "{property} {name}",
+    "cursed": "Cursed {name}",
+    "count": "{name} x{n}",
+    "badge": {
+      "unknown": "?",
+      "cursed": "!"
+    },
+    "known": {
+      "sage": "The sage names it.",
+      "lore": "You know it at a glance.",
+      "scroll": "The scroll names everything you carry.",
+      "bought": "Bought and known.",
+      "drunk": "Now you know what it was.",
+      "read": "Now you know what it was.",
+      "worn": "You know what it does now.",
+      "triggered": "It shows what it can do.",
+      "curse": "It will not come off."
+    }
+  },
   "loot": {
     "title": "VICTORY",
     "xp": "XP +{n}",

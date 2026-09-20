@@ -9,6 +9,7 @@
  * until then the hero goes straight down the stairs.
  */
 import { el } from '../parts/el.js';
+import { item } from '../../data/items.js';
 import { button } from '../parts/button.js';
 import { topBar, chip, textInput } from '../parts/parts.js';
 import { t } from '../../data/strings.js';
@@ -92,7 +93,11 @@ export const createOrigin = {
           // well enough until then.
           chip(t('create.freeSkill', { skill: chosen.freeSkill.id.replace(/_/g, ' ') })),
           ...chosen.kit.map((line) =>
-            chip(`${line.item.replace(/_/g, ' ')}${line.count > 1 ? ` x${line.count}` : ''}`),
+            chip(
+              line.count > 1
+                ? t('items.count', { name: item(line.item).name, n: line.count })
+                : item(line.item).name,
+            ),
           ),
           chip(t('create.kitGold', { n: chosen.gold }), { tone: 'accent' }),
         ]),

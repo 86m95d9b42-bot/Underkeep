@@ -19,6 +19,7 @@
 import {
   CROSSROADS,
   COST_PER_RANK,
+  exploreEffects,
   gateFor,
   isCrossroads,
   skill,
@@ -152,6 +153,20 @@ export function canLearn(hero, id) {
  * re-derives their sheet.
  * @returns {{ learned: boolean, why?: string, rank?: number }}
  */
+/**
+ * Whether a hero's skills give them one of the dungeon systems' `explore`
+ * flags — Lore's `identify`, Trapfinding's `trap`, Lockpicking's `pick`
+ * (`01` section 6). The items that also grant these are the pack's, and the
+ * systems that read both are `03`'s.
+ * @param {object} hero
+ * @param {string} key
+ */
+export function hasExplore(hero, key) {
+  return (hero?.skills ?? []).some(({ id, rank = 1 }) =>
+    exploreEffects(id, rank).some((effect) => effect.explore === key),
+  );
+}
+
 export function learn(hero, id) {
   const why = whyNot(hero, id);
   if (why) return { learned: false, why };

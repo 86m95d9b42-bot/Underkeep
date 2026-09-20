@@ -39,7 +39,12 @@ export const CARRIED_STREAMS = /** @type {const} */ (['encounter', 'combat', 'lo
  * as often as they like (`01` section 3). The attempt number is that number,
  * so the tenth reroll of a seed is the tenth reroll of that seed for ever.
  */
-export const DERIVED_STREAMS = /** @type {const} */ (['layout', 'restock', 'creation']);
+export const DERIVED_STREAMS = /** @type {const} */ ([
+  'layout',
+  'restock',
+  'creation',
+  'appearance',
+]);
 
 /** 2^32, the divisor that turns a 32-bit word into a float in [0, 1). */
 const TWO32 = 4294967296;
@@ -290,6 +295,16 @@ export function layoutStream(masterSeed, floor, attempt = 0) {
  */
 export function restockStream(masterSeed, townVisits) {
   return createStream(seedState(masterSeed, 'restock', townVisits), `restock:${townVisits}`);
+}
+
+/**
+ * The stream a game's potion appearances and scroll titles are shuffled from
+ * (`04` section 5). Derived, never saved: the save stores the shuffle
+ * (`04` section 17), and this can always rebuild it from the seed alone.
+ * @param {number} masterSeed
+ */
+export function appearanceStream(masterSeed) {
+  return createStream(seedState(masterSeed, 'appearance'), 'appearance');
 }
 
 /**
