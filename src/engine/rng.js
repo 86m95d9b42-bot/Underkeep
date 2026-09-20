@@ -290,11 +290,20 @@ export function layoutStream(masterSeed, floor, attempt = 0) {
 
 /**
  * The restock stream for one return to town. Derived, never saved.
+ *
+ * A floor draws its own: `05` section 8 restocks *every* previously visited
+ * floor on the same return, and each is entered at its own time, so keying
+ * the stream by the floor as well as the visit keeps one floor's rolls out
+ * of another's.
  * @param {number} masterSeed
  * @param {number} townVisits
+ * @param {number} [floor] 0 for the shop's own stock, which is the town's
  */
-export function restockStream(masterSeed, townVisits) {
-  return createStream(seedState(masterSeed, 'restock', townVisits), `restock:${townVisits}`);
+export function restockStream(masterSeed, townVisits, floor = 0) {
+  return createStream(
+    seedState(masterSeed, 'restock', townVisits, floor),
+    `restock:${townVisits}:${floor}`,
+  );
 }
 
 /**

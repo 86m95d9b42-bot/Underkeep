@@ -11,7 +11,7 @@
  * The save layer is Phase 8; when it arrives it writes at the end of `press`,
  * before the screen is told anything.
  */
-import { buildFloor } from '../dungeon/floor-builder.js';
+import { buildFloor, isWalkable } from '../dungeon/floor-builder.js';
 import {
   createExploration,
   resolveMove,
@@ -30,6 +30,7 @@ import { bestWay, waysToOpen, tryOpen, stepsFor, bashTn } from './locks.js';
 import { layoutStream, carriedStreams } from '../engine/rng.js';
 import { t } from '../data/strings.js';
 import { attune, whyNotLeaveByStone } from './travel.js';
+import { applyMemory, memoryFor, restockFloor } from './floor-memory.js';
 
 /**
  * A stand-in hero so the bars have something to show. Real attributes, derived
@@ -138,7 +139,20 @@ export function createRun({
 }) {
   const rng = streams ?? carriedStreams(masterSeed);
   let floor = buildFloor(floorNumber, masterSeed, layoutStream);
-  let ex = createExploration(floor);
+
+  // What the hero left here last time, and what has come back since
+  // (`05` section 8). A floor with no town behind it is a fresh one, which is
+  // what the tools and the tests build.
+  const memory = town ? memoryFor(town, floorNumber) : null;
+  if (memory) {
+    restockFloor({ floor, memory, town, masterSeed, isWalkable });
+    applyMemory(floor, memory);
+    memory.visits += 1;
+    // The hero is here today, so today is not a return they missed.
+    memory.restockedOnDay = town.day;
+  }
+
+  let ex = createExploration(floor, memory);
   // A trip that begins at a Return Mark begins where the scroll was read
   // (`05` section 9), not in the arrival room.
   if (startAt?.at) {

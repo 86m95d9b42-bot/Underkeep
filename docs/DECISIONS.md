@@ -4,6 +4,16 @@ Rulings here override the other documents. Add new entries at the top of each li
 
 ## Decisions
 
+- **2026-09-20 — Restocking, and what a floor remembers.** `05` section 8 only means something once a floor can remember being visited, so this task is two: `src/systems/floor-memory.js` keeps one record per floor on the town, and restocks it. Six rulings:
+  - **The memory is the floor's, and the town holds it.** A floor is rebuilt from the seed every trip (`05` section 11), so what the hero *did* — the map they made, the doors they opened, the lairs they cleared — lives in `town.floors[n]` and is stamped back onto the floor when it is next built.
+  - **Exploration writes straight into it.** `createExploration(floor, memory)` hands the run the memory's own sets rather than fresh ones, so walking, opening and finding are recorded by happening. There is no "save the floor" step to forget.
+  - **A floor restocks when it is entered, not when the hero reaches town.** Only the floor the hero is standing on can be seen, and each floor's rolls are keyed by seed, day and floor, so rolling them at the door gives the same dungeon as rolling them all at once — and costs nothing for the nine floors nobody visits.
+  - **A floor that was missed catches up.** Section 8 restocks every visited floor on every return, so a floor left alone for three returns rolls three times when it is next entered. The chest cap keeps that bounded, and a test pins a caught-up floor to one that was visited every day.
+  - **The day of a visit is not a return the floor owes.** Entering a floor stamps the day, so a hero who walks in on day 5 does not find it restocked for day 5 as well.
+  - **The restocked chest is a plain one.** Section 8 says "1 new chest appears in a random dead end" and nothing about its lock, so it arrives unlocked and untrapped, marked `restocked: true`. Phase 7's chest rules can make it more than that if they should.
+
+  **Not yet wired:** nothing clears a lair, opens a chest or springs a trap, because those systems are Phase 7. The memory has the sets they will write to, and restocking already refills what is put in them — which is what the tests do.
+
 - **2026-09-20 — Waystones, and the Dungeon Gate.** `05` section 9's other half: attuning a stone by standing on it, travelling to any attuned stone from town, and taking one back up. `src/systems/travel.js` gained the waystone half beside the Return Mark, and `src/ui/screens/gate.js` is the outline's Dungeon Gate. Six rulings:
   - **A stone is attuned by standing on it, not by arriving near it.** The Waystone sits *in* the arrival room, a step from the stairs the hero lands on, so attuning hangs off the `waystone` event the movement rules already fire when the hero lands on that tile. Arriving beside it and facing it is not attuning it, and the context key says so: "Stand on the waystone."
   - **The Gate knows one floor past the deepest thing the hero has done.** A floor is reachable when its own stone is attuned (and floor 1 always is, because that is where a trip starts). Everything up to one past the deepest stone *or* the deepest boss shows what it is waiting for; past that it is "Unknown", which is the mockup's own word.

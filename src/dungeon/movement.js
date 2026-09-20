@@ -104,10 +104,21 @@ export function tileAhead(pos, facing) {
  * The step clock's counters live here too, so a visit is one object to save.
  *
  * @param {import('./floor-builder.js').Floor} floor
+ * @param {object} [memory] what this floor remembers from an earlier trip
  * @returns {Exploration}
  */
-export function createExploration(floor) {
+export function createExploration(floor, memory = null) {
   const [x, y] = floor.start.pos;
+  // A floor the hero has been to before hands over the sets it kept, so
+  // walking writes straight into what the floor remembers (`05` section 8:
+  // the map, opened shortcuts and unlocked doors stay as they were left).
+  const kept = memory ?? {};
+  const set = (name, start = []) => {
+    if (!kept[name]) return new Set(start);
+    for (const one of start) kept[name].add(one);
+    return kept[name];
+  };
+
   return {
     floor: floor.floor,
     pos: [x, y],
@@ -116,12 +127,12 @@ export function createExploration(floor) {
     // Map memory. `automap.js` owns what goes in: a Dark Zone is never
     // remembered, so neither set is written to by movement itself
     // (`05` section 10).
-    explored: new Set([key(x, y)]),
-    seen: new Set([key(x, y)]),
-    doorsOpened: new Set(),
-    secretsFound: new Set(),
-    hazardsCleared: new Set(),
-    keysTaken: new Set(),
+    explored: set('explored', [key(x, y)]),
+    seen: set('seen', [key(x, y)]),
+    doorsOpened: set('doorsOpened'),
+    secretsFound: set('secretsFound'),
+    hazardsCleared: set('hazardsCleared'),
+    keysTaken: set('keysTaken'),
   };
 }
 

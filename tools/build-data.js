@@ -65,6 +65,24 @@ function checkFloors(json) {
     if (!row.features?.length) problems.push(`${where} has no theme feature`);
   }
 
+  // 05 section 8: what comes back when the hero returns from town.
+  const restock = json.restock;
+  if (!restock) problems.push('floors.json has no restock table (05 section 8)');
+  else {
+    const [low, high] = restock.lairs?.refill ?? [];
+    if (!(low >= 1 && low <= high)) problems.push('floors.json restock lairs is not a sane range');
+    if (!(restock.chests?.perReturn >= 1)) problems.push('floors.json restocks no chests');
+    if (!(restock.chests?.maxRestocked >= restock.chests?.perReturn)) {
+      problems.push('floors.json restocks more chests a return than it allows at once');
+    }
+    if (!/^\d+d\d+$/.test(restock.traps?.rearm ?? '')) {
+      problems.push('floors.json restock traps does not name a die');
+    }
+    for (const name of ['bosses', 'uniques', 'secretDoors', 'keys']) {
+      if (!restock.never?.includes(name)) problems.push(`floors.json restock should never refill ${name}`);
+    }
+  }
+
   if (!(json.hazardCount?.base >= 0)) problems.push('floors.json has no hazardCount');
   if (!json.curiosities?.kinds?.length) problems.push('floors.json lists no kinds of curiosity');
   // A hazard that covers ground needs to know how much, or it takes the floor.

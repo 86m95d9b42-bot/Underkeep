@@ -143,5 +143,6 @@ export const hazardRules = floors.hazardRules;
 export const chestDepthBonus = floors.chestDepthBonus;
 export const floorTrapPlacement = floors.floorTrapPlacement;
 export const criticalPathMaxLockTier = floors.specialDoors.criticalPathMaxLockTier;
+export const restock = floors.restock;
 
 export { floors as floorsData };

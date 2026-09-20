@@ -241,6 +241,34 @@
       "shrine"
     ]
   },
+  "restock": {
+    "_source": "05 section 8. Every previously visited floor restocks each time the hero comes back from town. Bosses, unique items, secret doors and keys never do, and the map, opened shortcuts and unlocked doors stay as they were left.",
+    "lairs": {
+      "refill": [
+        1,
+        2
+      ]
+    },
+    "chests": {
+      "perReturn": 1,
+      "maxRestocked": 3,
+      "where": "deadEnd"
+    },
+    "traps": {
+      "rearm": "1d3"
+    },
+    "never": [
+      "bosses",
+      "uniques",
+      "secretDoors",
+      "keys"
+    ],
+    "kept": [
+      "map",
+      "shortcuts",
+      "unlockedDoors"
+    ]
+  },
   "floors": [
     {
       "floor": 1,
