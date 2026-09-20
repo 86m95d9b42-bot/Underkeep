@@ -208,6 +208,80 @@
     "sellLabel": "SELL",
     "buyLabel": "BUY"
   },
+  "service": {
+    "label": "SERVICES",
+    "portrait": "PORTRAIT",
+    "cost": "{n} GP",
+    "free": "—",
+    "pay": "PAY",
+    "pick": "Pick a service first.",
+    "gold": "{n} GP",
+    "none": "Nothing on offer here.",
+    "inn": {
+      "title": "INN",
+      "flavour": "A bed, a bowl, and no dreams of the dark.",
+      "rest": {
+        "name": "Full Rest",
+        "sub": "Hit points, Focus, and what a night mends",
+        "detail": "Sleep until morning. Cost is 5 gp × your level.",
+        "nothing": "Nothing to sleep off"
+      }
+    },
+    "temple": {
+      "title": "TEMPLE",
+      "flavour": "Healing for the body. Mercy for the cursed.",
+      "cure": {
+        "name": "Cure Ailments",
+        "sub": "{what}",
+        "detail": "Every ailment lifted at once. Cost is 10 gp × your level.",
+        "nothing": "Nothing to cure"
+      },
+      "restore": {
+        "name": "Restore Drain",
+        "sub": "{n} stack of the Wraith's drain",
+        "subMany": "{n} stacks of the Wraith's drain",
+        "detail": "One stack of Drained, undone. Cost is 100 gp × your level.",
+        "nothing": "Nothing to restore"
+      },
+      "removeCurse": {
+        "name": "Remove Curse",
+        "sub": "{item} · found on floor {floor} · destroys it",
+        "detail": "The cursed item is destroyed. Cost is 50 gp × the floor it was found on."
+      },
+      "respec": {
+        "name": "Respec Skills",
+        "sub": "Refund all {n} skill points",
+        "detail": "Every point spent comes back; your origin's skill stays. Cost is 100 gp × your level.",
+        "nothing": "Nothing spent yet"
+      }
+    },
+    "sage": {
+      "title": "SAGE",
+      "flavour": "Everything has a name. Most of them cost twenty gold.",
+      "identify": {
+        "name": "Identify",
+        "sub": "{item}",
+        "detail": "The sage names one thing you carry. 20 gp an item."
+      },
+      "identifyAll": {
+        "name": "Identify Everything",
+        "sub": "{n} unknown in your pack",
+        "detail": "Everything unknown, named in one sitting. 20 gp an item.",
+        "nothing": "Nothing you do not know"
+      }
+    },
+    "why": {
+      "notEnoughGold": "Not enough gold.",
+      "pick": "Pick a service first.",
+      "nothingToRest": "Nothing to sleep off.",
+      "nothingToCure": "Nothing to cure.",
+      "notDrained": "Nothing to restore.",
+      "nothingSpent": "Nothing spent yet.",
+      "nothingUnknown": "You know everything you carry.",
+      "notCarried": "You are not carrying that.",
+      "notCursed": "Nothing wrong with it."
+    }
+  },
   "conditions": {
     "poisoned": {
       "name": "POISONED",

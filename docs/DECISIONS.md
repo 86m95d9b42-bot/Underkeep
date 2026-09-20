@@ -4,6 +4,16 @@ Rulings here override the other documents. Add new entries at the top of each li
 
 ## Decisions
 
+- **2026-09-20 — The Inn, the Temple and the Sage: one screen, three shopfronts.** `src/systems/services.js` is what each one offers and what it charges; `src/ui/screens/service.js` is the outline's Temple table, built once and exported three times, because `00` says the Inn and the Sage use that same layout. Six rulings:
+  - **An offer carries its own price and its own refusal.** Every service hands back the same shape — `{ id, cost, why, apply }` — so the screen dims a row, prices it and pays for it without knowing whether it is a bed, a cure or a name.
+  - **A full rest at the Inn clears the drain.** `01` section 7 ends Drained on "Temple cure, **or a full rest in town**", and `02` section 18's counterplay table says the same, so the Inn's 5 gp x level rest takes it. That makes the Temple's 100 gp x level restore the expensive way round; it is kept because the documents name it, and flagged below.
+  - **"Cure ailments" is everything but the drain.** Rather than a list that would have to be kept in step with `conditions.json`, the cure takes every condition the hero is still carrying except Drained, which has a price of its own. What can still be on a hero in town is `06` section 10's own after-combat list.
+  - **Remove Curse is one offer per cursed item, and it pays for itself.** The fee is 50 gp x the floor *that item* was found on, so the list shows one row each, naming the item and its floor; `cleanseAtTemple` already charges and destroys, so `take` hands it the hero rather than charging twice.
+  - **The Sage lists the items, not just the service.** One row per unknown thing at 20 gp, and a last row for the lot at 20 gp each — which is what a player with six mysteries actually wants to tap.
+  - **The top bar is repainted in place.** A bar built inside a bar leaves the gold chip stranded beside the title instead of at the edge, so the screen replaces the bar's children rather than nesting a second `.region.topbar` inside the first.
+
+  **Not yet wired:** Drained has no teeth yet — `01` section 7's "-1 level's worth of HP and BA per stack" is not applied anywhere, because the Wraith that inflicts it is a floor 6 monster (Phase 7). Restoring a stack today costs 100 gp x level and removes a flag that does nothing. When the penalty lands it hangs off the same condition.
+
 - **2026-09-20 — The Shop, and the line under an item's name.** `src/data/shops.json` is `04` section 15's whole table, `src/systems/shop.js` is the shelves and the prices, and `src/ui/screens/shop.js` is the outline's three tabs. Seven rulings:
   - **A tier is its own list plus every tier below it.** The Shop stocks what its tier and all the earlier ones name, so a hero who has beaten the floor 4 boss can still buy torches. "All base weapons" is a filter rather than seventeen ids, so a new common weapon joins the shelf by existing.
   - **The rotating lines reroll on the day, not on the visit.** `04` section 15 rerolls them "every time the hero returns from the dungeon", and a day *is* a return (`05` section 12), so the stock is rolled from `restockStream(masterSeed, day)`. Walking out of the Shop and back in shows the same shelves; coming back from the dungeon does not.
@@ -432,6 +442,8 @@ Rulings here override the other documents. Add new entries at the top of each li
 - **2026-09-16 — Reaction mockup** shows a Shadow/Arcana hero's options (Lucky, Arcane Shield). The real prompt lists only reactions the hero owns.
 
 ## Open questions
+
+- **Does a night at the Inn really lift the Wraith's drain?** `01` section 7 and `02` section 18 both end Drained on "Temple cure, or a full rest in town", so the Inn's 5 gp x level rest does it and the Temple's 100 gp x level restore is strictly worse. Both are implemented as written. (Default: leave it; if the Temple is meant to be the only cure, the fix is one word in `conditions.json` — `endsOn: "temple"` — and the Inn stops taking it.)
 
 - **What a hero with no weapon hits with.** `04` never expects one, because it never lets go of the kit. `items.json` carries `rules.unarmed` — **1d2 crush**, the smallest thing that is not nothing — and `attackWith` falls back to it. (Default: keep it; if bare hands should be a real option, `04` section 2 needs a row.)
 

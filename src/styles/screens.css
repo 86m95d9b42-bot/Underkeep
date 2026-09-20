@@ -967,3 +967,36 @@
   min-width: calc(var(--u) * 1.2);
   text-align: right;
 }
+
+/* The Inn, Temple and Sage share a portrait strip over their service list. */
+.portrait {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  min-height: 0;
+  overflow: hidden;
+}
+.portrait__frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: calc(var(--u) * 2);
+  max-height: 100%;
+  aspect-ratio: 1;
+  box-sizing: border-box;
+  border: calc(var(--u) * 0.04) dashed var(--muted);
+  border-radius: var(--radius);
+  color: var(--muted);
+  font-family: var(--font-label);
+  font-size: var(--fs-micro);
+}
+/* The line of flavour keeps to the room it has rather than pushing the
+   region past its rows. */
+.portrait > .hint {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  min-width: 0;
+  overflow: hidden;
+}
