@@ -68,7 +68,7 @@ Work top to bottom. Check a box when the task is done and tested. Each phase end
 ## Phase 5 — Loot
 
 - [x] `items.json` (all sections of `04`) and `loot.json`
-- [ ] Inventory rules: slots, stacking, equipment slots, quick slots
+- [x] Inventory rules: slots, stacking, equipment slots, quick slots
 - [ ] Loot generation (`04` section 14) including properties, curses, and identification state
 - [ ] Per-game potion looks and scroll titles; identification methods
 - [ ] Cursed item binding and effects

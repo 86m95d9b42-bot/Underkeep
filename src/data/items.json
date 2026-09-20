@@ -29,6 +29,8 @@
     "ammunition": false,
     "thrownRecoveredAfterCombat": true,
     "requirementNotMet": { "toHit": -2, "keepsDef": true },
+    "_unarmed": "04 has no rule for fighting bare-handed, because it never expects it. This is the smallest thing that is not nothing (see DECISIONS, open questions).",
+    "unarmed": { "name": "fists", "damage": "1d2", "damageType": "crush" },
     "weaponProperties": {
       "_source": "04 section 2, Properties.",
       "light": "Works with the Duelist skill (AGI for attack and damage).",

@@ -8,6 +8,8 @@
  * an event the engine fires.
  */
 import { describe, it, expect } from 'vitest';
+import { equipNew } from '../src/systems/inventory.js';
+import { rebuildSheet } from '../src/systems/levelling.js';
 import {
   CROSSROADS,
   PATHS,
@@ -233,12 +235,17 @@ describe('what a skill does to the sheet', () => {
     expect(learning.maxHp).toBe(once);
   });
 
-  it('keeps a conditional bonus off the sheet until its system exists', () => {
-    // Duelist's +1 DEF is "while not using a shield", and the pack is Phase 5.
+  it('applies a conditional bonus only while the pack says it holds', () => {
+    // Duelist's +1 DEF is "while not using a shield", and the pack is what
+    // knows (`01` section 6, `04` section 1).
     const plain = hero();
     const duelist = hero([{ id: 'duelist', rank: 1 }]);
-    expect(duelist.def).toBe(plain.def);
+    expect(duelist.def).toBe(plain.def + 1);
     expect(duelist.lightWeaponAttribute).toBe('agility');
+
+    equipNew(duelist.pack, 'shield');
+    rebuildSheet(duelist);
+    expect(duelist.def).toBe(plain.def + 1); // the shield's own +1, not Duelist's
   });
 });
 

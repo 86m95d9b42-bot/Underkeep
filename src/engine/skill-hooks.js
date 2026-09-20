@@ -78,6 +78,10 @@ export function applySkillSheet(hero) {
   for (const { id, rank = 1 } of learned) {
     for (const effect of sheetEffects(id, rank)) applySheetEffect(sheet, effect, rank, hero);
   }
+  // The gear goes on after the skills, because Armor Training is what cancels
+  // the heavy penalties (`04` section 3). `hero.gear` is the pack's summary,
+  // so nothing here has to know what an item is.
+  applyGear(sheet, hero.gear);
 
   hero.maxHp = sheet.maxHp;
   hero.maxFp = sheet.maxFp;
@@ -92,6 +96,11 @@ export function applySkillSheet(hero) {
   if (sheet.cannotBeSurprised) hero.cannotBeSurprised = true;
   if (sheet.dr) hero.dr = sheet.dr;
   if (sheet.spellCost) hero.spellCost = sheet.spellCost;
+  // These two come from the gear, and gear comes off: they are written every
+  // time rather than only when they are set, or a penalty would outlive the
+  // armour that caused it.
+  hero.spellFizzle = sheet.spellFizzle ?? 0;
+  hero.stealth = sheet.stealth ?? 0;
 
   // Anything the engine does not read itself — the pack's and the dungeon's
   // own flags — is copied across under its own name for that system to find.
@@ -109,6 +118,24 @@ export function applySkillSheet(hero) {
   return hero;
 }
 
+/**
+ * Whether an effect's `while` condition holds. The two the tree uses are about
+ * what is worn — Duelist's +1 DEF with no shield, Armor Training's DR in heavy
+ * armour — and the pack's summary answers both. With no pack yet, a
+ * conditional bonus stays off.
+ */
+function holds(condition, hero) {
+  if (!condition) return true;
+  switch (condition) {
+    case 'noShield':
+      return Boolean(hero?.gear) && !hero.gear.shield;
+    case 'heavyArmor':
+      return Boolean(hero?.gear?.heavyArmor);
+    default:
+      return false;
+  }
+}
+
 /** The hero's numbers before any skill touched them. */
 function snapshot(hero) {
   return {
@@ -122,6 +149,28 @@ function snapshot(hero) {
   };
 }
 
+/**
+ * What the worn gear does to the sheet's attack lines (`04` sections 2 and 3).
+ *
+ * DEF is already in the base — it is part of `01` section 4's formula — so
+ * what is left is to-hit: heavy armour and tower shields, which Armor Training
+ * cancels, a requirement the hero does not meet, which nothing cancels, and
+ * the weapon's own bonus, which lands on the line it is swung with. Spell
+ * attacks are untouched: heavy armour taxes spells by fizzling them instead.
+ *
+ * @param {object} sheet
+ * @param {object} [gear] the pack's summary, or nothing while there is no pack
+ */
+function applyGear(sheet, gear) {
+  if (!gear) return;
+  const heavy = sheet.noHeavyArmorPenalty ? 0 : (gear.heavyToHit ?? 0);
+  const worn = heavy + (gear.toHit ?? 0);
+  sheet.attacks.melee += worn + (gear.weaponToHit?.melee ?? 0);
+  sheet.attacks.ranged += worn + (gear.weaponToHit?.ranged ?? 0);
+  if (gear.fizzle) sheet.spellFizzle = sheet.noHeavyArmorPenalty ? 0 : gear.fizzle;
+  if (gear.stealth) sheet.stealth = (sheet.stealth ?? 0) + gear.stealth;
+}
+
 /** One `sheet` effect, folded in. */
 function applySheetEffect(sheet, effect, rank, hero) {
   const amount = amountOf(effect, rank);
@@ -133,9 +182,9 @@ function applySheetEffect(sheet, effect, rank, hero) {
       sheet.maxFp += amount;
       break;
     case 'def':
-      // A conditional bonus — Duelist's +1 with no shield — waits for the
-      // pack, which is what says whether a shield is held.
-      if (!effect.while) sheet.def += amount;
+      // A conditional bonus — Duelist's +1 with no shield — asks the pack's
+      // summary whether it applies.
+      if (holds(effect.while, hero)) sheet.def += amount;
       break;
     case 'saves':
       for (const save of Object.keys(sheet.saves)) sheet.saves[save] += amount;
@@ -159,7 +208,7 @@ function applySheetEffect(sheet, effect, rank, hero) {
       sheet.cannotBeSurprised = true;
       break;
     case 'dr':
-      if (!effect.while) sheet.dr = (sheet.dr ?? 0) + amount;
+      if (holds(effect.while, hero)) sheet.dr = (sheet.dr ?? 0) + amount;
       break;
     case 'spellCost':
       sheet.spellCost = (sheet.spellCost ?? 0) + effect.value;

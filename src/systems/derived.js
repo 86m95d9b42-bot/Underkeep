@@ -60,12 +60,15 @@ export function focusFor(scores, level = 1) {
 }
 
 /**
- * Defense: 10 + AGI mod, plus whatever is worn. Armour and shields are `04`
- * and arrive with the pack, so they come in as a number.
- * @param {Scores} scores @param {number} [gear]
+ * Defense: 10 + AGI mod, plus whatever is worn. Armour and shields come in as
+ * a number from the pack, and heavier armour caps the AGI mod that counts
+ * (`04` section 3, Max AGI mod).
+ * @param {Scores} scores @param {number} [gear] @param {number | null} [maxAgi]
  */
-export function defenseFor(scores, gear = 0) {
-  return DERIVED.defense.base + modFor(scores[DERIVED.defense.mod]) + gear;
+export function defenseFor(scores, gear = 0, maxAgi = null) {
+  const agility = modFor(scores[DERIVED.defense.mod]);
+  const counted = maxAgi === null || maxAgi === undefined ? agility : Math.min(agility, maxAgi);
+  return DERIVED.defense.base + counted + gear;
 }
 
 /** The initiative modifier: the AGI mod the d6 is added to each round. */
@@ -140,10 +143,11 @@ export function effectDcFor(scores, attribute, level = 1) {
  * @param {object} [options]
  * @param {number} [options.level]
  * @param {number} [options.gear] armour and shield, once there are any
+ * @param {number | null} [options.maxAgi] the cap heavy armour puts on the AGI mod
  * @param {number} [options.maxHp] a hero past level 1 carries their own, since
  *   the gains were rolled; without it this is the level 1 figure
  */
-export function derivedFor(scores, { level = 1, gear = 0, maxHp } = {}) {
+export function derivedFor(scores, { level = 1, gear = 0, maxAgi = null, maxHp } = {}) {
   return {
     level,
     mods: modsFor(scores),
@@ -151,7 +155,7 @@ export function derivedFor(scores, { level = 1, gear = 0, maxHp } = {}) {
     maxFp: focusFor(scores, level),
     ba: baseAttack(level),
     attacks: attacksFor(scores, level),
-    def: defenseFor(scores, gear),
+    def: defenseFor(scores, gear, maxAgi),
     init: initiativeFor(scores),
     saves: savesFor(scores, level),
     slots: slotsFor(scores),

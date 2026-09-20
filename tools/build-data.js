@@ -650,52 +650,6 @@ function checkSkills(json, strings, attributes) {
 }
 
 /**
- * starting-kit.json: the fighting numbers of the items `01` section 3 hands
- * out, from `04` sections 2 and 3. Every equipped kit item needs a line, and
- * an armour needs a DEF — the moment `items.json` arrives this file goes, and
- * this check is what makes that a clean swap.
- */
-function checkStartingKit(json, origins, damageTypes, items) {
-  const wanted = { weapon: new Set(), armor: new Set() };
-  for (const entry of Object.values(origins?.origins ?? {})) {
-    for (const line of entry.kit ?? []) {
-      if (line.equip === 'weapon') wanted.weapon.add(line.item);
-      if (line.equip === 'armor') wanted.armor.add(line.item);
-    }
-  }
-
-  for (const item of wanted.weapon) {
-    const weapon = json.weapons?.[item];
-    if (!weapon) {
-      problems.push(`starting-kit.json has no weapon line for "${item}", which a kit equips`);
-      continue;
-    }
-    if (!/^\d+d\d+/.test(weapon.damage ?? '')) {
-      problems.push(`starting-kit.json ${item} has no damage dice`);
-    }
-    const type = String(weapon.damage ?? '').split(/\s+/)[1];
-    if (damageTypes.length && !damageTypes.includes(type)) {
-      problems.push(`starting-kit.json ${item} deals "${type}", which is not a damage type`);
-    }
-    // The stand-in is 04's own numbers until the pack takes over, so it must
-    // not drift from items.json now that items.json exists.
-    const real = items?.items?.[item];
-    if (real && weapon.damage !== `${real.damage} ${real.damageType}`) {
-      problems.push(`starting-kit.json ${item} deals ${weapon.damage}, and items.json says ${real.damage} ${real.damageType}`);
-    }
-  }
-  for (const item of wanted.armor) {
-    const armor = json.armor?.[item];
-    if (!armor) problems.push(`starting-kit.json has no armour line for "${item}", which a kit equips`);
-    else if (!(armor.def >= 0)) problems.push(`starting-kit.json ${item} has no DEF`);
-    const real = items?.items?.[item];
-    if (armor && real && armor.def !== real.def) {
-      problems.push(`starting-kit.json ${item} has DEF ${armor.def}, and items.json says ${real.def}`);
-    }
-  }
-}
-
-/**
  * file name -> checker. A file with no checker is only parsed, which still
  * catches the most common failure: a trailing comma in hand-edited JSON.
  * @type {Record<string, (json: any) => void>}
@@ -877,6 +831,15 @@ function checkItems(json, strings, combat, conditions, skills, attributes) {
 
   // The rules block 04 section 1 gives.
   if (!(json.rules?.inventory?.base >= 1)) problems.push('items.json has no inventory size');
+  // The same rule is in two documents (`01` section 4 and `04` section 1), and
+  // the hero's sheet reads the other one: they have to agree.
+  const slots = attributes?.derived?.inventorySlots;
+  if (slots && (slots.base !== json.rules?.inventory?.base || slots.perMod !== json.rules?.inventory?.perMightMod)) {
+    problems.push(
+      `items.json carries ${json.rules?.inventory?.base} + MIG x ${json.rules?.inventory?.perMightMod} slots, and attributes.json says ${slots.base} + MIG x ${slots.perMod}`,
+    );
+  }
+  if (!json.rules?.unarmed?.damage) problems.push('items.json has no unarmed attack');
   if (!(json.rules?.stashSlots >= 1)) problems.push('items.json has no stash size');
   if (!(json.rules?.quickSlots >= 1)) problems.push('items.json has no quick slots');
   for (const slot of json.rules?.equipSlots ?? []) {
@@ -970,13 +933,6 @@ const CHECKS = {
       loaded['strings.json'],
       loaded['items.json'],
       loaded['skills.json'],
-    ),
-  'starting-kit.json': (json) =>
-    checkStartingKit(
-      json,
-      loaded['origins.json'],
-      loaded['combat.json']?.damage?.types ?? [],
-      loaded['items.json'],
     ),
   'monsters.json': (json) => checkMonsters(json, loaded['ai.json'], loaded['combat.json']),
   'encounters.json': (json) => checkEncounters(json, loaded['monsters.json']),

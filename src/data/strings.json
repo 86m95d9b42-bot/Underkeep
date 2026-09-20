@@ -782,5 +782,26 @@
     "nothingToTake": "Nothing to carry.",
     "continue": "CONTINUE",
     "toLevel": "A level is waiting."
+  },
+  "pack": {
+    "title": "PACK",
+    "slots": "{used} / {total}",
+    "equipped": "WORN",
+    "quick": "QUICK",
+    "empty": "Nothing here yet.",
+    "why": {
+      "packFull": "No room in your pack.",
+      "notCarried": "You are not carrying that.",
+      "notEquipment": "That is not worn or held.",
+      "alreadyWorn": "Already worn.",
+      "bothHands": "Both hands are on your weapon.",
+      "cursedInPlace": "It will not come off.",
+      "nothingThere": "That slot is empty.",
+      "notConsumable": "Only potions, scrolls and bombs can be pinned.",
+      "worn": "It is worn, not carried.",
+      "alreadyPinned": "Already pinned.",
+      "quickFull": "All four quick slots are taken.",
+      "noSuchSlot": "No such slot."
+    }
   }
 }

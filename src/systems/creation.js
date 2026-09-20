@@ -20,6 +20,7 @@ import { equipKit, kitOf } from './kit.js';
 import { creationStream } from '../engine/rng.js';
 import { derivedFor } from './derived.js';
 import { grantFree } from './skill-tree.js';
+import { rebuildSheet } from './levelling.js';
 import { LEVELING } from '../data/attributes.js';
 
 /** The two modes, and the one the New Game screen starts on. */
@@ -266,7 +267,11 @@ export function finish(draft) {
     difficulty: draft.difficulty,
   };
 
+  // The kit goes on, and the sheet is rebuilt over it: what is worn decides
+  // DEF, the Max AGI it lets through and the to-hit it costs (`04` section 3),
+  // and `rebuildSheet` is the one place that composes those.
   equipKit(hero);
+  rebuildSheet(hero);
   // The origin's skill is the hero's from the first step (`01` section 3).
   return grantFree(hero, grants.freeSkill);
 }
