@@ -97,7 +97,7 @@ Work top to bottom. Check a box when the task is done and tested. Each phase end
 - [x] Remaining monsters, floors 3–10, and all encounter tables
 - [x] `bosses.json` and all ten boss fights, including arena objects and state machines
 - [x] Elite traits, rare wanderers, Hollow Stalker
-- [ ] Graves (Adventurer mode)
+- [x] Graves (Adventurer mode)
 - [ ] Balance simulator (`tools/sim.js`) with the four example builds
 - [ ] **Done when:** every boss is beatable by each example build at least 60% of the time in the simulator
 

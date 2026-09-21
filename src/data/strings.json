@@ -133,7 +133,10 @@
         "condition": "The water is foul. Your throat burns."
       },
       "antiMagic": "The air here is dead. Your charms go quiet.",
-      "magicBack": "The air lifts. Your charms wake."
+      "magicBack": "The air lifts. Your charms wake.",
+      "grave": "Your own grave, and everything in it: {n} gp back.",
+      "graveLeft": "You take {n} gp back. Your pack will not hold the rest.",
+      "fell": "You wake in town. Your grave is on floor {n}."
     },
     "title": "EXPLORE",
     "pad": {

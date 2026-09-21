@@ -42,6 +42,7 @@ import { attune, whyNotLeaveByStone } from './travel.js';
 import { refreshGear } from './kit.js';
 import { applySkillSheet } from '../engine/skill-hooks.js';
 import { applyMemory, memoryFor, restockFloor } from './floor-memory.js';
+import { clearGrave, graveOn, open as openGrave } from './graves.js';
 import { search as searchTrap, trigger as fireTrap } from './traps.js';
 import {
   disarmTrap,
@@ -111,6 +112,13 @@ export function lineFor(event) {
       return { text: t(`explore.log.stairs.${event.direction}`) };
     case 'waystone':
       return { text: t('explore.log.waystone'), tone: 'accent' };
+    case 'grave':
+      return {
+        text: event.left
+          ? t('explore.log.graveLeft', { n: event.gold })
+          : t('explore.log.grave', { n: event.gold }),
+        tone: 'accent',
+      };
     case 'attuned':
       return { text: t('explore.log.attuned'), tone: 'accent' };
     case 'waystoneTravel':
@@ -281,6 +289,11 @@ export function createRun({
   // What the hero left here last time, and what has come back since
   // (`05` section 8). A floor with no town behind it is a fresh one, which is
   // what the tools and the tests build.
+  // The grave an Adventurer left here, if the one that exists is on this
+  // floor (`05` section 9). It is floor state like a chest, not map memory:
+  // it survives restocking, and there is only ever one.
+  if (town) floor.grave = graveOn(town, floorNumber);
+
   const memory = town ? memoryFor(town, floorNumber) : null;
   if (memory) {
     restockFloor({ floor, memory, town, masterSeed, isWalkable });
@@ -488,6 +501,19 @@ export function createRun({
       // A key underfoot is picked up on the way past: it belongs to the floor,
       // not to a pack, until inventory arrives in Phase 5.
       for (const event of events) if (event.type === 'key') ex.keysTaken.add(event.key.id);
+
+      // And a grave gives back what the hero left in it (`05` section 9).
+      for (const event of events) {
+        if (event.type !== 'grave') continue;
+        const back = openGrave(hero, event.grave);
+        event.gold = back.gold;
+        event.taken = back.taken.length;
+        event.left = back.left.length;
+        if (event.grave.emptied) {
+          floor.grave = null;
+          if (town) clearGrave(town);
+        }
+      }
       // Stepping on a Waystone attunes it, permanently (`05` section 9).
       for (const event of events) {
         if (event.type !== 'waystone' || !town) continue;

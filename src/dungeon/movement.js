@@ -240,6 +240,7 @@ export function whatIsAt(floor, pos, ex) {
     chest: floor.chests?.[at] ?? null,
     curiosity: floor.curiosities?.[at] ?? null,
     feature: floor.features?.[at] ?? null,
+    grave: floor.grave && key(...floor.grave.pos) === at ? floor.grave : null,
     keyItem: floor.keys?.[at] ?? null,
     // An undetected trap or hazard is not something the hero can be told about;
     // it is here so the step resolver can fire it (Phase 7).
@@ -313,6 +314,8 @@ export function arrivalEvents(floor, at, ex) {
   const landed = whatIsAt(floor, at, ex);
   if (landed.stairs) events.push({ type: 'stairs', direction: landed.stairs, at });
   if (landed.waystone) events.push({ type: 'waystone', at });
+  // "Walking onto it returns everything that was dropped" (`05` section 9).
+  if (landed.grave) events.push({ type: 'grave', at, grave: landed.grave });
   if (landed.pit) events.push({ type: 'pit', at });
   if (landed.hazard) events.push({ type: 'hazard', kind: landed.hazard.kind, at, hazard: landed.hazard });
   if (landed.feature) events.push({ type: 'feature', kind: landed.feature.kind, at, feature: landed.feature });

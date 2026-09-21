@@ -15,6 +15,7 @@ import { openShop } from './shop.js';
 import { returnToTown, useMark } from './travel.js';
 import { createFight } from './fight.js';
 import { bossOnFloor } from '../data/bosses.js';
+import { heroFell as fell } from './graves.js';
 
 /**
  * @param {object} options
@@ -103,6 +104,40 @@ export function createSession({ hero, seed, difficulty = 'normal', go } = {}) {
       shelves = null;
       go?.('town');
       return left;
+    },
+
+    /**
+     * The hero fell (`01` section 12, `05` section 9).
+     *
+     * An Adventurer wakes in town without half their gold and without what
+     * they could not name, and a Grave holds it where they died — one grave
+     * at a time, so dying again loses the last one. An Ironman's save is
+     * deleted, which is Phase 8's; here the trip simply ends.
+     *
+     * @returns {{ mode: string, grave: object | null }}
+     */
+    heroFell() {
+      const where = run;
+      const mode = hero.mode === 'ironman' ? 'ironman' : 'adventurer';
+      const grave =
+        where && mode === 'adventurer'
+          ? fell(town, hero, { floor: where.floor.floor, at: [...where.ex.pos] })
+          : null;
+
+      // Waking up is not coming home: the day still turns over, and the trip
+      // is over either way.
+      hero.hp = mode === 'adventurer' ? Math.max(1, Math.floor(hero.maxHp / 2)) : 0;
+      hero.alive = mode === 'adventurer';
+      run = null;
+      fight = null;
+      shelves = null;
+      if (mode === 'adventurer') {
+        town.day += 1;
+        go?.('town');
+      } else {
+        go?.('death');
+      }
+      return { mode, grave };
     },
 
     /** The fight in front of the hero, started if there is not one. */

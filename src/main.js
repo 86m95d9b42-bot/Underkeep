@@ -187,6 +187,14 @@ const ctx = {
   leaveDungeon(options) {
     return game().leaveDungeon(options);
   },
+  /**
+   * The hero fell (`01` section 12). The Death screen is Phase 8's; the rules
+   * are here, so whatever asks gets the same answer: an Adventurer wakes in
+   * town with a grave behind them, and an Ironman's run is over.
+   */
+  heroFell() {
+    return game().heroFell();
+  },
 };
 
 router = createRouter({ app, screens, frame: () => watcher.frame, ctx });

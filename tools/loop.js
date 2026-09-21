@@ -59,6 +59,7 @@ console.log(`  nights at the Inn   ${totals.rests}`);
 console.log(`  bought / sold       ${totals.bought} / ${totals.sold}`);
 console.log(`  waystones home      ${totals.byStone}`);
 console.log(`  heroes lost         ${deaths}`);
+console.log(`  graves left         ${totals.graves}`);
 console.log(`  ${seconds}s\n`);
 
 if (failures.length > 0) {

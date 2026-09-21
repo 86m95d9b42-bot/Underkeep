@@ -4,6 +4,13 @@ Rulings here override the other documents. Add new entries at the top of each li
 
 ## Decisions
 
+- **2026-09-21 — Graves.** `05` section 9 and `01` section 12: an Adventurer who falls wakes in town without half their gold and without what they could not name, and it waits where they died. Five rulings:
+  - **A grave belongs to the town, not to the floor.** `town.grave` is the one there is, and a run puts it on the floor it is on when the floor is built. That is what makes it survive restocking without the restock rules having to know about it, and what makes "dying again loses the old one" a single assignment.
+  - **The items go in whole.** A grave holds the item objects, not their names: a +1 long sword comes back a +1 long sword, unidentified, exactly as it went in.
+  - **Walking onto it is all it takes.** The tile reports a grave the way it reports a key, and the step gives everything back. What the pack cannot hold stays in it, the way a chest keeps what will not fit, and the grave only disappears once it is empty.
+  - **Waking is not coming home.** An Adventurer wakes at half their maximum hit points and the day turns over, because a day underground has passed — but the trip does not count as a return, and nothing is restocked on their behalf.
+  - **An Ironman leaves nothing.** `heroFell` digs no grave and takes nothing: there is no one to come back for it. Deleting the save is Phase 8's.
+
 - **2026-09-21 — Elite traits, the Coin Imp, and the Hollow Stalker.** `02` sections 14 and 15: the d12 of elite traits in `src/data/elites.json`, the twelve hooks behind them in `src/engine/elite-traits.js`, and the two monsters that arrive without an encounter table. Six rulings:
   - **An elite is a monster made bigger, not a stat block of its own.** `applyElite` doubles the hit points and the experience, adds the guaranteed drop, puts the trait's name in front of its own — "Blazing Cultist" — and writes the trait's numbers onto the unit beside it, so the hook never looks anything up.
   - **Both ways of making one are kept.** Section 15 gives every encounter a 10% + 2% x F chance; section 16's table sends a 12 back for a second roll with one monster made Elite. They are two different mechanisms for the same thing, so both run: the chance on every encounter, and the twelve as it is written. The measured rate is the document's chance plus about six points.
@@ -557,6 +564,8 @@ Rulings here override the other documents. Add new entries at the top of each li
 - **2026-09-16 — Reaction mockup** shows a Shadow/Arcana hero's options (Lucky, Arcane Shield). The real prompt lists only reactions the hero owns.
 
 ## Open questions
+
+- **Nothing calls `heroFell` from a screen yet.** The rules are in `systems/graves.js`, the session has `heroFell()`, `main.js` offers it to the screens, and `npm run loop` uses it — but the Combat screen does not, because the Death screen it would go to is Phase 8's. (Default: the Death screen calls it; until then a hero who falls in the browser simply stays at 0 HP.)
 
 - **The Coin Imp's 1 in 50.** `02` section 14 says it appears in one encounter in fifty; section 16's table sends it on a 12 followed by a 1 on a d6, which is one in seventy-two. The table is the mechanism, so the table is what runs. (Default: leave it; if the rate matters, the fix is a second row rather than a second rule.)
 

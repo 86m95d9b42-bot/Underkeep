@@ -40,13 +40,16 @@ export const SERVICE_PRICES = shops.services;
 /**
  * A town, as the save carries it.
  * @param {object} [state]
- * @returns {{ day: number, trips: number, bosses: number[] }}
+ * @returns {{ day: number, trips: number, bosses: number[], grave: object | null }}
  */
-export function createTown({ day = 1, trips = 0, bosses = [], attuned = [] } = {}) {
+export function createTown({ day = 1, trips = 0, bosses = [], attuned = [], grave = null } = {}) {
   return {
     day,
     trips,
     bosses: [...bosses],
+    // Where an Adventurer fell, and what they left there (`05` section 9).
+    // There is only ever one.
+    grave,
     // The Waystones the hero has stepped on (`05` section 9). Attuning is
     // permanent, and the Dungeon Gate lists them.
     attuned: [...attuned],

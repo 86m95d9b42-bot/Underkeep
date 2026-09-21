@@ -22,6 +22,7 @@
  *      from a fight are banked before anything is shown.
  */
 import { createSession } from '../../src/systems/session.js';
+import { unknownItems } from '../../src/systems/graves.js';
 import { chooseOrigin, createDraft, finish, setName } from '../../src/systems/creation.js';
 import { memoryFor } from '../../src/systems/floor-memory.js';
 import { attunedFloors, isAttuned, markOf } from '../../src/systems/travel.js';
@@ -71,6 +72,7 @@ export function playLoop(masterSeed, { trips = 4, origin = 'sellsword' } = {}) {
     rests: 0,
     steps: 0,
     byStone: 0,
+    graves: 0,
   };
   let died = false;
 
@@ -105,10 +107,26 @@ export function playLoop(masterSeed, { trips = 4, origin = 'sellsword' } = {}) {
     /* -- fight ---------------------------------------------------------- */
 
     fightOne(game, run, counts, say, masterSeed + trip);
-    // A hero can die down there; that is the game, not a broken rule. The
-    // loop this game was playing ends with them.
+    // A hero can die down there; that is the game, not a broken rule. An
+    // Adventurer wakes in town with a grave to go back for (`05` section 9),
+    // and the loop this game was playing ends with them either way.
     if ((hero.hp ?? 0) <= 0) {
       died = true;
+      const purse = hero.gold ?? 0;
+      const unknown = unknownItems(hero).length;
+      const fell = game.heroFell();
+
+      // `05` section 9: half the gold and everything they could not name.
+      if (fell.grave) {
+        counts.graves += 1;
+        if (fell.grave.gold !== Math.floor(purse / 2)) {
+          say(`grave holds ${fell.grave.gold} gp of a purse of ${purse}`);
+        }
+        if (fell.grave.items.length !== unknown) {
+          say(`grave holds ${fell.grave.items.length} unknown items of ${unknown}`);
+        }
+        if (hero.gold !== purse - fell.grave.gold) say('the hero woke with the wrong purse');
+      }
       break;
     }
 
