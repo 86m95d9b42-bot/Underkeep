@@ -716,7 +716,14 @@ export function createFight({
   function actionFor(id, at = target, options = {}) {
     const weapon = combat.hero.attack ?? {};
     if (id === 'attack') {
-      return { id: 'attack', kind: weapon.kind ?? 'melee', ...weapon, target: at ?? undefined };
+      return {
+        id: 'attack',
+        kind: weapon.kind ?? 'melee',
+        ...weapon,
+        // Juggernaut swings twice (`01` section 6); the sheet says how many.
+        ...(combat.hero.attacksPerAction > 1 ? { attacks: combat.hero.attacksPerAction } : {}),
+        target: at ?? undefined,
+      };
     }
     if (id === 'item' && options.item) {
       const built = actionForItem(combat.hero, options.item, {

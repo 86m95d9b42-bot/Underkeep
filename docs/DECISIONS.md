@@ -4,6 +4,14 @@ Rulings here override the other documents. Add new entries at the top of each li
 
 ## Decisions
 
+- **2026-09-21 — Balance simulator.** `npm run sim` flies the four example builds of `01` section 6 through `createFight` against every boss (`tools/lib/builds.js`, `tools/lib/simulator.js`). Six assumptions, each in one place:
+  - **Attributes are the average roll**, 15/14/13/12/10/9 (`STANDARD_ARRAY`), placed by the build's own priority, so the builds differ by choice rather than luck. The points of levels 4, 8, 12, 16 and 20 follow the same priority.
+  - **A hero meets each boss at the top of `02` section 3's level range** (`EXPECTED_LEVEL`): level 2 for the Rat King up to 18 for Vyrmathrax. Hit points and Focus per level are rolled, as `01` section 5 says.
+  - **Skill points go down a fixed order** per build, and a point the tier gates will not take yet waits for the next legal entry. The Pure Warrior's Spirit 4 is bought the legal way (see the Open question on it).
+  - **Gear is what the floor's Shop tier sells** (`shopTier`: one tier per two bosses, `04` section 15), with a +1 or +2 enchantment from tier 3, and four healing potions in the quick slots. The weapon is the biggest die on the build's list that the boss does not resist. The Assassin carries no off-hand dagger: `04` section 1 allows a shield or nothing.
+  - **The pilot is Auto-Fight plus two things `02` spells out**: Defend into every telegraph, and break the Phylactery or valve first. Otherwise it drinks below 30%, uses the dearest legal skill (heals only below half), and swings at the weakest target it can reach.
+  - **A Juggernaut swings as often as its sheet says.** `createFight` now passes `attacksPerAction` to the attack action; nothing had wired it before.
+
 - **2026-09-21 — Graves.** `05` section 9 and `01` section 12: an Adventurer who falls wakes in town without half their gold and without what they could not name, and it waits where they died. Five rulings:
   - **A grave belongs to the town, not to the floor.** `town.grave` is the one there is, and a run puts it on the floor it is on when the floor is built. That is what makes it survive restocking without the restock rules having to know about it, and what makes "dying again loses the old one" a single assignment.
   - **The items go in whole.** A grave holds the item objects, not their names: a +1 long sword comes back a +1 long sword, unidentified, exactly as it went in.
@@ -564,6 +572,8 @@ Rulings here override the other documents. Add new entries at the top of each li
 - **2026-09-16 — Reaction mockup** shows a Shadow/Arcana hero's options (Lucky, Arcane Shield). The real prompt lists only reactions the hero owns.
 
 ## Open questions
+
+- **Every build loses to almost every boss in the simulator.** `npm run sim -- 50` puts 38 of 40 build and boss pairings under the 60% target, most of them at 0%. Only the Pure Warrior and Battle Mage beat the Rat King. The fights are clean, not buggy: every number checked against `02` matches, and a hero at the expected level simply cannot out-trade the boss plus its escort alone. For example, at level 16 an Assassin with 78 HP faces two Frozen Revenants (+11, 1d10+5) and a Paralyzing Gaze, and falls in about four rounds. Trips show the same shape: from floor 3 down, only the Pure Warrior survives six rolled encounters, and not reliably. This is the Phase 7 "done when", and meeting it means changing numbers in the rule documents, so it waits for a ruling. The candidates, roughly by leverage: (1) boss escorts, since most bosses fight alongside 2–4 adds, which is more than `02` section 3's encounter budget of hero level × 1.5 HD (Grukk's fight is 14 HD against a budget of 8 at level 5; Malgorath's is 36 against 24); (2) hero hit points per level; (3) the expected level per floor; (4) potion count or strength. (Default: nothing is changed until Harry picks one. `npm run sim` re-measures in under a second.)
 
 - **Nothing calls `heroFell` from a screen yet.** The rules are in `systems/graves.js`, the session has `heroFell()`, `main.js` offers it to the screens, and `npm run loop` uses it — but the Combat screen does not, because the Death screen it would go to is Phase 8's. (Default: the Death screen calls it; until then a hero who falls in the browser simply stays at 0 HP.)
 
