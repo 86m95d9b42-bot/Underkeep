@@ -4,6 +4,14 @@ Rulings here override the other documents. Add new entries at the top of each li
 
 ## Decisions
 
+- **2026-09-21 — Elite traits, the Coin Imp, and the Hollow Stalker.** `02` sections 14 and 15: the d12 of elite traits in `src/data/elites.json`, the twelve hooks behind them in `src/engine/elite-traits.js`, and the two monsters that arrive without an encounter table. Six rulings:
+  - **An elite is a monster made bigger, not a stat block of its own.** `applyElite` doubles the hit points and the experience, adds the guaranteed drop, puts the trait's name in front of its own — "Blazing Cultist" — and writes the trait's numbers onto the unit beside it, so the hook never looks anything up.
+  - **Both ways of making one are kept.** Section 15 gives every encounter a 10% + 2% x F chance; section 16's table sends a 12 back for a second roll with one monster made Elite. They are two different mechanisms for the same thing, so both run: the chance on every encounter, and the twelve as it is written. The measured rate is the document's chance plus about six points.
+  - **The Hollow Stalker is written in hit dice.** "(floor + 6) x 8 hit points" and "triple the normal XP for its HD" are `perHd: { hp: 8, xp: 30 }` on the block, and its damage — "2d8 + floor" — resolves the word `floor` the way the traps resolve `F`.
+  - **The threshold sends it once.** After that it is the hundred steps of section 14 that bring it back: fleeing sets a step to return on, and the clock fires again when the hero reaches it. Changing floors or taking a Waystone clears all of it, which `05` section 9 already asked for.
+  - **A Gilded purse is three purses.** `goldFrom` multiplies by the unit's own `goldMultiplier`, so the trait needs no code beyond the number.
+  - **Venomous poisons with the monster's own DC.** The rider is added to the elite's attack with no `dc`, and `riders.js` already falls back to `10 + HD / 2` — the rule `01` section 4 gives every monster.
+
 - **2026-09-21 — `bosses.json`, and all ten boss fights.** The ten stat blocks of `02`, the scripts of `06` section 12, and the rules of section 13 that only a boss needs: an escort, arena objects, phases, and — for the Hydra — parts. `src/engine/boss.js` is the machinery, `src/engine/boss-traits.js` is the thirteen traits each boss is built around, and `npm run boss` plays every one of them and checks that its own mechanic fired. Nine rulings:
   - **A part is not another enemy.** `06` section 13 caps a fight at five enemies, and `02` section 8 lets the Hydra grow to five heads beside a body. A head is more of the same creature rather than another one, so parts are outside the cap and outside morale — and inside the target picker, because a head is still something to hit.
   - **A boss's article belongs to its name.** Every log line was written "The {who} hits you", which made "The Vyrmathrax the Ashen". The article moved out of the templates and into `logName`, which knows the difference between a kind of thing ("the Giant Rat") and somebody ("The Rat King", "Vyrmathrax the Ashen").
@@ -549,6 +557,8 @@ Rulings here override the other documents. Add new entries at the top of each li
 - **2026-09-16 — Reaction mockup** shows a Shadow/Arcana hero's options (Lucky, Arcane Shield). The real prompt lists only reactions the hero owns.
 
 ## Open questions
+
+- **The Coin Imp's 1 in 50.** `02` section 14 says it appears in one encounter in fifty; section 16's table sends it on a 12 followed by a 1 on a d6, which is one in seventy-two. The table is the mechanism, so the table is what runs. (Default: leave it; if the rate matters, the fix is a second row rather than a second rule.)
 
 - **A boss fight has no way in yet.** `session.startBoss(floor)` builds the fight and `session.bossBeaten(floor)` opens the stairs, but nothing on the Exploration screen walks into the arena and starts it — the same gap a wandering monster and a Mimic are waiting in. (Default: all three land together when the exploration loop learns to start a fight.)
 

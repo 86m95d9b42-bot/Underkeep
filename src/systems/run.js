@@ -25,7 +25,15 @@ import {
   openDoor,
   COMMANDS,
 } from '../dungeon/movement.js';
-import { tick, inSafeZone, inDarkness, costOf, rollNoiseCheck, wanderingBonus } from '../dungeon/step-clock.js';
+import {
+  tick,
+  inSafeZone,
+  inDarkness,
+  costOf,
+  rollNoiseCheck,
+  stalkerEscaped,
+  wanderingBonus,
+} from '../dungeon/step-clock.js';
 import { remember } from '../dungeon/automap.js';
 import { bestWay, waysToOpen, tryOpen, stepsFor, bashTn, searchSecret } from './locks.js';
 import { layoutStream, carriedStreams } from '../engine/rng.js';
@@ -63,6 +71,7 @@ import {
 } from './hazards.js';
 import { feature as featureSpec, offeringCost } from '../data/hazards.js';
 import { ITEMS } from '../data/items.js';
+import { makeMonster } from '../data/monsters.js';
 import { nameOf } from './identification.js';
 
 /** A tile's key in the floor's side tables. */
@@ -471,6 +480,11 @@ export function createRun({
         ...safeRoomEvents(),
         ...spend(outcome.cost, 'steps'),
       ];
+      // The Hollow Stalker arrives with the fight it is (`02` section 14),
+      // so whoever starts fights has one to start.
+      for (const event of events) {
+        if (event.type === 'stalker') event.monsters = [makeMonster('hollow_stalker', { floor: floor.floor })];
+      }
       // A key underfoot is picked up on the way past: it belongs to the floor,
       // not to a pack, until inventory arrives in Phase 5.
       for (const event of events) if (event.type === 'key') ex.keysTaken.add(event.key.id);
@@ -704,6 +718,19 @@ export function createRun({
 
       record(events);
       return { events };
+    },
+
+    /**
+     * The hero ran from the Stalker: it comes back a hundred steps later,
+     * and keeps coming back until they leave the floor (`02` section 14).
+     */
+    stalkerEscaped() {
+      return stalkerEscaped(ex);
+    },
+
+    /** The Stalker, if it is out on this floor. */
+    get stalker() {
+      return ex.stalkerLoose ? makeMonster('hollow_stalker', { floor: floor.floor }) : null;
     },
 
     /** What the hero adds to a bash (`03` section 6), for the odds a key shows. */

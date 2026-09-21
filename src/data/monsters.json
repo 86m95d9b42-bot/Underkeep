@@ -1381,6 +1381,31 @@
       "floors": [10]
     },
 
+    "hollow_stalker": {
+      "name": "The Hollow Stalker",
+      "hd": "6 + floor",
+      "_numbers": "02 section 14: (floor + 6) x 8 hit points, and triple the normal HD x 10 XP.",
+      "perHd": { "hp": 8, "xp": 30 },
+      "atk": "8 + floor",
+      "def": "14 + floor",
+      "init": 4,
+      "saves": { "body": "4 + floor", "reflex": "4 + floor", "mind": "8 + floor" },
+      "row": "front",
+      "group": [1, 1],
+      "type": "unknown",
+      "morale": null,
+      "archetype": "brute",
+      "proper": true,
+      "attacks": [{ "name": "reaching hand", "dmg": "2d8+floor", "dmgType": "necrotic" }],
+      "traits": [{ "id": "returns", "afterSteps": 100 }],
+      "immune": ["asleep", "feared", "paralyzed", "blinded", "sickened", "petrified", "stunned"],
+      "xp": 0,
+      "gold": "0",
+      "drops": [{ "item": "rare", "chance": 1 }],
+      "floors": [],
+      "wanderer": true
+    },
+
     "coin_imp": {
       "_source": "02 section 14, Rare Wanderers. Its numbers are per floor, which `scale` resolves.",
       "name": "Coin Imp",

@@ -38,6 +38,10 @@ export function createClock() {
     stalkerWarned: /** @type {number[]} */ ([]),
     /** The Stalker is out, and stays out until the hero leaves the floor. */
     stalkerLoose: false,
+    /** The step it comes back on, once the hero has run from it (`02`). */
+    stalkerReturnsAt: /** @type {number | null} */ (null),
+    /** True once it has come at all, so the threshold only sends it once. */
+    stalkerSeen: false,
     /** Set by a Potion of Invisibility: the next check is skipped (`04`). */
     skipNextCheck: false,
   };
@@ -54,7 +58,23 @@ export function resetStalker(clock) {
   clock.sinceCheck = 0;
   clock.stalkerWarned = [];
   clock.stalkerLoose = false;
+  clock.stalkerReturnsAt = null;
+  clock.stalkerSeen = false;
   return clock;
+}
+
+/**
+ * The hero ran, and it is coming back: a hundred steps from now, on this
+ * floor, for as long as they stay on it (`02` section 14).
+ * @param {object} clock the exploration state
+ */
+export function stalkerEscaped(clock) {
+  // It has come once, whatever the step count says; from here on it is the
+  // hundred steps that bring it back.
+  clock.stalkerSeen = true;
+  clock.stalkerLoose = false;
+  clock.stalkerReturnsAt = clock.steps + data.hollowStalker.returnsAfterSteps;
+  return clock.stalkerReturnsAt;
 }
 
 /** The cost in steps of a named action, for callers that don't hold the data. */
@@ -186,9 +206,20 @@ function stalkerEvents(clock) {
       events.push({ type: 'stalkerWarning', at, steps: clock.steps });
     }
   }
-  if (clock.steps >= pacing.hollowStalkerSteps && !clock.stalkerLoose) {
+  // The threshold sends it once; after that it is the hundred steps that
+  // bring it back (`02` section 14).
+  if (clock.steps >= pacing.hollowStalkerSteps && !clock.stalkerLoose && !clock.stalkerSeen) {
     clock.stalkerLoose = true;
+    clock.stalkerSeen = true;
     events.push({ type: 'stalker', steps: clock.steps });
+  }
+  // "The hero can Flee from it, but it returns after 100 steps until the hero
+  // leaves the floor" (`02` section 14).
+  if (clock.stalkerReturnsAt !== null && clock.steps >= clock.stalkerReturnsAt) {
+    clock.stalkerReturnsAt = null;
+    clock.stalkerLoose = true;
+    clock.stalkerSeen = true;
+    events.push({ type: 'stalker', steps: clock.steps, again: true });
   }
   return events;
 }

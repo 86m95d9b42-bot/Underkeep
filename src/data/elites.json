@@ -1,0 +1,40 @@
+{
+  "_source": "02 section 15, Elite Monsters, and section 14's two rare wanderers.",
+
+  "elite": {
+    "chance": { "base": 0.1, "perFloor": 0.02 },
+    "hpMultiplier": 2,
+    "xpMultiplier": 2,
+    "guaranteedDrop": true,
+    "nameTone": "gold",
+    "dice": "d12",
+    "table": [
+      { "roll": 1, "id": "hulking", "name": "Hulking", "damage": 2, "extraHpShare": 0.25 },
+      { "roll": 2, "id": "swift", "name": "Swift", "init": 4, "everyOtherRound": true },
+      { "roll": 3, "id": "venomous", "name": "Venomous", "condition": "poisoned" },
+      { "roll": 4, "id": "blazing", "name": "Blazing", "dice": "1d6", "damageType": "fire", "immune": ["fire"] },
+      {
+        "roll": 5,
+        "id": "frostbound",
+        "name": "Frostbound",
+        "dice": "1d6",
+        "damageType": "cold",
+        "critCondition": "slowed",
+        "immune": ["cold"]
+      },
+      { "roll": 6, "id": "vampiric", "name": "Vampiric", "share": 0.5 },
+      { "roll": 7, "id": "ironhide", "name": "Ironhide", "dr": 3 },
+      { "roll": 8, "id": "arcane", "name": "Arcane", "missilePerHd": 3, "dmg": "1d4+1", "damageType": "force", "everyOtherRound": true },
+      { "roll": 9, "id": "warded", "name": "Warded", "def": 4, "perRound": 1 },
+      { "roll": 10, "id": "berserker", "name": "Berserker", "below": 0.5, "atk": 3, "damage": 3, "def": -3 },
+      { "roll": 11, "id": "cursed", "name": "Cursed", "save": "mind", "condition": "weakened" },
+      { "roll": 12, "id": "gilded", "name": "Gilded", "goldMultiplier": 3, "drop": "uncommon" }
+    ]
+  },
+
+  "wanderers": {
+    "_source": "02 section 14. The Coin Imp arrives through section 16's own d12; the Stalker arrives on the step clock.",
+    "coin_imp": { "oneIn": 50, "by": "encounterTable" },
+    "hollow_stalker": { "by": "stepClock", "xpMultiplier": 3, "drop": "rare" }
+  }
+}

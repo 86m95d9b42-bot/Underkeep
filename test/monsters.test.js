@@ -14,6 +14,8 @@ import { registerRules } from '../src/engine/rules.js';
 import { MONSTERS, goldFrom, makeMonster, monsterIds, monstersOnFloor, scale, statBlock } from '../src/data/monsters.js';
 import { idsOnTable, lineFor, rollEncounter, tableFor } from '../src/data/encounters.js';
 import { PENDING, TRAITS } from '../src/engine/monster-traits.js';
+import { BOSS_TRAITS } from '../src/engine/boss-traits.js';
+import { ELITE_TRAITS } from '../src/engine/elite-traits.js';
 import { resolveAttack } from '../src/engine/attack.js';
 import { applyRider, rollSave } from '../src/engine/riders.js';
 import { chooseAction } from '../src/engine/ai.js';
@@ -134,8 +136,10 @@ describe('the stat blocks (02 sections 4 and 5)', () => {
     expect(monstersOnFloor(10)).toEqual(
       expect.arrayContaining(['drake', 'ashbound_knight', 'basilisk']),
     );
-    // 31 more than floors 1 and 2's nine, plus the Coin Imp.
-    expect(monsterIds()).toHaveLength(41);
+    // 31 more than floors 1 and 2's nine, plus the two rare wanderers of
+    // `02` section 14.
+    expect(monsterIds()).toHaveLength(42);
+    expect(monsterIds()).toContain('hollow_stalker');
   });
 
   it('transcribes the deeper floors, row by row of 02', () => {
@@ -205,7 +209,10 @@ describe('the stat blocks (02 sections 4 and 5)', () => {
     for (const id of monsterIds()) {
       for (const entry of MONSTERS[id].traits ?? []) {
         const trait = typeof entry === 'string' ? entry : entry.id;
-        expect([trait, Boolean(TRAITS[trait] || PENDING[trait])]).toEqual([trait, true]);
+        const answered = Boolean(
+          TRAITS[trait] || BOSS_TRAITS[trait] || ELITE_TRAITS[trait] || PENDING[trait],
+        );
+        expect([trait, answered]).toEqual([trait, true]);
       }
     }
   });

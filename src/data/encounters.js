@@ -10,6 +10,7 @@
  */
 import data from './encounters.json' with { type: 'json' };
 import { groupSize, makeMonster } from './monsters.js';
+import { eliteChance, makeElite } from './elites.js';
 
 export const ENCOUNTERS = data.floors;
 export const ENCOUNTER_DIE = data.die;
@@ -35,7 +36,7 @@ export function lineFor(floor, roll) {
  * @param {{ depth?: number }} [options] how many 12s have already been rolled
  * @returns {{ roll: number, monsters: object[], elite?: string, wanderer?: string }}
  */
-export function rollEncounter(floor, rng, { depth = 0 } = {}) {
+export function rollEncounter(floor, rng, { depth = 0, elite = true } = {}) {
   const roll = rng.die(ENCOUNTER_DIE);
 
   if (roll === SPECIAL.on) {
@@ -51,11 +52,11 @@ export function rollEncounter(floor, rng, { depth = 0 } = {}) {
     }
     // Otherwise roll again and make one monster Elite. The guard is for a
     // table that could only ever answer 12, which none of them can.
-    const again = depth < 4 ? rollEncounter(floor, rng, { depth: depth + 1 }) : null;
+    const again = depth < 4 ? rollEncounter(floor, rng, { depth: depth + 1, elite: false }) : null;
     if (!again || again.monsters.length === 0) return { roll, special, monsters: [] };
-    // Which trait the Elite gets is rolled with the elites (`02` section 15).
+    // Which trait it gets is the d12 of `02` section 15.
     const chosen = rng.int(again.monsters.length);
-    again.monsters[chosen].elite = true;
+    makeElite(rng, again.monsters[chosen]);
     return { ...again, roll, special, elite: again.monsters[chosen].type };
   }
 
@@ -67,6 +68,16 @@ export function rollEncounter(floor, rng, { depth = 0 } = {}) {
     const count = groupSize(entry.id, rng, entry.count);
     for (let i = 0; i < count; i += 1) monsters.push(makeMonster(entry.id, { floor }));
   }
+
+  // `02` section 15: every non-boss encounter has a 10% + 2% x F chance that
+  // one of them is Elite. The table's own 12 has already made one, and does
+  // not roll again.
+  if (elite && monsters.length > 0 && rng.chance(eliteChance(floor))) {
+    const chosen = rng.int(monsters.length);
+    makeElite(rng, monsters[chosen]);
+    return { roll, monsters, elite: monsters[chosen].type };
+  }
+
   return { roll, monsters };
 }
 

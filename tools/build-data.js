@@ -12,6 +12,7 @@ import { checkCondition } from '../src/engine/ai.js';
 import { parsePart } from '../src/engine/damage.js';
 import { PENDING, TRAITS } from '../src/engine/monster-traits.js';
 import { BOSS_TRAITS } from '../src/engine/boss-traits.js';
+import { ELITE_TRAITS } from '../src/engine/elite-traits.js';
 import { HANDLERS, PENDING as SKILLS_PENDING } from '../src/engine/skill-hooks.js';
 import { HANDLERS as ITEM_HANDLERS, PENDING as ITEMS_PENDING } from '../src/engine/item-hooks.js';
 import { EVENTS } from '../src/engine/hooks.js';
@@ -468,6 +469,9 @@ function checkMonsters(json, ai, combat) {
     const where = `monsters.json ${id}`;
     if (!block.name) problems.push(`${where} has no name`);
     for (const stat of ['hd', 'hp', 'atk', 'def', 'init', 'xp']) {
+      // A wanderer's hit points and XP are written per hit die
+      // (`02` section 14): "(floor + 6) x 8", "triple the normal HD x 10".
+      if (block.perHd?.[stat] !== undefined) continue;
       if (block[stat] === undefined) problems.push(`${where} has no ${stat}`);
     }
     if (!['front', 'back'].includes(block.row)) problems.push(`${where} stands in no row`);
@@ -479,7 +483,10 @@ function checkMonsters(json, ai, combat) {
 
     for (const attack of block.attacks ?? []) {
       try {
-        const part = parsePart(`${attack.dmg}${attack.dmgType ? ` ${attack.dmgType}` : ''}`);
+        // A damage die may carry the floor in it, which is resolved when the
+        // unit is built (`02` section 14, the Hollow Stalker).
+        const dice = String(attack.dmg ?? '').replace(/\bfloor\b/g, '1');
+        const part = parsePart(`${dice}${attack.dmgType ? ` ${attack.dmgType}` : ''}`);
         if (part.type && !damageTypes.includes(part.type)) {
           problems.push(`${where} deals "${part.type}", which is not a damage type`);
         }
@@ -502,7 +509,7 @@ function checkMonsters(json, ai, combat) {
     for (const entry of block.traits ?? []) {
       const trait = typeof entry === 'string' ? entry : entry.id;
       if (!trait) problems.push(`${where} has a trait with no id`);
-      else if (!TRAITS[trait] && !BOSS_TRAITS[trait] && !PENDING[trait]) {
+      else if (!TRAITS[trait] && !BOSS_TRAITS[trait] && !ELITE_TRAITS[trait] && !PENDING[trait]) {
         problems.push(`${where} has trait "${trait}", which nothing implements`);
       }
     }

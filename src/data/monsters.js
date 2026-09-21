@@ -67,12 +67,15 @@ export function scale(value, floor = 1) {
  * One attack from the bestiary's `attacks` list, as the engine's attack shape.
  * @param {object} attack
  */
-function toAttack(attack) {
+function toAttack(attack, floor = 1) {
   if (!attack) return { damage: '1' };
+  // "2d8 + floor": the one wanderer whose damage grows with the depth it is
+  // met at (`02` section 14).
+  const dice = String(attack.dmg ?? '').replace(/\bfloor\b/g, String(floor));
   return {
     name: attack.name,
     kind: attack.kind ?? 'melee',
-    damage: `${attack.dmg}${attack.dmgType ? ` ${attack.dmgType}` : ''}`,
+    damage: `${dice}${attack.dmgType ? ` ${attack.dmgType}` : ''}`,
     ...(attack.bonus !== undefined ? { bonus: attack.bonus } : {}),
     ...(attack.onHit ? { onHit: attack.onHit } : {}),
     // A blow of two kinds at once — the Ember Hound's bite and its fire —
@@ -120,7 +123,13 @@ export function makeMonster(id, { floor = 1, elite = false, overrides = {} } = {
  */
 export function buildUnit(block, { id, floor = 1, elite = false, overrides = {} }) {
   const at = (value) => scale(value, floor);
-  const attacks = (block.attacks ?? []).map(toAttack);
+  const hd = at(block.hd);
+  // A wanderer is written in terms of its own hit dice: the Hollow Stalker is
+  // "(floor + 6) x 8 HP" and "triple the normal XP for its HD"
+  // (`02` section 14).
+  const perHd = (key, fallback) =>
+    block.perHd?.[key] !== undefined ? hd * block.perHd[key] : at(fallback);
+  const attacks = (block.attacks ?? []).map((attack) => toAttack(attack, floor));
 
   return {
     type: id,
@@ -130,9 +139,9 @@ export function buildUnit(block, { id, floor = 1, elite = false, overrides = {} 
     family: block.type ?? null,
     name: block.name,
     side: 'monsters',
-    hd: at(block.hd),
-    hp: at(block.hp),
-    maxHp: at(block.hp),
+    hd,
+    hp: perHd('hp', block.hp),
+    maxHp: perHd('hp', block.hp),
     atk: at(block.atk),
     def: at(block.def),
     init: at(block.init),
@@ -170,6 +179,8 @@ export function buildUnit(block, { id, floor = 1, elite = false, overrides = {} 
     ...(block.phases ? { phases: block.phases, phase: 1 } : {}),
     ...(block.states ? { states: block.states } : {}),
     ...(block.final ? { final: true } : {}),
+    ...(block.proper ? { proper: true } : {}),
+    ...(block.wanderer ? { wanderer: true } : {}),
     ...(block.coldSlowsAndStripsDr ? { coldSlowsAndStripsDr: true } : {}),
     ...(block.weakAlsoSlows ? { weakAlsoSlows: block.weakAlsoSlows } : {}),
     ...(block.weakAlsoSlows ? { weakAlsoSlows: block.weakAlsoSlows } : {}),
@@ -183,7 +194,7 @@ export function buildUnit(block, { id, floor = 1, elite = false, overrides = {} 
     // Conditions the bestiary lists as immunities are immunities to conditions
     // as well as to damage; the condition engine reads the same list.
     immunities: [...(block.immune ?? [])],
-    xp: at(block.xp),
+    xp: perHd('xp', block.xp),
     goldRoll: at(block.gold ?? '0'),
     drops: block.drops ?? [],
     ...(block.swallowedGold ? { swallowedGold: block.swallowedGold } : {}),
@@ -224,5 +235,8 @@ export function groupSize(id, rng, range) {
 export function goldFrom(unit, rng) {
   const notation = String(unit.goldRoll ?? '0');
   if (notation === '0') return 0;
-  return /^\d+$/.test(notation) ? Number(notation) : rng.roll(notation);
+  const rolled = /^\d+$/.test(notation) ? Number(notation) : rng.roll(notation);
+  // A Gilded elite is carrying three times what its kind usually does
+  // (`02` section 15).
+  return rolled * (unit.goldMultiplier ?? 1);
 }
