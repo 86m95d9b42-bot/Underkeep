@@ -63,6 +63,10 @@ export function canStep(floor, from, to, keysHeld) {
   const hazard = floor.hazards?.[key(tx, ty)];
   if (hazard?.kind === 'teleporter_pad' && !MINIMUM_HERO.canUseTeleporters) return false;
 
+  // Lava and ash are scenery: a wall to everyone, however well equipped
+  // (`05` section 6). The floor is rebuilt if one of them cuts the way.
+  if (floor.features?.[key(tx, ty)]?.blocks) return false;
+
   if (tile !== TILE.DOOR) return true;
 
   const door = floor.doors?.[key(tx, ty)];

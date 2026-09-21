@@ -203,6 +203,13 @@ export function mapMarks(floor, ex) {
     if (!hazard.found) continue;
     add('hazard', hazard.pos, { label: hazard.kind });
   }
+  // Scenery is plain to see, so it is drawn wherever the hero has been:
+  // a lava channel on the map is what stops them walking into it again
+  // (`05` section 6).
+  for (const feature of Object.values(floor.features ?? {})) {
+    if (!feature.blocks) continue;
+    add('hazard', feature.pos, { label: feature.kind });
+  }
 
   if (floor.grave) add('grave', floor.grave.pos);
   if (floor.returnMark) add('returnMark', floor.returnMark.pos);

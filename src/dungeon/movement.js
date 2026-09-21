@@ -204,6 +204,12 @@ export function blockedBy(floor, from, to, ex) {
     return stop('web', 'web', { hazard });
   }
 
+  // Lava channels and ash pits are impassable scenery (`05` section 6). They
+  // are a side table rather than a wall, because the map holds terrain only,
+  // but nothing walks through them and the solvability check knows it.
+  const feature = floor.features?.[at];
+  if (feature?.blocks) return stop('scenery', feature.kind, { feature });
+
   return null;
 }
 
@@ -233,6 +239,7 @@ export function whatIsAt(floor, pos, ex) {
     secretFound: tile === TILE.ILLUSION ? secretFound(floor, at, ex) : false,
     chest: floor.chests?.[at] ?? null,
     curiosity: floor.curiosities?.[at] ?? null,
+    feature: floor.features?.[at] ?? null,
     keyItem: floor.keys?.[at] ?? null,
     // An undetected trap or hazard is not something the hero can be told about;
     // it is here so the step resolver can fire it (Phase 7).
@@ -280,6 +287,12 @@ export function contextFor(floor, ex) {
     if (spot.curiosity && !spot.curiosity.used) {
       return spot.curiosity.kind === 'fountain' ? 'drink' : 'offer';
     }
+    // A sarcophagus is opened and an ash pit is reached into; a wine rack and
+    // a bookshelf are searched, which is what the key already does
+    // (`05` section 6).
+    if (spot.feature && !spot.feature.opened && !spot.feature.taken) {
+      if (spot.feature.kind === 'sarcophagus' || spot.feature.gem) return 'open';
+    }
   }
   return 'search';
 }
@@ -302,6 +315,7 @@ export function arrivalEvents(floor, at, ex) {
   if (landed.waystone) events.push({ type: 'waystone', at });
   if (landed.pit) events.push({ type: 'pit', at });
   if (landed.hazard) events.push({ type: 'hazard', kind: landed.hazard.kind, at, hazard: landed.hazard });
+  if (landed.feature) events.push({ type: 'feature', kind: landed.feature.kind, at, feature: landed.feature });
   if (landed.trap && !landed.trap.sprung && !landed.trap.disarmed) {
     events.push({ type: 'trap', at, trap: landed.trap });
   }
@@ -343,10 +357,58 @@ export function resolveMove(floor, ex, command) {
     return { command, from, to: from, moved: false, turned: false, blocked, cost: 0, events };
   }
 
-  events.push({ type: 'step', from: from.pos, to, heading: headingFor(ex.facing, command) });
-  events.push(...arrivalEvents(floor, to, ex));
+  const heading = headingFor(ex.facing, command);
+  events.push({ type: 'step', from: from.pos, to, heading });
 
-  return { command, from, to: { pos: to, facing: ex.facing }, moved: true, turned: false, blocked: null, cost: 1, events };
+  // Ice: stepping onto it slides the hero on until a wall or a tile that is
+  // not ice, and they cannot turn on the way (`05` section 6). Every tile
+  // slid still counts on the step clock, so the cost is the whole path.
+  const slid = slideOn(floor, to, heading, ex);
+  const landed = slid.at;
+  if (slid.path.length > 0) {
+    events.push({ type: 'slid', from: to, to: landed, tiles: slid.path.length });
+  }
+
+  events.push(...arrivalEvents(floor, landed, ex));
+
+  return {
+    command,
+    from,
+    to: { pos: landed, facing: ex.facing },
+    moved: true,
+    turned: false,
+    blocked: null,
+    cost: 1 + slid.path.length,
+    slid: slid.path,
+    events,
+  };
+}
+
+/**
+ * Where a step onto ice ends (`05` section 6, Ice Slide). Deterministic, so
+ * it belongs with the movement rather than with the rolls: the hero keeps
+ * going in the direction they were travelling until something stops them.
+ *
+ * @param {import('./floor-builder.js').Floor} floor
+ * @param {[number, number]} from the tile just stepped onto
+ * @param {[number, number]} heading
+ * @param {Exploration} [ex]
+ */
+export function slideOn(floor, from, heading, ex) {
+  /** @type {[number, number][]} */
+  const path = [];
+  let at = /** @type {[number, number]} */ ([...from]);
+  const isIce = (pos) => floor.hazards?.[key(...pos)]?.kind === 'ice_slide';
+
+  // A floor is at most 49 tiles across, so nothing slides further than that.
+  for (let step = 0; step < floor.width + floor.height; step += 1) {
+    if (!isIce(at)) break;
+    const next = /** @type {[number, number]} */ ([at[0] + heading[0], at[1] + heading[1]]);
+    if (blockedBy(floor, at, next, ex)) break;
+    at = next;
+    path.push(at);
+  }
+  return { path, at };
 }
 
 /**

@@ -638,6 +638,7 @@ export function buildFloor(floor, masterSeed, makeStream) {
         hazards: furnished.hazards,
         lairs: furnished.lairs,
         curiosities: furnished.curiosities,
+        features: furnished.features,
         // Filled in as the game is played, not at generation (05 section 9).
         grave: null,
         returnMark: null,

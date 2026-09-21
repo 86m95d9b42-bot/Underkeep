@@ -258,16 +258,30 @@ export function springWithPole(rng, hero, entry) {
 /* -------------------------------------------------------------------------- */
 
 /**
+ * A trap's damage as `06` section 7 wants it. Two traps roll dice **and**
+ * dice — the Falling Block and the Fire Rune are `FD+1d6` — and that is two
+ * parts of one hit, not one unreadable number.
+ * @param {string} notation
+ * @param {string | null} type
+ */
+function damageParts(notation, type) {
+  const pieces = String(notation).split('+').map((piece) => piece.trim());
+  const dice = pieces.filter((piece) => /\dd\d|^d\d/.test(piece));
+  if (dice.length < 2) return { damage: `${notation}${type ? ` ${type}` : ''}` };
+  return { parts: pieces.map((piece) => `${piece}${type ? ` ${type}` : ''}`) };
+}
+
+/**
  * The damage itself, through `06` section 7: the dice, then resistance,
  * weakness, immunity and DR, then the floor of 1 that a hit that lands has.
  * A trap has no attacker, so nothing adds an attribute to it.
  */
-function hurt(services, hero, notation, type, entry, { half = false } = {}) {
+export function hurt(services, hero, notation, type, entry, { half = false } = {}) {
   const combat = { rng: services.rng, hooks: services.hooks ?? createHooks() };
   const attack = {
     name: entry.kind,
     kind: 'trap',
-    damage: `${notation}${type ? ` ${type}` : ''}`,
+    ...damageParts(notation, type),
     noAttributeDamage: true,
   };
   // "Reflex save for half" is a multiplier on every part, which is what
@@ -289,8 +303,8 @@ function hurt(services, hero, notation, type, entry, { half = false } = {}) {
   return dealt.total;
 }
 
-/** One saving throw against a trap (`03` sections 2 and 4). */
-function rollSave(rng, hero, save, dc, { advantage = false, disadvantage = false }) {
+/** One saving throw against a trap or a hazard (`03` sections 2, 4 and 8). */
+export function rollSave(rng, hero, save, dc, { advantage = false, disadvantage = false }) {
   const roll = rng.d20({ advantage, disadvantage });
   const total = roll + (hero?.saves?.[save] ?? 0);
   return { save, roll, total, dc, passed: roll === 20 || (roll !== 1 && total >= dc) };

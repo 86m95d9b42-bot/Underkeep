@@ -218,7 +218,8 @@ function fireTrap(services, hero, chest, floor, { advantage = false } = {}) {
  */
 export function lootBonusOf(chest) {
   const bonusFor = (tier) => lockData.tiers[tier]?.chestLootBonus ?? 0;
-  return bonusFor(chest.tier) + bonusFor(chest.trap?.tier);
+  // A Goblin Camp's chest carries its own +10 (`05` section 6).
+  return bonusFor(chest.tier) + bonusFor(chest.trap?.tier) + (chest.lootBonus ?? 0);
 }
 
 /**

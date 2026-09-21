@@ -217,7 +217,8 @@
     },
     "ice_slide": {
       "roomsOnly": true,
-      "everyEntryMustReachANonIceExit": true
+      "everyEntryMustReachANonIceExit": true,
+      "leastTiles": 4
     },
     "web_curtain": {
       "blocksCorridor": true,

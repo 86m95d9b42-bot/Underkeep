@@ -405,6 +405,10 @@ export function quickItems(pack) {
 export function gearSummary(pack, hero = null) {
   const scores = hero?.attributes ?? {};
   const worn = equippedItems(pack);
+  // "Magic items give no bonus" inside an Anti-Magic Field (`03` section 8).
+  // A curse is not a bonus, so it keeps working: the field suppresses what
+  // the hero paid for, not what is holding on to them.
+  const dead = Boolean(hero?.antiMagic);
   const summary = {
     def: 0,
     maxAgi: null,
@@ -431,7 +435,7 @@ export function gearSummary(pack, hero = null) {
     const waives = (key) => local.some((effect) => effect.sheet === key);
     const lighter = local.find((effect) => effect.sheet === 'maxAgi')?.value ?? 0;
 
-    summary.def += (gear.def ?? 0) + (gear.bonus ?? 0);
+    summary.def += (gear.def ?? 0) + (dead ? 0 : (gear.bonus ?? 0));
     if (gear.maxAgi !== undefined) {
       const cap = gear.maxAgi + lighter;
       summary.maxAgi = summary.maxAgi === null ? cap : Math.min(summary.maxAgi, cap);
@@ -449,7 +453,7 @@ export function gearSummary(pack, hero = null) {
     }
   }
 
-  summary.effects = [...wornEffects(worn), ...carriedToolEffects(pack)];
+  summary.effects = [...wornEffects(worn, { dead }), ...carriedToolEffects(pack)];
 
   // A score a charm raises is raised before the sheet is derived from it: the
   // Lucky Coin's +1 LCK is a +1 to the score, capped where the charm says
@@ -469,7 +473,7 @@ export function gearSummary(pack, hero = null) {
   if (weapon) {
     const kind = weapon.group === 'bow' ? 'ranged' : 'melee';
     summary.twoHanded = (weapon.properties ?? []).includes('twoHanded');
-    summary.weaponToHit[kind] += (weapon.toHit ?? 0) + (weapon.bonus ?? 0);
+    summary.weaponToHit[kind] += (weapon.toHit ?? 0) + (dead ? 0 : (weapon.bonus ?? 0));
     if (!meets(weapon)) {
       summary.weaponToHit[kind] += ITEM_RULES.requirementNotMet.toHit;
       summary.unmet.push(weapon.instanceId);
@@ -504,18 +508,23 @@ function propertyEffects(gear) {
  * after a hundred steps *or when it first triggers*, which it can only do if
  * it has been working all along.
  */
-function wornEffects(worn) {
+function wornEffects(worn, { dead = false } = {}) {
   const out = [];
   for (const [slot, gear] of Object.entries(worn)) {
     if (!gear) continue;
     const from = (effects, source) =>
       out.push(...effects.map((effect) => ({ ...effect, slot, source, item: gear.instanceId })));
 
-    from(gear.effects ?? [], 'item');
-    from(
-      propertyEffects(gear).filter((effect) => !GEAR_LOCAL.includes(effect.sheet)),
-      'property',
-    );
+    // In an Anti-Magic Field a magic item is an ordinary one: what it does
+    // beyond its own steel stops (`03` section 8). Its curse does not.
+    const silenced = dead && gear.magic;
+    if (!silenced) {
+      from(gear.effects ?? [], 'item');
+      from(
+        propertyEffects(gear).filter((effect) => !GEAR_LOCAL.includes(effect.sheet)),
+        'property',
+      );
+    }
     if (gear.curse) {
       const curse = CURSES.table.find((row) => row.id === gear.curse);
       from(curse?.effects ?? [], 'curse');

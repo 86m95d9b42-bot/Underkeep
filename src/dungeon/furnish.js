@@ -11,6 +11,7 @@
  * table it cannot see yet will fill it in.
  */
 import floorsData from '../data/floors.json' with { type: 'json' };
+import { FEATURES } from '../data/hazards.js';
 import { isArcane, rollChestTrap, rollTrap } from '../data/traps.js';
 import { TILE, isWalkable, distancesFrom } from './floor-builder.js';
 import { rollLockTier, tn, lockData } from './doors.js';
@@ -62,6 +63,21 @@ function roomAt(floor, x, y) {
     const [rx, ry, rw, rh] = room.rect;
     return x >= rx && x < rx + rw && y >= ry && y < ry + rh;
   });
+}
+
+/**
+ * The tiles of a patch with its outer ring left off, so whatever covers it
+ * has a shore. A room's `rect` counts its walls, so the ring has to be found
+ * from the walkable tiles themselves.
+ * @param {[number, number][]} tiles
+ */
+function insideOf(tiles) {
+  if (tiles.length === 0) return [];
+  const xs = tiles.map(([x]) => x);
+  const ys = tiles.map(([, y]) => y);
+  const [left, right] = [Math.min(...xs), Math.max(...xs)];
+  const [top, bottom] = [Math.min(...ys), Math.max(...ys)];
+  return tiles.filter(([x, y]) => x > left && x < right && y > top && y < bottom);
 }
 
 /** True for a tile in a corridor: walkable, and in no room at all. */
@@ -280,40 +296,26 @@ export function placeChests(floor, rng, traps) {
 /* -------------------------------------------------------------------------- */
 
 /**
- * Hazards (`05` section 3 step 8, `03` section 8).
+ * One placer per hazard, each answering whether it found somewhere to go
+ * (`05` section 3 step 8, `03` section 8).
  *
- * The documents give each hazard's placement rules but never say how many a
- * floor gets, so the count is `hazardCount` in `floors.json` and is flagged in
- * docs/DECISIONS.md. Kinds are drawn from the ones the floor allows.
+ * It is a factory because two callers lay hazards: the floor's own random
+ * ones, and a theme feature — floor 4's Web Curtain, floor 5's Flooded
+ * Corridor, floor 9's Frozen Lake are hazards a room is made of (`05`
+ * section 6), and they are laid by the same rules as the rest.
  *
  * @param {import('./floor-builder.js').Floor} floor
  * @param {import('../engine/rng.js').Stream} rng
- * @param {Record<string, any>} traps
+ * @param {Record<string, any>} hazards the table being filled
+ * @param {Set<string>} taken tiles already spoken for
  */
-export function placeHazards(floor, rng, traps) {
-  /** @type {Record<string, any>} */
-  const hazards = {};
-  if (floor.spec.hazards.length === 0) return hazards;
-
+export function hazardPlacers(floor, rng, hazards, taken) {
   const rules = floorsData.hazardRules;
   const off = protectedTiles(floor);
-  const taken = new Set([...Object.keys(traps)]);
   const onPath = new Set(floor.criticalPath.map(([x, y]) => key(x, y)));
   const open = openTiles(floor).filter(([x, y]) => !off.has(key(x, y)));
 
   const free = (pos) => !taken.has(key(...pos)) && !off.has(key(...pos));
-
-  /** True when sealing this tile would cut the floor in two. */
-  const severs = ([x, y]) => {
-    const sides = DIRS.map(([dx, dy]) => [x + dx, y + dy]).filter(([nx, ny]) =>
-      isWalkable(floor.map[ny]?.[nx]),
-    );
-    if (sides.length < 2) return false;
-    const sealed = floor.map.map((row) => [...row]);
-    sealed[y][x] = TILE.WALL;
-    const reach = distancesFrom(sealed, sides[0]);
-    return sides.slice(1).some(([nx, ny]) => reach[ny][nx] < 0);
-  };
 
   /** Distance to the nearest stairs or door, for the spinner's spacing rule. */
   const landmarks = [floor.stairs.up, floor.stairs.down, ...Object.values(floor.doors).map((d) => d.pos).filter(Boolean)];
@@ -401,11 +403,12 @@ export function placeHazards(floor, rng, traps) {
     // stepping on one teleports the hero away, so a pad in a single corridor
     // is a wall to anyone trying to walk past it (05 section 4).
     teleporter_pad: () => {
-      const spots = open.filter(
-        (pos) => free(pos) && !onPath.has(key(...pos)) && !severs(pos),
-      );
+      const spots = open.filter((pos) => free(pos) && !onPath.has(key(...pos)));
       if (spots.length < 2) return false;
-      const pad = rng.pick(spots);
+      // `severs` walks the whole floor, so it is asked about the tile that
+      // was picked rather than about every tile there is.
+      const pad = rng.shuffle(spots).slice(0, 8).find((pos) => !severs(floor, pos));
+      if (!pad) return false;
       const reach = distancesFrom(floor.map, floor.start.pos);
       const targets = open.filter((pos) => reach[pos[1]][pos[0]] > 0 && key(...pos) !== key(...pad));
       if (targets.length === 0) return false;
@@ -426,16 +429,19 @@ export function placeHazards(floor, rng, traps) {
     },
 
     // Rooms only, and every entry has to lead back out to a non-ice tile.
+    // The lake is the room's middle, not the whole room: a floor of ice from
+    // wall to wall has nowhere to stop, and `05` section 6 wants a room that
+    // can be crossed and left.
     ice_slide: () => {
       const rooms = floor.rooms.filter(
         (room) => !['bossArena', 'safeRoom'].includes(room.role) && room.depth >= 0,
       );
       for (const room of rng.shuffle(rooms)) {
-        const tiles = roomTiles(floor, room).filter(free);
-        if (tiles.length < 4) continue;
-        const ice = new Set(tiles.map((pos) => key(...pos)));
+        const lake = insideOf(roomTiles(floor, room).filter(free));
+        if (lake.length < rules.ice_slide.leastTiles) continue;
+        const ice = new Set(lake.map((pos) => key(...pos)));
         if (!everySlideEnds(floor, ice)) continue;
-        add('ice_slide', tiles, { room: room.id });
+        add('ice_slide', lake, { room: room.id });
         return true;
       }
       return false;
@@ -453,6 +459,26 @@ export function placeHazards(floor, rng, traps) {
     },
   };
 
+  return placers;
+}
+
+/**
+ * The floor's own hazards (`05` section 3 step 8).
+ *
+ * The documents give each hazard's placement rules but never say how many a
+ * floor gets, so the count is `hazardCount` in `floors.json` and is flagged in
+ * docs/DECISIONS.md. Kinds are drawn from the ones the floor allows.
+ *
+ * @param {import('./floor-builder.js').Floor} floor
+ * @param {import('../engine/rng.js').Stream} rng
+ * @param {Record<string, any>} taken what the traps and chests already hold
+ */
+export function placeHazards(floor, rng, taken) {
+  /** @type {Record<string, any>} */
+  const hazards = {};
+  if (floor.spec.hazards.length === 0) return hazards;
+
+  const placers = hazardPlacers(floor, rng, hazards, new Set(Object.keys(taken)));
   const wanted = resolveCount(floorsData.hazardCount, floor.floor);
   let placed = 0;
   let tries = 0;
@@ -462,6 +488,297 @@ export function placeHazards(floor, rng, traps) {
     if (placers[kind]?.()) placed += 1;
   }
   return hazards;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Theme features                                                             */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The floor's theme features (`05` section 6).
+ *
+ * Each floor names one to three in `floors.json`, and `hazards.json` says what
+ * each one is: something to search (Wine Racks, Bookshelves), something to
+ * open (a Sarcophagus), a hazard a room is made of (the Web Curtain, the
+ * Flooded Corridor, the Frozen Lake), scenery that shapes a room (Lava
+ * Channels, Ash Pits), a shrine by another name (the Altar), a visible trap
+ * (the Heat Vent), a Lair with better loot (the Goblin Camp), or the boss's
+ * own chest (the Dragon's Hoard).
+ *
+ * Theme Rooms were given their role in `05` section 3 step 6; this is what
+ * goes in them. Everything a feature creates goes in the table it belongs to,
+ * so nothing has to look in two places for a hazard.
+ *
+ * @param {import('./floor-builder.js').Floor} floor
+ * @param {import('../engine/rng.js').Stream} rng
+ * @param {{ traps: object, chests: object, hazards: object, lairs: object,
+ *   curiosities: object }} tables the side tables already filled
+ */
+export function placeFeatures(floor, rng, tables) {
+  /** @type {Record<string, any>} */
+  const features = {};
+  const wanted = floor.spec.features ?? [];
+  if (wanted.length === 0) return features;
+
+  const off = protectedTiles(floor);
+  const taken = new Set([
+    ...Object.keys(tables.traps),
+    ...Object.keys(tables.chests),
+    ...Object.keys(tables.hazards),
+    ...Object.keys(tables.curiosities),
+  ]);
+  const onPath = new Set(floor.criticalPath.map(([x, y]) => key(x, y)));
+  const placers = hazardPlacers(floor, rng, tables.hazards, taken);
+  // What the hero can reach before any scenery is laid, so a patch can be
+  // judged against the floor as it was.
+  const reachable = distancesFrom(floor.map, floor.start.pos);
+  const free = (pos) => !taken.has(key(...pos)) && !off.has(key(...pos));
+
+  /** Writes one feature down and marks its tile. */
+  const add = (id, pos, extra = {}) => {
+    features[key(...pos)] = { kind: id, pos: [...pos], found: false, used: false, ...extra };
+    taken.add(key(...pos));
+    return true;
+  };
+
+  /** A room that has not been used for a feature yet, deepest first. */
+  const themeRooms = floor.rooms
+    .filter((room) => room.role === 'theme')
+    .sort((a, b) => b.depth - a.depth);
+  const usedRooms = new Set();
+
+  /** One tile of a free theme room, and the room it came from. */
+  const spotInRoom = () => {
+    for (const room of themeRooms) {
+      if (usedRooms.has(room.id)) continue;
+      const tiles = roomTiles(floor, room).filter(free);
+      if (tiles.length === 0) continue;
+      usedRooms.add(room.id);
+      return { room, tiles };
+    }
+    return null;
+  };
+
+  /** A corridor tile that is not already busy. */
+  const spotInCorridor = () => {
+    const spots = openTiles(floor).filter((pos) => free(pos) && inCorridor(floor, pos));
+    return spots.length ? rng.pick(spots) : null;
+  };
+
+  const makers = {
+    // Something to search once: a 1-in-6 or a 1-in-8 for what it hides.
+    wine_rack: () => searchable('wine_rack'),
+    bookshelf: () => searchable('bookshelf'),
+
+    // Something to open, which may be a fight (`05` section 6).
+    sarcophagus: () => {
+      const spot = spotInRoom();
+      if (!spot) return false;
+      return add('sarcophagus', rng.pick(spot.tiles), { room: spot.room.id, opened: false });
+    },
+
+    // Naturally lit: torches do not burn down inside (`05` section 6).
+    glowcap_room: () => {
+      const spot = spotInRoom();
+      if (!spot) return false;
+      spot.room.lit = true;
+      return add('glowcap_room', rng.pick(spot.tiles), { room: spot.room.id, lit: true });
+    },
+
+    // Impassable scenery that shapes a room. It is a side table, not a wall,
+    // so the map still holds terrain only — but the solvability check treats
+    // it as one, and it never takes the critical path.
+    lava_channel: () => scenery('lava_channel'),
+    ash_pit: () => scenery('ash_pit'),
+
+    // An Altar is an Offering Shrine under another name (`05` section 6).
+    altar: () => {
+      const spot = spotInRoom();
+      if (!spot) return false;
+      const at = rng.pick(spot.tiles);
+      tables.curiosities[key(...at)] = {
+        kind: 'shrine',
+        pos: [...at],
+        room: spot.room.id,
+        used: false,
+        feature: 'altar',
+      };
+      return add('altar', at, { room: spot.room.id, curiosity: 'shrine' });
+    },
+
+    // A visible Flame Jet that fires every third step: no detecting needed,
+    // and it can be timed (`05` section 6).
+    heat_vent: () => {
+      const at = spotInCorridor();
+      if (!at) return false;
+      tables.traps[key(...at)] = {
+        kind: 'flame_jet',
+        tier: 'standard',
+        on: 'floor',
+        pos: [...at],
+        // Visible: `05` section 6 says it does not need detecting.
+        found: true,
+        typeKnown: true,
+        disarmed: false,
+        sprung: false,
+        searches: { normal: true, careful: true },
+        everyStep: FEATURES.heat_vent.firesEveryStep,
+        feature: 'heat_vent',
+      };
+      return add('heat_vent', at, { trap: 'flame_jet' });
+    },
+
+    // A Lair whose chest gets +10 on its loot roll (`05` section 6).
+    goblin_camp: () => {
+      const lairs = Object.values(tables.lairs).filter((lair) => !lair.feature);
+      if (lairs.length === 0) return false;
+      const lair = rng.pick(lairs);
+      lair.feature = 'goblin_camp';
+      const chest = Object.values(tables.chests).find((one) => one.room === lair.room);
+      if (chest) chest.lootBonus = (chest.lootBonus ?? 0) + FEATURES.goblin_camp.chestLootBonus;
+      const tiles = roomTiles(floor, floor.rooms.find((room) => room.id === lair.room)).filter(free);
+      if (tiles.length === 0) return false;
+      return add('goblin_camp', rng.pick(tiles), { room: lair.room, lair: lair.room });
+    },
+
+    // The dragon's hoard: the boss's own chest, always Rare and never
+    // trapped (`03` section 7).
+    dragon_hoard: () => {
+      const tiles = arenaTiles(floor).filter((pos) => !taken.has(key(...pos)));
+      if (tiles.length === 0) return false;
+      const at = rng.pick(tiles);
+      tables.chests[key(...at)] = {
+        id: `chest_f${floor.floor}_hoard`,
+        pos: [...at],
+        where: 'bossArena',
+        room: floor.arena?.id ?? null,
+        depthBonus: 0,
+        boss: true,
+        lock: 'none',
+        tier: null,
+        pickTn: 0,
+        trap: null,
+        mimic: false,
+        searches: { normal: false, careful: false },
+        gold: `${floor.floor}*${lockData.chests.gold.dice}`,
+        opened: false,
+        restocked: false,
+      };
+      return add('dragon_hoard', at, { chest: true });
+    },
+
+    // Three features are a hazard the room is made of: the placers already
+    // know the rules, so the feature only records where one went.
+    web_curtain: () => fromHazard('web_curtain'),
+    flooded_corridor: () => fromHazard('flooded_corridor', 'deep_water'),
+    frozen_lake: () => fromHazard('frozen_lake', 'ice_slide'),
+  };
+
+  /** A search-once feature: the racks and the shelves. */
+  function searchable(id) {
+    const spot = spotInRoom();
+    if (!spot) return false;
+    return add(id, rng.pick(spot.tiles), { room: spot.room.id, searched: false });
+  }
+
+  /**
+   * Scenery: a few tiles of a room nothing can walk through. The whole patch
+   * is checked for connectivity at once — walling tiles one at a time would
+   * walk the floor once per tile — and dropped if it would cut the floor.
+   */
+  function scenery(id) {
+    const spot = spotInRoom();
+    if (!spot) return false;
+    const spec = FEATURES[id];
+
+    // Along the room's edge, and never on a tile the room is entered by: a
+    // channel of lava shapes a room, it does not seal it. A tile that touches
+    // anything outside the room is a way in, so it is left alone.
+    const middle = new Set(insideOf(spot.tiles).map((at) => key(...at)));
+    const inRoom = new Set(spot.tiles.map((at) => key(...at)));
+    const edge = spot.tiles.filter(([x, y]) => {
+      if (middle.has(key(x, y)) || onPath.has(key(x, y))) return false;
+      return DIRS.every(([dx, dy]) => {
+        const next = [x + dx, y + dy];
+        return !isWalkable(floor.map[next[1]]?.[next[0]]) || inRoom.has(key(...next));
+      });
+    });
+    if (edge.length === 0) return false;
+
+    // The whole patch is checked at once; a patch that would cut the floor is
+    // trimmed rather than dropped.
+    let picked = rng.shuffle(edge).slice(0, Math.max(1, Math.floor(spot.tiles.length / 4)));
+    while (picked.length > 0 && !stillConnected(floor, picked, reachable)) picked = picked.slice(0, -1);
+    if (picked.length === 0) return false;
+
+    for (const at of picked) {
+      const gem = Boolean(spec.gemOneIn) && rng.chance(1 / spec.gemOneIn);
+      add(id, at, { room: spot.room.id, blocks: true, gem, taken: false });
+    }
+    return true;
+  }
+
+  /** A feature that is a hazard: lay the hazard, then point at it. */
+  function fromHazard(id, kind = id) {
+    const before = new Set(Object.keys(tables.hazards));
+    if (!placers[kind]?.()) return false;
+    const laid = Object.keys(tables.hazards).filter((at) => !before.has(at));
+    if (laid.length === 0) return false;
+    const [x, y] = laid[0].split(',').map(Number);
+    for (const at of laid) tables.hazards[at].feature = id;
+    return add(id, [x, y], { hazard: kind, tiles: laid.length });
+  }
+
+  for (const id of wanted) makers[id]?.();
+  return features;
+}
+
+/** The tiles of the boss arena, where the hoard goes. */
+function arenaTiles(floor) {
+  const arena = floor.arena;
+  if (!arena?.rect) return [];
+  return roomTiles(floor, arena);
+}
+
+/**
+ * Whether the floor is still in one piece with these tiles walled off: no
+ * tile the hero could reach before may become unreachable. It is measured
+ * against the floor as it was, because some tiles — a secret stash behind an
+ * illusion — were never reachable this way to begin with.
+ *
+ * One walk of the map for the whole patch: scenery is placed in handfuls, and
+ * asking tile by tile would walk the floor once per tile.
+ *
+ * @param {import('./floor-builder.js').Floor} floor
+ * @param {[number, number][]} blocked
+ * @param {number[][]} before distances on the untouched map
+ */
+function stillConnected(floor, blocked, before) {
+  const sealed = floor.map.map((row) => [...row]);
+  for (const [x, y] of blocked) sealed[y][x] = TILE.WALL;
+  const reach = distancesFrom(sealed, floor.start.pos);
+  for (let y = 0; y < floor.height; y += 1) {
+    for (let x = 0; x < floor.width; x += 1) {
+      if (before[y][x] < 0 || !isWalkable(sealed[y][x])) continue;
+      if (reach[y][x] < 0) return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * True when blocking this tile would cut the floor in two. A teleporter pad
+ * is as good as a wall to anyone walking past it, and so is scenery.
+ */
+function severs(floor, [x, y]) {
+  const sides = DIRS.map(([dx, dy]) => [x + dx, y + dy]).filter(([nx, ny]) =>
+    isWalkable(floor.map[ny]?.[nx]),
+  );
+  if (sides.length < 2) return false;
+  const sealed = floor.map.map((row) => [...row]);
+  sealed[y][x] = TILE.WALL;
+  const reach = distancesFrom(sealed, sides[0]);
+  return sides.slice(1).some(([nx, ny]) => reach[ny][nx] < 0);
 }
 
 /**
@@ -562,5 +879,8 @@ export function furnishFloor(floor, rng) {
   const hazards = placeHazards(floor, rng, { ...traps, ...chests });
   const lairs = placeLairs(floor);
   const curiosities = placeCuriosities(floor, rng);
-  return { traps, chests, hazards, lairs, curiosities };
+  // The theme features come last: they read the tables above, and some of
+  // them add to those tables (`05` section 6).
+  const features = placeFeatures(floor, rng, { traps, chests, hazards, lairs, curiosities });
+  return { traps, chests, hazards, lairs, curiosities, features };
 }

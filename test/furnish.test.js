@@ -28,7 +28,9 @@ function roomAt(floor, [x, y]) {
 
 describe('traps', () => {
   it.each(floors)('floor %i lays the 4 + F floor traps 05 asks for', (number, floor) => {
-    const laid = Object.values(floor.traps).filter((trap) => trap.on === 'floor');
+    // A Heat Vent is a theme feature that happens to be a trap (05 section 6),
+    // so it is not one of the floor's own count.
+    const laid = Object.values(floor.traps).filter((trap) => trap.on === 'floor' && !trap.feature);
     expect(laid).toHaveLength(floor.spec.counts.floorTraps);
   });
 
@@ -79,6 +81,9 @@ describe('traps', () => {
 
   it.each(floors)('floor %i starts every trap unfound and unsprung', (number, floor) => {
     for (const trap of Object.values(floor.traps)) {
+      // A Heat Vent is visible from the start: 05 section 6 says it does not
+      // need detecting, and that is what makes it timeable.
+      if (trap.feature) continue;
       expect(trap.found).toBe(false);
       expect(trap.disarmed).toBe(false);
       expect(trap.sprung).toBe(false);
@@ -105,7 +110,10 @@ describe('traps', () => {
 
 describe('chests', () => {
   it.each(floors)('floor %i places the 3 + F/2 chests 05 asks for', (number, floor) => {
-    expect(Object.keys(floor.chests)).toHaveLength(floor.spec.counts.chests);
+    // 05 section 3 step 9 counts the floor's own chests; a boss's chest is
+    // "plus any placed by bosses or special rooms" (03 section 7).
+    const own = Object.values(floor.chests).filter((chest) => !chest.boss);
+    expect(own).toHaveLength(floor.spec.counts.chests);
   });
 
   it.each(floors)('floor %i prefers the places the document lists', (number, floor) => {
@@ -120,8 +128,11 @@ describe('chests', () => {
 
   it.each(floors)('floor %i never drops a chest on a trap or a protected tile', (number, floor) => {
     const off = protectedTiles(floor);
-    for (const where of Object.keys(floor.chests)) {
+    for (const [where, chest] of Object.entries(floor.chests)) {
       expect(floor.traps[where], `${where} has a trap under it`).toBeUndefined();
+      // The dragon's hoard is the exception: it belongs in the arena, which is
+      // out of bounds to everything else (05 section 6).
+      if (chest.boss) continue;
       expect(off.has(where), `${where} is out of bounds`).toBe(false);
     }
   });
@@ -190,8 +201,14 @@ describe('chests', () => {
 
 describe('hazards', () => {
   it.each(floors)('floor %i only uses hazards its depth allows', (number, floor) => {
-    // 05 section 2 lists which hazards each floor may have.
+    // 05 section 2 lists which hazards each floor may have, and section 6's
+    // theme features bring their own: floor 4's Web Curtain, floor 5's
+    // Flooded Corridor, floor 9's Frozen Lake.
     for (const hazard of Object.values(floor.hazards)) {
+      if (hazard.feature) {
+        expect(floor.spec.features, `${hazard.feature} on floor ${number}`).toContain(hazard.feature);
+        continue;
+      }
       expect(floor.spec.hazards, `${hazard.kind} on floor ${number}`).toContain(hazard.kind);
     }
   });
@@ -309,10 +326,13 @@ describe('lairs and curiosities', () => {
 
   it.each(floors)('floor %i puts one curiosity in each Curiosity Room', (number, floor) => {
     const rooms = floor.rooms.filter((room) => room.role === 'curiosity');
-    expect(Object.keys(floor.curiosities)).toHaveLength(rooms.length);
+    // An Altar is an Offering Shrine in a Theme Room (05 section 6), so it is
+    // a curiosity the Curiosity Rooms did not ask for.
+    const own = Object.values(floor.curiosities).filter((one) => !one.feature);
+    expect(own).toHaveLength(rooms.length);
 
     const used = new Set();
-    for (const curiosity of Object.values(floor.curiosities)) {
+    for (const curiosity of own) {
       expect(floorsData.curiosities.kinds).toContain(curiosity.kind);
       expect(used.has(curiosity.room)).toBe(false);
       used.add(curiosity.room);
@@ -358,10 +378,16 @@ describe('the floor as a whole', () => {
         const where = `seed ${seed}, floor ${number}`;
         const off = protectedTiles(floor);
 
-        expect(Object.values(floor.traps).filter((t) => t.on === 'floor'), where).toHaveLength(
+        expect(
+          Object.values(floor.traps).filter((t) => t.on === 'floor' && !t.feature),
+          where,
+        ).toHaveLength(
           floor.spec.counts.floorTraps,
         );
-        expect(Object.keys(floor.chests), where).toHaveLength(floor.spec.counts.chests);
+        expect(
+          Object.values(floor.chests).filter((chest) => !chest.boss),
+          where,
+        ).toHaveLength(floor.spec.counts.chests);
         expect(Object.keys(floor.lairs), where).toHaveLength(floor.spec.counts.lairs);
 
         for (const tile of Object.keys(floor.traps)) {
@@ -374,6 +400,7 @@ describe('the floor as a whole', () => {
           hazardRules.dark_zone.maxFloorTileShare,
         );
         for (const hazard of Object.values(floor.hazards)) {
+          if (hazard.feature) continue; // a theme feature brings its own
           expect(floor.spec.hazards, `${where}: ${hazard.kind}`).toContain(hazard.kind);
         }
       }

@@ -19,6 +19,7 @@ import {
   contextFor,
   arrivalEvents,
   lookAhead,
+  tileAhead,
   whatIsAt,
   clearHazard,
   openDoor,
@@ -30,6 +31,8 @@ import { bestWay, waysToOpen, tryOpen, stepsFor, bashTn, searchSecret } from './
 import { layoutStream, carriedStreams } from '../engine/rng.js';
 import { t } from '../data/strings.js';
 import { attune, whyNotLeaveByStone } from './travel.js';
+import { refreshGear } from './kit.js';
+import { applySkillSheet } from '../engine/skill-hooks.js';
 import { applyMemory, memoryFor, restockFloor } from './floor-memory.js';
 import { search as searchTrap, trigger as fireTrap } from './traps.js';
 import {
@@ -43,6 +46,22 @@ import {
   whyNotOpen,
 } from './chests.js';
 import { takeAll } from './loot.js';
+import {
+  bashWeb,
+  inAntiMagic,
+  drink as drinkFountain,
+  featureAt,
+  hazardAt,
+  notice as noticeHazard,
+  offer as offerAtShrine,
+  onEnter as enterHazard,
+  openFeature,
+  reachIn,
+  search as searchHazard,
+  searchFeature,
+  whyNotUse,
+} from './hazards.js';
+import { feature as featureSpec, offeringCost } from '../data/hazards.js';
 import { ITEMS } from '../data/items.js';
 import { nameOf } from './identification.js';
 
@@ -158,6 +177,44 @@ export function lineFor(event) {
       return { text: t('explore.log.took', { name: event.name }), tone: 'accent' };
     case 'packFull':
       return { text: t('explore.log.packFull'), tone: 'danger' };
+
+    // Hazards (`03` section 8) and theme features (`05` section 6).
+    case 'spun':
+      // "Silently turns the hero to a random facing": a hero who never found
+      // the spinner is told nothing at all.
+      return event.silent ? null : { text: t('explore.log.spun'), tone: 'danger' };
+    case 'spinnerHeld':
+      return { text: t('explore.log.spinnerHeld'), tone: 'accent' };
+    case 'teleported':
+      return { text: t('explore.log.teleported'), tone: 'danger' };
+    case 'slid':
+      return { text: t('explore.log.slid', { n: event.tiles }), tone: 'danger' };
+    case 'drowning':
+      return { text: t('explore.log.drowning', { n: event.damage }), tone: 'danger' };
+    case 'waded':
+      return { text: t('explore.log.waded'), tone: 'muted' };
+    case 'scrollRuined':
+      return { text: t('explore.log.scrollRuined'), tone: 'danger' };
+    case 'hazardFound':
+      return { text: t(`explore.log.hazardFound.${event.kind}`), tone: 'danger' };
+    case 'webBashed':
+      return { text: t('explore.log.webBashed') };
+    case 'webHeld':
+      return { text: t('explore.log.webHeld'), tone: 'muted' };
+    case 'featureSearched':
+      return event.found
+        ? { text: t('explore.log.featureFound', { name: event.name }), tone: 'accent' }
+        : { text: t('explore.log.featureNothing'), tone: 'muted' };
+    case 'featureOpened':
+      return { text: t(`explore.log.feature.${event.kind}.${event.result}`), tone: event.result === 'fight' ? 'danger' : 'accent' };
+    case 'fountain':
+      return { text: t(`explore.log.fountain.${event.result}`, event), tone: event.result === 'poisoned' ? 'danger' : 'accent' };
+    case 'blessed':
+      return { text: t('explore.log.blessed', { n: event.cost }), tone: 'accent' };
+    case 'antiMagic':
+      return { text: t('explore.log.antiMagic'), tone: 'danger' };
+    case 'magicBack':
+      return { text: t('explore.log.magicBack'), tone: 'accent' };
     case 'wanderingCheck':
     case 'noiseCheck':
       // Which monsters arrive is Phase 3; a failed check stays silent, as it
@@ -257,6 +314,94 @@ export function createRun({
     return crossed ? [{ type: 'safeRoom', at: [...ex.pos] }] : [];
   }
 
+  /**
+   * What the tile the hero has just reached does to them: a trap goes off
+   * (`03` section 5), and a hazard acts (`03` section 8). Both are resolved
+   * here, before the clock is wound, so the log reads in the order it
+   * happened.
+   *
+   * @param {object[]} arrivals what `arrivalEvents` raised for the new tile
+   */
+  function landOn(arrivals) {
+    const services = { rng: rng.combat };
+    /** @type {object[]} */
+    const events = [];
+    const at = [...ex.pos];
+
+    // A trap underfoot. A Heat Vent fires every third step, which is what
+    // makes it timeable (`05` section 6).
+    const trap = floor.traps?.[key(...at)];
+    const ready = !trap?.everyStep || ex.steps % trap.everyStep === 0;
+    if (trap?.kind && !trap.disarmed && !trap.sprung && ready) {
+      events.push({
+        type: 'trapSprung',
+        at,
+        by: 'step',
+        trap: fireTrap(services, hero, trap, floor.floor, { detected: Boolean(trap.found) }),
+      });
+    }
+
+    // Then the hazard, which is a property of the tile rather than something
+    // that is used up: the spinner turns the hero, the pad moves them, the
+    // water drags at their armour.
+    const acted = enterHazard(services, hero, floor, ex, at);
+    events.push(...acted.events);
+    if (acted.facing !== undefined) ex.facing = acted.facing;
+    if (acted.teleportTo) {
+      ex.pos = [...acted.teleportTo];
+      remember(floor, ex);
+      events.push(...arrivalEvents(floor, ex.pos, ex));
+    }
+
+    // An Anti-Magic Field is a place, not an event: what changes is what the
+    // hero's gear is worth while they stand in it (`03` section 8).
+    const dead = inAntiMagic(floor, ex.pos);
+    if (Boolean(hero.antiMagic) !== dead) {
+      hero.antiMagic = dead;
+      refreshGear(hero);
+      applySkillSheet(hero);
+      events.push({ type: dead ? 'antiMagic' : 'magicBack' });
+    }
+
+    // And the look the game takes for the hero at what is in front of them
+    // (`03` section 3): a hazard spotted this way goes on the map.
+    const ahead = tileAhead(ex.pos, ex.facing);
+    const next = floor.hazards?.[key(...ahead)];
+    if (next && !next.found) {
+      const seen = noticeHazard(rng.combat, hero, next, floor.floor, {
+        dark: inDarkness(floor, ex.pos),
+      });
+      if (seen.found) events.push({ type: 'hazardFound', kind: next.kind, at: ahead });
+    }
+    return events;
+  }
+
+  /**
+   * Puts what something gave up into the pack, and says what was taken and
+   * what would not fit. Chests, racks, shelves and ash pits all use it.
+   * @param {object[]} drops
+   */
+  function carry(drops = []) {
+    if (drops.length === 0) return [];
+    const events = [];
+    const { taken, left } = takeAll(hero, drops);
+    for (const drop of taken) events.push({ type: 'took', name: nameOf(drop, hero.identification) });
+    if (left.length) events.push({ type: 'packFull' });
+    return events;
+  }
+
+  /** Every tile the hero could be put down on, for a fountain's teleport. */
+  function walkableTiles() {
+    /** @type {[number, number][]} */
+    const tiles = [];
+    for (let y = 1; y < floor.height - 1; y += 1) {
+      for (let x = 1; x < floor.width - 1; x += 1) {
+        if (isWalkable(floor.map[y]?.[x])) tiles.push([x, y]);
+      }
+    }
+    return tiles;
+  }
+
   /** `03` section 6: MIG mod + Brute Force + a crowbar. */
   function bashBonusOf() {
     return hero.bashBonus ?? (hero.mods?.might ?? 0) + (hero.explore?.bash ?? 0);
@@ -322,6 +467,7 @@ export function createRun({
 
       const events = [
         ...outcome.events,
+        ...(outcome.moved ? landOn(outcome.events) : []),
         ...safeRoomEvents(),
         ...spend(outcome.cost, 'steps'),
       ];
@@ -392,17 +538,111 @@ export function createRun({
           if (found.why) continue;
           events.push({ type: 'searched', found: found.found, exact: found.exact, trap: entry });
         }
+        // A hazard is found with the same Search, at `03` section 8's own TN
+        // of 12 + F, and goes on the map once it is.
+        for (const entry of [hazardAt(floor, ex.pos), hazardAt(floor, at)].filter(Boolean)) {
+          const seen = searchHazard(rng.combat, hero, entry, floor.floor, {
+            careful: Boolean(careful),
+            dark: inDarkness(floor, ex.pos),
+          });
+          if (seen.why) continue;
+          if (seen.found) events.push({ type: 'hazardFound', kind: entry.kind, at: entry.pos });
+        }
+
+        // Wine Racks and Bookshelves are searched, once, for what they hide
+        // (`05` section 6).
+        for (const entry of [featureAt(floor, ex.pos), featureAt(floor, at)].filter(Boolean)) {
+          if (!featureSpec(entry.kind).search || whyNotUse(entry, hero)) continue;
+          const looked = searchFeature(rng.combat, hero, entry, floor.floor);
+          if (!looked.ok) continue;
+          events.push({
+            type: 'featureSearched',
+            kind: entry.kind,
+            found: Boolean(looked.found),
+            name: looked.drops?.[0] ? nameOf(looked.drops[0], hero.identification) : null,
+          });
+          events.push(...carry(looked.drops ?? []));
+        }
+
         if (events.length === 0) events.push({ type: 'searched', found: false, exact: false });
         events.push(...spend(costOf(careful ? 'carefulSearch' : 'search'), 'search'));
         record(events);
         return { events };
       }
 
-      if (run.context === 'burn') {
-        clearHazard(ex, at);
-        const events = [{ type: 'burned', at }, ...spend(costOf('item'), 'burn')];
+      // A Mysterious Fountain, once (`03` section 8).
+      if (run.context === 'drink') {
+        const fountain = run.here.curiosity ?? ahead.curiosity;
+        const drank = drinkFountain({ rng: rng.combat }, hero, fountain, town);
+        if (!drank.ok) return { events: [] };
+        const events = drank.events.map((event) => ({
+          type: 'fountain',
+          result: event.type === 'condition' ? event.id : event.type,
+          ...event,
+        }));
+        // "Teleported to a random tile": the fountain says so, the floor does it.
+        if (drank.teleport) {
+          const where = rng.combat.pick(walkableTiles());
+          ex.pos = [...where];
+          remember(floor, ex);
+          events.push({ type: 'teleported', at: where });
+          events.push(...arrivalEvents(floor, ex.pos, ex));
+        }
+        events.push(...spend(costOf('item'), 'drink'));
         record(events);
-        return { events };
+        return { events, outcome: drank };
+      }
+
+      // An Offering Shrine, or the Altar that works as one (`05` section 6).
+      if (run.context === 'offer') {
+        const shrine = run.here.curiosity ?? ahead.curiosity;
+        const given = offerAtShrine(hero, shrine, floor.floor);
+        if (!given.ok) return { events: [], why: given.why };
+        const events = [{ type: 'blessed', cost: given.cost }, ...spend(costOf('item'), 'offer')];
+        record(events);
+        return { events, outcome: given };
+      }
+
+      if (run.context === 'burn') {
+        // Burn it with a torch, a flask of oil or a spell — or, with none of
+        // those, put a shoulder through it at TN 10 + F (`03` section 8).
+        if (hero.has?.fire !== false) {
+          clearHazard(ex, at);
+          const events = [{ type: 'burned', at }, ...spend(costOf('item'), 'burn')];
+          record(events);
+          return { events };
+        }
+        const swung = bashWeb(rng.combat, hero, floor.floor);
+        if (swung.cleared) clearHazard(ex, at);
+        const events = [
+          swung.cleared ? { type: 'webBashed', at } : { type: 'webHeld', at },
+          ...spend(costOf('bash'), 'bash'),
+          rollNoiseCheck(rng.encounter, 'bash'),
+        ];
+        record(events);
+        return { events, outcome: swung };
+      }
+
+      // A theme feature the hero can open or reach into (`05` section 6).
+      const themeFeature = [featureAt(floor, ex.pos), featureAt(floor, at)].find(
+        (entry) => entry && !whyNotUse(entry, hero) && !featureSpec(entry.kind).search,
+      );
+      if (themeFeature) {
+        const events = [];
+        const spec = featureSpec(themeFeature.kind);
+        const used = spec.open
+          ? openFeature(rng.combat, hero, themeFeature, floor.floor)
+          : reachIn(rng.combat, hero, themeFeature, floor.floor);
+        if (!used.ok) return { events: [] };
+
+        const result = used.fight ? 'fight' : used.empty ? 'empty' : used.found === false ? 'empty' : 'loot';
+        events.push({ type: 'featureOpened', kind: themeFeature.kind, result, roll: used.roll });
+        events.push(...carry(used.drops ?? []));
+        events.push(...spend(costOf('item'), 'open'));
+        record(events);
+        // A sarcophagus can wake something up: the fight is the session's to
+        // start, the way a wandering monster is.
+        return { events, outcome: used, fight: used.fight ?? null };
       }
 
       const door = run.doorAhead;
@@ -603,13 +843,27 @@ export function createRun({
       hero.gold = (hero.gold ?? 0) + out.gold;
       // What the pack will hold goes in; the rest stays in the chest, so a
       // hero who drops something can come back for it.
-      const { taken, left } = takeAll(hero, out.drops);
-      for (const drop of taken) events.push({ type: 'took', name: nameOf(drop, hero.identification) });
-      if (left.length) events.push({ type: 'packFull' });
-      chest.left = left;
+      events.push(...carry(out.drops));
+      chest.left = out.drops.filter((drop) => (drop.count ?? 0) > 0);
       events.push(...spend(costOf('item'), 'open'));
       record(events);
       return { events, outcome: out };
+    },
+
+    /** True while the hero stands in an Anti-Magic Field (`03` section 8). */
+    get antiMagic() {
+      return inAntiMagic(floor, ex.pos);
+    },
+
+    /** The theme feature the context key would use, if there is one. */
+    get featureAhead() {
+      const here = featureAt(floor, ex.pos);
+      const ahead = featureAt(floor, tileAhead(ex.pos, ex.facing));
+      return (
+        [here, ahead].find(
+          (entry) => entry && !featureSpec(entry.kind).search && !whyNotUse(entry, hero),
+        ) ?? null
+      );
     },
 
     /** The door the hero is facing, when there is one still shut. */
@@ -637,7 +891,19 @@ export function createRun({
       // SEARCH is always something the hero can do, even where there is
       // nothing to find: `03` section 3 says a failure looks the same.
       if (run.context === 'search') return inDarkness(floor, ex.pos) ? t('explore.reason.tooDark') : undefined;
+      if (run.context === 'drink') return undefined;
+      if (run.context === 'offer') {
+        const shrine = run.here.curiosity ?? run.ahead.curiosity;
+        const cost = offeringCost(floor.floor);
+        if (shrine?.used) return t('explore.reason.usedUp');
+        return (hero.gold ?? 0) >= cost ? undefined : t('explore.reason.notEnoughGold', { n: cost });
+      }
       if (run.context === 'open' && run.chestAhead) return undefined;
+      if (run.context === 'open' && run.featureAhead) {
+        const why = whyNotUse(run.featureAhead, hero);
+        return why ? t(`explore.reason.${why}`) : undefined;
+      }
+      if (run.context === 'burn') return undefined;
       if (run.context === 'open' && run.doorAhead) {
         // A door with no way through says which one is missing, not "later".
         const way = run.openingWay;
@@ -650,6 +916,14 @@ export function createRun({
     get actHint() {
       if (run.context === 'search') return t('explore.hint.search');
       if (run.context === 'open' && run.chestAhead) return t('explore.hint.open');
+      if (run.context === 'open' && run.featureAhead) {
+        return t(`explore.hint.${run.featureAhead.kind}`);
+      }
+      if (run.context === 'drink') return t('explore.hint.drink');
+      if (run.context === 'offer') return t('explore.hint.offerCost', { n: offeringCost(floor.floor) });
+      if (run.context === 'burn') {
+        return hero.has?.fire !== false ? t('explore.hint.burn') : t('explore.hint.bashWeb');
+      }
       if (run.context === 'touch') {
         return whyNotLeaveByStone(town, run) ? null : t('explore.hint.toTown');
       }

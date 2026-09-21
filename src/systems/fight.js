@@ -208,6 +208,7 @@ export function createFight({
   masterSeed = 1,
   difficulty = 'normal',
   surprise = true,
+  antiMagic = false,
   watch,
   logKept = LOG_KEPT,
 }) {
@@ -223,6 +224,9 @@ export function createFight({
   });
   combat.difficulty = difficulty;
   combat.floor = floor;
+  // A fight inside an Anti-Magic Field is fought without Arcana, Spirit or
+  // scrolls (`03` section 8); `engine/actions.js` is what refuses them.
+  combat.antiMagic = antiMagic;
   registerRules(combat);
   watch?.(combat);
 

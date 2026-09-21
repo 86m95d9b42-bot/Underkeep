@@ -132,10 +132,14 @@ describe('what every swept floor still holds true', () => {
 
   it('gives every floor its documented counts', () => {
     for (const { floor } of everyRow) {
-      expect(Object.values(floor.traps).filter((t) => t.on === 'floor')).toHaveLength(
-        floor.spec.counts.floorTraps,
+      // The floor's own, without what a theme feature adds: a Heat Vent is a
+      // trap and the dragon's hoard is a chest (`05` section 6).
+      expect(
+        Object.values(floor.traps).filter((t) => t.on === 'floor' && !t.feature),
+      ).toHaveLength(floor.spec.counts.floorTraps);
+      expect(Object.values(floor.chests).filter((chest) => !chest.boss)).toHaveLength(
+        floor.spec.counts.chests,
       );
-      expect(Object.keys(floor.chests)).toHaveLength(floor.spec.counts.chests);
       expect(Object.keys(floor.lairs)).toHaveLength(floor.spec.counts.lairs);
       const secrets = Object.keys(floor.secrets).length;
       expect(secrets).toBeGreaterThanOrEqual(2);

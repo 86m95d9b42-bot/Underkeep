@@ -169,6 +169,80 @@ function checkLocks(json) {
 }
 
 /**
+ * hazards.json: `03` section 8 and `05` section 6. Every hazard a floor is
+ * allowed and every theme feature it lists has to exist here, and everything
+ * a hazard or a feature names — a condition, an item, a trap, a loot pool, a
+ * monster — has to exist where it lives.
+ */
+function checkHazards(json, floors, items, conditions, traps, loot, monsters) {
+  const hazards = Object.keys(json.hazards ?? {}).filter((id) => !id.startsWith('_'));
+  const features = Object.entries(json.features ?? {}).filter(([id]) => !id.startsWith('_'));
+  const featureIds = features.map(([id]) => id);
+  if (hazards.length !== 7) problems.push(`hazards.json has ${hazards.length} hazards; 03 section 8 lists 7`);
+
+  // Every floor's own lists resolve.
+  for (const row of floors?.floors ?? []) {
+    for (const id of row.hazards ?? []) {
+      if (!hazards.includes(id)) problems.push(`floor ${row.floor} allows hazard "${id}", which hazards.json has no entry for`);
+      else if (row.floor < json.hazards[id].minFloor) {
+        problems.push(`floor ${row.floor} allows "${id}", which 03 section 8 starts on floor ${json.hazards[id].minFloor}`);
+      }
+    }
+    for (const id of row.features ?? []) {
+      if (!featureIds.includes(id)) problems.push(`floor ${row.floor} names feature "${id}", which hazards.json has no entry for`);
+      else if (json.features[id].floor !== row.floor) {
+        problems.push(`feature "${id}" is listed on floor ${row.floor} but 05 section 6 puts it on floor ${json.features[id].floor}`);
+      }
+    }
+  }
+
+  // A hazard the hero can never meet is a table nobody reads.
+  const allowed = new Set((floors?.floors ?? []).flatMap((row) => [...(row.hazards ?? []), ...(row.features ?? [])]));
+  for (const id of hazards) {
+    const named = allowed.has(id) || features.some(([, one]) => one.hazard === id);
+    if (!named) problems.push(`hazards.json "${id}" is never allowed on any floor`);
+  }
+  for (const id of featureIds) {
+    if (!allowed.has(id)) problems.push(`hazards.json feature "${id}" is on no floor's list`);
+  }
+
+  const itemIds = Object.keys(items?.items ?? {});
+  const poolNames = Object.keys(loot?.pools ?? {});
+  /** Everything a feature may point at, checked where it lives. */
+  for (const [id, one] of features) {
+    for (const baseId of one.search?.oneOf ?? []) {
+      if (!itemIds.includes(baseId)) problems.push(`feature "${id}" gives "${baseId}", which items.json has no entry for`);
+    }
+    if (one.search?.pool && !poolNames.includes(one.search.pool)) {
+      problems.push(`feature "${id}" draws from pool "${one.search.pool}", which loot.json has no entry for`);
+    }
+    if (one.trap && !traps?.traps?.[one.trap]) {
+      problems.push(`feature "${id}" is trap "${one.trap}", which traps.json has no entry for`);
+    }
+    if (one.hazard && !hazards.includes(one.hazard)) {
+      problems.push(`feature "${id}" lays hazard "${one.hazard}", which hazards.json has no entry for`);
+    }
+    if (one.curiosity && !json.curiosities?.[one.curiosity]) {
+      problems.push(`feature "${id}" works as "${one.curiosity}", which hazards.json has no curiosity for`);
+    }
+    for (const band of one.open?.bands ?? []) {
+      for (const monster of band.fight ?? []) {
+        if (!monsters?.monsters?.[monster]) problems.push(`feature "${id}" wakes "${monster}", which monsters.json has no entry for`);
+      }
+    }
+  }
+
+  // The fountain is a d6 with one row per face (`03` section 8).
+  const rolls = (json.curiosities?.fountain?.results ?? []).map((row) => row.roll);
+  if (rolls.join(',') !== '1,2,3,4,5,6') problems.push('hazards.json fountain is not a d6 with one row per face');
+  for (const row of json.curiosities?.fountain?.results ?? []) {
+    if (row.condition && !conditions?.conditions?.[row.condition]) {
+      problems.push(`fountain roll ${row.roll} applies "${row.condition}", which conditions.json has no entry for`);
+    }
+  }
+}
+
+/**
  * conditions.json: `01` section 7's table and `06` section 10. A condition the
  * engine can apply but that the player has no words for, or an order naming a
  * condition that does not exist, would only show up mid-fight.
@@ -1122,6 +1196,17 @@ const CHECKS = {
   'monsters.json': (json) => checkMonsters(json, loaded['ai.json'], loaded['combat.json']),
   'encounters.json': (json) => checkEncounters(json, loaded['monsters.json']),
   'floors.json': checkFloors,
+  // Checked against half the database: floors, items, traps, loot, monsters.
+  'hazards.json': (json) =>
+    checkHazards(
+      json,
+      loaded['floors.json'],
+      loaded['items.json'],
+      loaded['conditions.json'],
+      loaded['traps.json'],
+      loaded['loot.json'],
+      loaded['monsters.json'],
+    ),
   'locks.json': checkLocks,
   // Checked against strings.json, so it is read first.
   'conditions.json': (json) =>

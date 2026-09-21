@@ -113,6 +113,9 @@ export function createSession({ hero, seed, difficulty = 'normal', go } = {}) {
         floor: where.floor.floor,
         masterSeed: fightSeed ?? where.masterSeed,
         difficulty,
+        // Where the hero is standing decides whether magic works at all
+        // (`03` section 8, Anti-Magic Field).
+        antiMagic: where.antiMagic ?? false,
       });
       return fight;
     },

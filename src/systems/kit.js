@@ -47,6 +47,9 @@ export function meansOf(hero) {
     knock: knows('knock') || carries('scroll_of_knock'),
     dispelWard: knows('dispel_ward') || carries('scroll_of_dispel'),
     lore: knows('lore'),
+    // Fire, for a web curtain: a torch, a flask of oil, or a spell
+    // (`03` section 8).
+    fire: carries('torch') || carries('oil_flask') || knows('fireball'),
   };
 }
 

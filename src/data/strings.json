@@ -31,7 +31,10 @@
       "keyed": "This door takes a key.",
       "sealed": "Runes hold this door shut.",
       "barred": "Barred from the other side.",
-      "web": "A web curtain blocks the way."
+      "web": "A web curtain blocks the way.",
+      "lava_channel": "A channel of lava bars the way.",
+      "ash_pit": "A pit of ash, too deep to cross.",
+      "scenery": "The way is blocked."
     },
     "context": {
       "search": "SEARCH",
@@ -87,7 +90,50 @@
       "chestGold": "The chest holds {n} gp.",
       "chestEmpty": "The chest is empty.",
       "took": "You take {name}.",
-      "packFull": "Your pack is full. What is left stays in the chest."
+      "packFull": "Your pack is full. What is left stays in the chest.",
+      "spun": "The floor turns under you.",
+      "spinnerHeld": "The compass needle holds. You keep your bearing.",
+      "teleported": "The world folds, and you are somewhere else.",
+      "slid": "The ice takes you {n} tiles.",
+      "drowning": "The water drags you under for {n}.",
+      "waded": "You wade through, armour and all.",
+      "scrollRuined": "A scroll comes apart in the water.",
+      "webBashed": "You tear the webbing down.",
+      "webHeld": "The webbing holds.",
+      "featureFound": "You turn up {name}.",
+      "featureNothing": "Nothing but dust.",
+      "blessed": "You leave {n} gp. A calm settles on you.",
+      "hazardFound": {
+        "spinner": "The flagstones here are set on a pivot.",
+        "dark_zone": "The dark ahead is not ordinary dark.",
+        "deep_water": "The water ahead is deeper than it looks.",
+        "teleporter_pad": "A pad of worked stone, humming faintly.",
+        "anti_magic_field": "The air here is dead to magic.",
+        "web_curtain": "Webbing, thick as rope.",
+        "ice_slide": "Black ice, and no grip on it."
+      },
+      "feature": {
+        "sarcophagus": {
+          "fight": "The lid grinds aside and something sits up.",
+          "empty": "The lid grinds aside. Empty.",
+          "loot": "The lid grinds aside. Something is folded on the stone."
+        },
+        "ash_pit": {
+          "empty": "The pole comes back with nothing but ash.",
+          "loot": "The pole comes back with something bright."
+        }
+      },
+      "fountain": {
+        "poisoned": "The water is foul. Your throat burns.",
+        "teleport": "The water takes you somewhere else.",
+        "nothing": "Cold water, and nothing more.",
+        "healed": "The water knits you back together: {hp} HP.",
+        "focus": "Your focus comes back, all of it.",
+        "attribute": "Something in you settles and holds.",
+        "condition": "The water is foul. Your throat burns."
+      },
+      "antiMagic": "The air here is dead. Your charms go quiet.",
+      "magicBack": "The air lifts. Your charms wake."
     },
     "title": "EXPLORE",
     "pad": {
@@ -117,10 +163,14 @@
       "search": "5 steps",
       "open": "Inspect",
       "touch": "Waystone",
-      "drink": "Fountain",
+      "drink": "Drink once",
       "offer": "Shrine",
       "burn": "Torch",
-      "toTown": "To town"
+      "toTown": "To town",
+      "offerCost": "{n} gp",
+      "bashWeb": "Bash it",
+      "sarcophagus": "Open the lid",
+      "ash_pit": "Reach in"
     },
     "way": {
       "bash": "Bash",
@@ -144,7 +194,15 @@
       "notAttuned": "This stone is not yours yet.",
       "nowhere": "Not here.",
       "tooDark": "Too dark to search.",
-      "jammed": "Jammed; bash or Knock"
+      "jammed": "Jammed; bash or Knock",
+      "usedUp": "Already used",
+      "notEnoughGold": "Needs {n} gp",
+      "noPole": "No ten-foot pole",
+      "taken": "Nothing left in it",
+      "searched": "You have searched it",
+      "opened": "Already open",
+      "nothingToDo": "Nothing to do here",
+      "nothingHere": "Nothing here"
     }
   },
   "pause": {
@@ -1431,5 +1489,29 @@
       "noRuneKey": "Needs its rune key",
       "notPickable": "This lock will not take a pick"
     }
+  },
+  "hazards": {
+    "spinner": "Spinner",
+    "dark_zone": "Dark Zone",
+    "deep_water": "Deep Water",
+    "teleporter_pad": "Teleporter Pad",
+    "anti_magic_field": "Anti-Magic Field",
+    "web_curtain": "Web Curtain",
+    "ice_slide": "Ice Slide"
+  },
+  "features": {
+    "wine_rack": "Wine Racks",
+    "sarcophagus": "Sarcophagus",
+    "goblin_camp": "Goblin Camp",
+    "glowcap_room": "Glowcap Room",
+    "web_curtain": "Web Curtain",
+    "flooded_corridor": "Flooded Corridor",
+    "altar": "Altar",
+    "lava_channel": "Lava Channel",
+    "heat_vent": "Heat Vent",
+    "bookshelf": "Bookshelf",
+    "frozen_lake": "Frozen Lake",
+    "ash_pit": "Ash Pit",
+    "dragon_hoard": "The Dragon's Hoard"
   }
 }

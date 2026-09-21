@@ -42,6 +42,9 @@ export function routeTo(run, target, bashBonus = 0) {
       for (const [dx, dy] of DELTA) {
         const to = [from[0] + dx, from[1] + dy];
         if (cameFrom.has(key(...to))) continue;
+        // A teleporter pad is not a way through: it takes the hero somewhere
+        // of its own choosing, so the route goes round one (`05` section 4).
+        if (floor.hazards?.[key(...to)]?.kind === 'teleporter_pad') continue;
         const stop = blockedBy(floor, from, to, ex);
         if (stop && !openable(run, stop, bashBonus)) continue;
         cameFrom.set(key(...to), from);
@@ -67,6 +70,9 @@ function openable(run, stop, bashBonus) {
   return bashTn(stop.door, run.floor.floor) - bashBonus <= 20;
 }
 
+/** What `walkTo` answers when the floor has moved the hero out from under it. */
+const REPLAN = Symbol('replan');
+
 /**
  * Turns to face a heading, then steps; opens what is in the way first.
  *
@@ -83,7 +89,10 @@ function walkTo(run, to, notes, tries) {
   };
 
   const heading = DELTA.findIndex(([dx, dy]) => ex.pos[0] + dx === to[0] && ex.pos[1] + dy === to[1]);
-  if (heading < 0) return `route jumped from ${ex.pos} to ${to}`;
+  // The hero is not where the route left them: a teleporter pad, a spinner or
+  // a slide across ice has moved them (`03` section 8, `05` section 6). That
+  // is not a failure — the route is simply out of date, and is replanned.
+  if (heading < 0) return REPLAN;
   while (ex.facing !== heading && !notes.stopped) {
     press(turnBy(ex.facing, 1) === heading ? 'turnRight' : 'turnLeft');
   }
@@ -145,11 +154,18 @@ export function walkFloor(
       if (!route) return { ok: false, why: `no route to the arena door at ${target}`, run };
     }
 
+    let replanned = false;
     for (const step of route) {
       const problem = walkTo(run, step, notes, tries);
+      if (problem === REPLAN) {
+        replanned = true;
+        notes.replans = (notes.replans ?? 0) + 1;
+        break;
+      }
       if (problem) return { ok: false, why: problem, run };
       if (notes.stopped) break;
     }
+    if (replanned) continue;
     if (goingFor) notes.keys += 1;
   }
   return { ok: false, why: 'gave up after 64 legs', run };

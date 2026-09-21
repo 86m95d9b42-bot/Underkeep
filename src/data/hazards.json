@@ -1,0 +1,155 @@
+{
+  "_source": "03 section 8 (Dungeon Hazards and Curiosities) and 05 section 6 (Theme Features). F is the floor number.",
+
+  "detection": {
+    "_source": "03 section 8: hazards are found with Search the same way, at Detect TN 12 + F, and marked on the map once discovered.",
+    "findTn": { "base": 12, "perFloor": 1 }
+  },
+
+  "hazards": {
+    "spinner": {
+      "name": "Spinner",
+      "minFloor": 2,
+      "hidden": true,
+      "onEnter": "turn",
+      "counter": "spinnerProof"
+    },
+    "dark_zone": {
+      "name": "Dark Zone",
+      "minFloor": 4,
+      "hidden": true,
+      "noLight": true,
+      "noMapping": true,
+      "counter": "darkZoneSight"
+    },
+    "deep_water": {
+      "name": "Deep Water",
+      "minFloor": 5,
+      "hidden": true,
+      "perStep": {
+        "whenHeavyArmor": {
+          "save": "body",
+          "dc": { "base": 10, "perFloor": 1 },
+          "damage": "1d6"
+        },
+        "scrollRuinedOneIn": 6
+      }
+    },
+    "teleporter_pad": {
+      "name": "Teleporter Pad",
+      "minFloor": 5,
+      "hidden": true,
+      "onEnter": "teleport"
+    },
+    "anti_magic_field": {
+      "name": "Anti-Magic Field",
+      "minFloor": 6,
+      "hidden": true,
+      "suppresses": {
+        "paths": ["arcana", "spirit"],
+        "scrolls": true,
+        "magicItemBonuses": true
+      }
+    },
+    "web_curtain": {
+      "name": "Web Curtain",
+      "minFloor": 4,
+      "hidden": false,
+      "blocks": true,
+      "burnWith": ["torch", "oil_flask", "fire"],
+      "bashTn": { "base": 10, "perFloor": 1 }
+    },
+    "ice_slide": {
+      "name": "Ice Slide",
+      "minFloor": 9,
+      "hidden": false,
+      "slides": true,
+      "noTurningWhileSliding": true
+    }
+  },
+
+  "curiosities": {
+    "_source": "03 section 8, Curiosities. Each is used once.",
+    "fountain": {
+      "name": "Mysterious Fountain",
+      "dice": "d6",
+      "results": [
+        { "roll": 1, "condition": "poisoned" },
+        { "roll": 2, "teleport": "random" },
+        { "roll": 3, "nothing": true },
+        { "roll": 4, "heal": "2d6" },
+        { "roll": 5, "restoreFp": "all" },
+        { "roll": 6, "attribute": "random", "value": 1, "oncePerGame": true }
+      ]
+    },
+    "shrine": {
+      "name": "Offering Shrine",
+      "costPerFloor": 20,
+      "blessing": { "effects": [{ "sheet": "saves", "value": 2 }], "until": "rest" }
+    }
+  },
+
+  "features": {
+    "_source": "05 section 6, Theme Features. Each floor's list is in floors.json.",
+    "wine_rack": {
+      "name": "Wine Racks",
+      "floor": 1,
+      "in": "room",
+      "search": { "oneIn": 6, "oneOf": ["ration", "healing_potion"] }
+    },
+    "sarcophagus": {
+      "name": "Sarcophagus",
+      "floor": 2,
+      "in": "room",
+      "open": {
+        "dice": "d6",
+        "bands": [
+          { "upTo": 2, "fight": ["skeleton"] },
+          { "upTo": 5, "empty": true },
+          { "upTo": 6, "loot": "common" }
+        ]
+      }
+    },
+    "goblin_camp": {
+      "name": "Goblin Camp",
+      "floor": 3,
+      "in": "lair",
+      "chestLootBonus": 10
+    },
+    "glowcap_room": {
+      "name": "Glowcap Room",
+      "floor": 4,
+      "in": "room",
+      "lit": true,
+      "noTorchBurn": true
+    },
+    "web_curtain": { "name": "Web Curtain", "floor": 4, "in": "corridor", "hazard": "web_curtain" },
+    "flooded_corridor": { "name": "Flooded Corridor", "floor": 5, "in": "corridor", "hazard": "deep_water" },
+    "altar": { "name": "Altar", "floor": 6, "in": "room", "curiosity": "shrine" },
+    "lava_channel": { "name": "Lava Channel", "floor": 7, "in": "room", "scenery": true },
+    "heat_vent": {
+      "name": "Heat Vent",
+      "floor": 7,
+      "in": "corridor",
+      "trap": "flame_jet",
+      "visible": true,
+      "firesEveryStep": 3
+    },
+    "bookshelf": {
+      "name": "Bookshelf",
+      "floor": 8,
+      "in": "room",
+      "search": { "oneIn": 8, "pool": "uncommon_scroll" }
+    },
+    "frozen_lake": { "name": "Frozen Lake", "floor": 9, "in": "room", "hazard": "ice_slide" },
+    "ash_pit": {
+      "name": "Ash Pit",
+      "floor": 10,
+      "in": "room",
+      "scenery": true,
+      "gemOneIn": 3,
+      "reachWith": "pole"
+    },
+    "dragon_hoard": { "name": "The Dragon's Hoard", "floor": 10, "in": "arena", "bossChest": true }
+  }
+}
