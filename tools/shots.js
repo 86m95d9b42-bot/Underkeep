@@ -34,6 +34,7 @@ const SCREENS = [
   'explore',
   'pause',
   'map',
+  'chest',
   'hero',
   'skillTree',
   'pack',
@@ -75,6 +76,8 @@ const PREPARE = {
   // The rewards screens want a fight that is over behind them.
   loot: `(() => globalThis.underkeep.showVictory('loot'))()`,
   levelUp: `(() => globalThis.underkeep.showVictory('levelUp'))()`,
+  // The Chest screen is worth looking at with a chest in front of the hero.
+  chest: `(() => globalThis.underkeep.showChest())()`,
   map: `(() => {
     const { run, router } = globalThis.underkeep;
     const step = () => run.press('forward').outcome.moved;

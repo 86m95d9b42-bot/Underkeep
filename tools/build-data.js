@@ -143,6 +143,29 @@ function checkLocks(json) {
   }
   const [min, max] = json.secretDoors?.perFloor ?? [];
   if (!(min >= 1 && min <= max)) problems.push('locks.json secretDoors.perFloor is not a sane range');
+
+  // `03` section 7: the chest chances are shares, and the Mimic bands must
+  // cover every floor down to the tenth.
+  const chests = json.chests ?? {};
+  for (const name of ['trapped', 'locked']) {
+    const rule = chests[name] ?? {};
+    const deepest = rule.base + rule.perFloor * 10;
+    if (!(rule.base >= 0 && rule.base <= 1 && rule.max <= 1 && rule.max >= rule.base)) {
+      problems.push(`locks.json chests.${name} is not a share between 0 and 1`);
+    }
+    if (!(deepest >= rule.max)) {
+      problems.push(`locks.json chests.${name} never reaches its own maximum`);
+    }
+  }
+  const bandEnds = (chests.mimic?.bands ?? []).map((band) => band.upToFloor);
+  if (bandEnds.at(-1) !== 10) problems.push('locks.json chests.mimic.bands stop before floor 10');
+  if (!chests.gold?.dice) problems.push('locks.json chests.gold has no dice');
+  for (const [name, tier] of Object.entries(json.tiers ?? {})) {
+    if (name.startsWith('_')) continue;
+    if (typeof tier.chestLootBonus !== 'number') {
+      problems.push(`locks.json tier "${name}" has no chestLootBonus`);
+    }
+  }
 }
 
 /**

@@ -1,5 +1,5 @@
 {
-  "_source": "03-traps-locks-treasure.md sections 2 and 6. The tier TN table is shared with traps, which get their own file in Phase 7.",
+  "_source": "03 sections 2, 6 and 7: the tier table traps and locks share, the door types and the ways through them, and what a chest is made of.",
   "tiers": {
     "_source": "03 section 2: every trap and lock has a tier. F is the floor number.",
     "crude": {
@@ -265,6 +265,45 @@
         "perFloor": 1
       },
       "steps": 5
+    }
+  },
+  "chests": {
+    "_source": "03 section 7, Generating a Chest and Chest Contents.",
+    "trapped": {
+      "base": 0.2,
+      "perFloor": 0.05,
+      "max": 0.7
+    },
+    "locked": {
+      "base": 0.3,
+      "perFloor": 0.05,
+      "max": 0.8
+    },
+    "mimic": {
+      "bands": [
+        {
+          "upToFloor": 4,
+          "chance": 0
+        },
+        {
+          "upToFloor": 7,
+          "chance": 0.03
+        },
+        {
+          "upToFloor": 10,
+          "chance": 0.08
+        }
+      ],
+      "detectTn": 18,
+      "loreAutomatic": true
+    },
+    "gold": {
+      "dice": "3d10",
+      "perFloor": true
+    },
+    "boss": {
+      "alwaysRare": true,
+      "neverTrapped": true
     }
   }
 }

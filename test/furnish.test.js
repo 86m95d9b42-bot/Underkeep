@@ -12,6 +12,7 @@ import { buildFloor, TILE, isWalkable, distancesFrom } from '../src/dungeon/floo
 import { protectedTiles, everySlideEnds } from '../src/dungeon/furnish.js';
 import { layoutStream } from '../src/engine/rng.js';
 import { allFloorSpecs, hazardRules, chestDepthBonus, floorsData } from '../src/data/floors.js';
+import { chanceOf } from '../src/systems/chests.js';
 
 const SEED = 20260918;
 const floors = allFloorSpecs().map((spec) => [spec.floor, buildFloor(spec.floor, SEED, layoutStream)]);
@@ -135,10 +136,43 @@ describe('chests', () => {
 
   it.each(floors)('floor %i gives every chest a lock it can describe', (number, floor) => {
     for (const chest of Object.values(floor.chests)) {
-      // 03 section 6: a chest lock is never Sealed; that is a door's business.
-      expect(['simple', 'good', 'masterwork']).toContain(chest.lock);
-      expect(chest.pickTn).toBeGreaterThan(0);
+      // 03 section 7: the five things the chest panel can say about a lock.
+      expect(['none', 'simple', 'good', 'masterwork', 'sealed']).toContain(chest.lock);
+      // An unlocked chest has no lock to pick; a locked one always does.
+      expect(chest.pickTn > 0).toBe(chest.lock !== 'none');
       expect(chest.opened).toBe(false);
+      if (chest.trap) expect(chest.trap.sprung).toBe(false);
+      if (floor.floor <= 4) expect(chest.mimic).toBe(false);
+    }
+  });
+
+  it('locks and traps chests as often as 03 section 7 says', () => {
+    // 30% + 5% F locked, 20% + 5% F trapped, so more of both as it deepens.
+    // One floor of one seed is four chests, so this counts many seeds.
+    const tally = (number) => {
+      const counts = { chests: 0, locked: 0, trapped: 0, mimic: 0 };
+      for (let seed = 1; seed <= 80; seed += 1) {
+        const built = buildFloor(number, SEED + seed * 7919, layoutStream);
+        for (const chest of Object.values(built.chests)) {
+          counts.chests += 1;
+          if (chest.lock !== 'none') counts.locked += 1;
+          if (chest.trap) counts.trapped += 1;
+          if (chest.mimic) counts.mimic += 1;
+        }
+      }
+      return counts;
+    };
+
+    for (const number of [1, 5, 9]) {
+      const counts = tally(number);
+      for (const what of ['locked', 'trapped', 'mimic']) {
+        const share = counts[what] / counts.chests;
+        const wanted = chanceOf(what, number);
+        expect(
+          Math.abs(share - wanted),
+          `floor ${number} ${what}: ${(share * 100).toFixed(0)}% against ${(wanted * 100).toFixed(0)}%`,
+        ).toBeLessThan(0.06);
+      }
     }
   });
 

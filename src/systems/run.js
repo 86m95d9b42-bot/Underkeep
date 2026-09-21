@@ -32,6 +32,19 @@ import { t } from '../data/strings.js';
 import { attune, whyNotLeaveByStone } from './travel.js';
 import { applyMemory, memoryFor, restockFloor } from './floor-memory.js';
 import { search as searchTrap, trigger as fireTrap } from './traps.js';
+import {
+  disarmTrap,
+  inspect as inspectChest,
+  isArmed,
+  isLocked,
+  open as openChest,
+  poleTrap,
+  unlock as unlockChest,
+  whyNotOpen,
+} from './chests.js';
+import { takeAll } from './loot.js';
+import { ITEMS } from '../data/items.js';
+import { nameOf } from './identification.js';
 
 /** A tile's key in the floor's side tables. */
 const key = (x, y) => `${x},${y}`;
@@ -116,6 +129,35 @@ export function lineFor(event) {
       };
     case 'heldShut':
       return { text: t('explore.log.bashFail'), tone: 'muted' };
+    case 'unlocked':
+      return { text: t('explore.log.chestUnlocked'), tone: 'accent' };
+    case 'lockHeld':
+      return { text: t('explore.log.chestHeld'), tone: 'muted' };
+    case 'disarmed':
+      return { text: t('explore.log.disarmed'), tone: 'accent' };
+    case 'disarmFailed':
+      return { text: t('explore.log.disarmFailed'), tone: 'muted' };
+    case 'poled':
+      return { text: t('explore.log.poled') };
+    case 'poleBroke':
+      return { text: t('explore.log.poleBroke'), tone: 'danger' };
+    case 'salvaged':
+      return { text: t('explore.log.salvaged', { name: ITEMS[event.item]?.name ?? event.item }), tone: 'accent' };
+    case 'mimicSeen':
+      return { text: t('explore.log.mimicSeen'), tone: 'danger' };
+    case 'mimic':
+      return { text: t(event.surprise ? 'explore.log.mimicSurprise' : 'explore.log.mimic'), tone: 'danger' };
+    case 'chestOpened':
+      return {
+        text: event.gold > 0
+          ? t('explore.log.chestGold', { n: event.gold })
+          : t('explore.log.chestEmpty'),
+        tone: 'accent',
+      };
+    case 'took':
+      return { text: t('explore.log.took', { name: event.name }), tone: 'accent' };
+    case 'packFull':
+      return { text: t('explore.log.packFull'), tone: 'danger' };
     case 'wanderingCheck':
     case 'noiseCheck':
       // Which monsters arrive is Phase 3; a failed check stays silent, as it
@@ -213,6 +255,11 @@ export function createRun({
     const crossed = safe && !wasSafe;
     wasSafe = safe;
     return crossed ? [{ type: 'safeRoom', at: [...ex.pos] }] : [];
+  }
+
+  /** `03` section 6: MIG mod + Brute Force + a crowbar. */
+  function bashBonusOf() {
+    return hero.bashBonus ?? (hero.mods?.might ?? 0) + (hero.explore?.bash ?? 0);
   }
 
   /** Winds the clock by what an action cost, from where the hero now stands. */
@@ -359,7 +406,10 @@ export function createRun({
       }
 
       const door = run.doorAhead;
-      if (!door) return { events: [] };
+      // A chest has a screen of its own (`03` section 7, "The Chest
+      // Sequence"): the context key opens it rather than resolving anything
+      // here, because every step of the sequence is a choice.
+      if (!door) return run.chestAhead ? { events: [], openChest: true } : { events: [] };
 
       const outcome = tryOpen({
         door,
@@ -368,9 +418,8 @@ export function createRun({
         keysHeld: ex.keysTaken,
         has: hero.has ?? {},
         hero,
-        // `03` section 6: MIG mod + Brute Force + a crowbar. The walk harness
-        // sets its own on the stand-in hero, and keeps it.
-        bashBonus: hero.bashBonus ?? (hero.mods?.might ?? 0) + (hero.explore?.bash ?? 0),
+        // The walk harness sets its own on the stand-in hero, and keeps it.
+        bashBonus: bashBonusOf(),
         method,
       });
       if (!outcome) return { events: [] };
@@ -417,6 +466,152 @@ export function createRun({
       return { events };
     },
 
+    /** What the hero adds to a bash (`03` section 6), for the odds a key shows. */
+    get bashBonus() {
+      return bashBonusOf();
+    },
+
+    /**
+     * The chest the hero is facing, while it is still shut. A chest can sit
+     * on a doorway tile, and then the door comes first: what is in the way is
+     * always what the context key offers (`00`, Exploration).
+     */
+    get chestAhead() {
+      const chest = run.ahead.chest;
+      if (!chest || chest.opened || run.doorAhead) return null;
+      return chest;
+    },
+
+    /**
+     * One key of the Chest screen's grid (`03` section 7). The sequence's
+     * rules are `systems/chests.js`'s; what belongs here is the floor around
+     * them — the time each step costs, the noise a bash makes, the gold and
+     * the loot going into the hero's own pack, and the log.
+     *
+     * @param {'search' | 'careful' | 'disarm' | 'pole' | 'pick' | 'bash'
+     *   | 'key' | 'knock' | 'dispelWard' | 'open'} action
+     */
+    chestAct(action) {
+      const chest = run.chestAhead;
+      if (!chest) return { events: [] };
+      const services = { rng: rng.combat };
+      const at = run.ahead.at;
+      /** @type {object[]} */
+      const events = [];
+
+      // 1. Inspect (`03` section 7 step 1).
+      if (action === 'search' || action === 'careful') {
+        const careful = action === 'careful';
+        const looked = inspectChest(rng.combat, hero, chest, floor.floor, {
+          careful,
+          dark: inDarkness(floor, ex.pos),
+        });
+        if (looked.why) return { events: [] };
+        if (looked.mimic) events.push({ type: 'mimicSeen', at });
+        events.push({
+          type: 'searched',
+          found: Boolean(looked.trap),
+          exact: Boolean(chest.trap?.typeKnown),
+          trap: chest.trap,
+        });
+        events.push(...spend(looked.steps, careful ? 'carefulSearch' : 'search'));
+        record(events);
+        return { events };
+      }
+
+      // 2. Handle the trap (`03` section 7 step 2).
+      if (action === 'disarm' || action === 'pole') {
+        const out =
+          action === 'disarm'
+            ? disarmTrap(rng.combat, hero, chest, floor.floor)
+            : poleTrap(rng.combat, hero, chest);
+        if (out.why) return { events: [] };
+
+        if (action === 'pole') {
+          events.push({ type: 'poled', at });
+          if (out.poleBroke) events.push({ type: 'poleBroke' });
+          // An area trap still reaches the hero, with the save made with
+          // advantage (`03` section 4).
+          if (out.reaches) {
+            events.push({
+              type: 'trapSprung',
+              at,
+              by: 'pole',
+              trap: fireTrap(services, hero, chest.trap, floor.floor, { detected: true, advantage: true }),
+            });
+          }
+        } else if (out.disarmed) {
+          events.push({ type: 'disarmed', at });
+          if (out.salvage) events.push({ type: 'salvaged', item: out.salvage });
+          if (out.xp) events.push({ type: 'earned', xp: out.xp, why: 'disarm' });
+        } else {
+          events.push({ type: 'disarmFailed', at });
+          if (out.sprung) {
+            events.push({
+              type: 'trapSprung',
+              at,
+              by: 'disarm',
+              // `03` section 4: the hero is working on it, so it is no
+              // surprise when it goes off in their hands.
+              trap: fireTrap(services, hero, chest.trap, floor.floor, { detected: true }),
+            });
+          }
+        }
+        events.push(...spend(out.steps ?? 0, action));
+        record(events);
+        return { events, outcome: out };
+      }
+
+      // 3. Unlock (`03` section 7 step 3).
+      if (action !== 'open') {
+        const out = unlockChest(services, hero, chest, floor.floor, {
+          method: action,
+          keysHeld: ex.keysTaken,
+          has: hero.has ?? {},
+          bashBonus: bashBonusOf(),
+        });
+        if (out.why) return { events: [] };
+
+        events.push(out.opened ? { type: 'unlocked', at, method: out.method } : { type: 'lockHeld', at });
+        if (out.xp) events.push({ type: 'earned', xp: out.xp, why: out.method });
+        if (out.jammed) events.push({ type: 'jammed', at });
+        if (out.broke) events.push({ type: 'picksBroke' });
+        if (out.backlash) events.push({ type: 'backlash', ...out.backlash });
+        if (out.usedUp) events.push({ type: 'usedUp', item: 'skeleton_key' });
+        if (out.sprung) events.push({ type: 'trapSprung', at, by: out.method, trap: out.sprung });
+        events.push(...spend(out.steps ?? 0, out.method));
+        if (out.noisy) events.push(rollNoiseCheck(rng.encounter, out.method));
+        record(events);
+        return { events, outcome: out };
+      }
+
+      // 4 and 5. Open, and loot (`03` section 7 steps 4 and 5).
+      const armed = isArmed(chest);
+      const out = openChest(services, hero, chest, floor.floor);
+      if (out.why) return { events: [] };
+      if (armed && out.sprung) events.push({ type: 'trapSprung', at, by: 'open', trap: out.sprung });
+
+      if (out.mimic) {
+        events.push({ type: 'mimic', at, surprise: out.surprise });
+        // Lifting a lid is a use, and a use is one step (`03` section 1).
+        events.push(...spend(costOf('item'), 'open'));
+        record(events);
+        return { events, outcome: out, mimic: true };
+      }
+
+      events.push({ type: 'chestOpened', at, gold: out.gold, drops: out.drops });
+      hero.gold = (hero.gold ?? 0) + out.gold;
+      // What the pack will hold goes in; the rest stays in the chest, so a
+      // hero who drops something can come back for it.
+      const { taken, left } = takeAll(hero, out.drops);
+      for (const drop of taken) events.push({ type: 'took', name: nameOf(drop, hero.identification) });
+      if (left.length) events.push({ type: 'packFull' });
+      chest.left = left;
+      events.push(...spend(costOf('item'), 'open'));
+      record(events);
+      return { events, outcome: out };
+    },
+
     /** The door the hero is facing, when there is one still shut. */
     get doorAhead() {
       const ahead = run.ahead;
@@ -442,6 +637,7 @@ export function createRun({
       // SEARCH is always something the hero can do, even where there is
       // nothing to find: `03` section 3 says a failure looks the same.
       if (run.context === 'search') return inDarkness(floor, ex.pos) ? t('explore.reason.tooDark') : undefined;
+      if (run.context === 'open' && run.chestAhead) return undefined;
       if (run.context === 'open' && run.doorAhead) {
         // A door with no way through says which one is missing, not "later".
         const way = run.openingWay;
@@ -453,6 +649,7 @@ export function createRun({
     /** What the context key's second line says. */
     get actHint() {
       if (run.context === 'search') return t('explore.hint.search');
+      if (run.context === 'open' && run.chestAhead) return t('explore.hint.open');
       if (run.context === 'touch') {
         return whyNotLeaveByStone(town, run) ? null : t('explore.hint.toTown');
       }

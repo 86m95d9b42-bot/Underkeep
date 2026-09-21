@@ -176,9 +176,18 @@ export function useKey(door) {
  * @param {number} floor
  * @param {object} [hero]
  */
+/**
+ * What the hero adds to a pick: AGI mod and Lockpicking (`03` section 6). The
+ * odds the Chest screen's PICK key shows are this against `pickTn`, so the
+ * button and the roll cannot disagree.
+ */
+export function pickBonus(hero = {}) {
+  return modFor(hero.attributes?.agility) + (hero.explore?.pick ?? 0);
+}
+
 export function rollPick(rng, door, floor, hero = {}) {
   const spec = locks.methods.pick;
-  const bonus = modFor(hero.attributes?.agility) + (hero.explore?.pick ?? 0);
+  const bonus = pickBonus(hero);
   const target = pickTn(door, floor);
   const roll = rng.d20();
   const total = roll + bonus;

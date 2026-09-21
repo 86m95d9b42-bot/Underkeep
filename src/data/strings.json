@@ -73,7 +73,21 @@
       "picksBroke": "A pick snaps in the lock.",
       "backlash": "The ward bites back.",
       "earned": "+{n} XP",
-      "trapSprung": "{name}! It catches you for {n}."
+      "trapSprung": "{name}! It catches you for {n}.",
+      "chestUnlocked": "The lock gives and the lid is free.",
+      "chestHeld": "The lock holds.",
+      "disarmed": "You take the trap apart.",
+      "disarmFailed": "Your hands slip. The trap is still live.",
+      "poled": "You reach in with the pole and the trap goes off on it.",
+      "poleBroke": "The pole snaps.",
+      "salvaged": "You salvage {name}.",
+      "mimicSeen": "It breathes.",
+      "mimic": "The chest opens a mouth.",
+      "mimicSurprise": "The chest opens a mouth, and it is already moving.",
+      "chestGold": "The chest holds {n} gp.",
+      "chestEmpty": "The chest is empty.",
+      "took": "You take {name}.",
+      "packFull": "Your pack is full. What is left stays in the chest."
     },
     "title": "EXPLORE",
     "pad": {
@@ -1341,6 +1355,81 @@
     },
     "soul_leech": {
       "name": "Soul Leech"
+    }
+  },
+  "chest": {
+    "title": "CHEST",
+    "door": "DOOR",
+    "sub": "{name} · F{floor}",
+    "searched": "SEARCHED",
+    "lock": "LOCK",
+    "trap": "TRAP",
+    "locks": {
+      "none": "Unlocked",
+      "simple": "Simple",
+      "good": "Good",
+      "masterwork": "Masterwork",
+      "sealed": "Sealed"
+    },
+    "trapStates": {
+      "unknown": "Unknown",
+      "none": "None found",
+      "armed": "Armed",
+      "disarmed": "Disarmed",
+      "sprung": "Sprung"
+    },
+    "tiers": {
+      "crude": "Crude",
+      "standard": "Standard",
+      "masterwork": "Masterwork",
+      "arcane": "Arcane"
+    },
+    "tips": {
+      "armed": "Tip: disarm first. A bad pick sets off the trap.",
+      "unknown": "Tip: look before you lift the lid.",
+      "locked": "Tip: the lock has to give before the lid will.",
+      "ready": "Tip: nothing is in the way now.",
+      "mimic": "Tip: this is no chest. Back away or open it and fight."
+    },
+    "actions": {
+      "search": "SEARCH",
+      "careful": "CAREFUL",
+      "disarm": "DISARM",
+      "pole": "POLE",
+      "pick": "PICK",
+      "bash": "BASH",
+      "spell": "KEY / SPELL",
+      "open": "OPEN",
+      "leave": "LEAVE"
+    },
+    "hints": {
+      "steps": "{n} steps",
+      "odds": "{n}%",
+      "safe": "Safe · no XP",
+      "setsOff": "Sets off trap",
+      "armedWarning": "Trap armed!",
+      "takeIt": "Take what is inside",
+      "none": "None",
+      "leave": "Back to the dungeon"
+    },
+    "reasons": {
+      "used": "Used",
+      "noTrap": "No trap found",
+      "notFound": "Search for it first",
+      "alreadyGone": "The trap is gone",
+      "noLockpicks": "No lockpicks",
+      "noPole": "No ten-foot pole",
+      "notPoleable": "A pole cannot reach it",
+      "unlocked": "It is not locked",
+      "locked": "Unlock it first",
+      "tooDark": "Too dark to search",
+      "noWay": "No way through this lock",
+      "noKey": "Its key is elsewhere",
+      "noKnock": "You don't know Knock",
+      "noDispel": "Runes: needs Dispel Ward",
+      "noSkeletonKey": "No skeleton key",
+      "noRuneKey": "Needs its rune key",
+      "notPickable": "This lock will not take a pick"
     }
   }
 }

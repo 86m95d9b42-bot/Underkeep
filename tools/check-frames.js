@@ -42,6 +42,7 @@ const SCREENS = [
   'explore',
   'pause',
   'map',
+  'chest',
   'hero',
   'skillTree',
   'pack',

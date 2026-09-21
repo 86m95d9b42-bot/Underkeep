@@ -151,6 +151,30 @@ export function whyNotDisarm(hero, entry) {
 }
 
 /**
+ * What the hero adds to a disarm roll, and whether it is made with
+ * disadvantage (`03` section 4). The odds on the Chest screen's DISARM key
+ * are this against `disarmTn`, so the button and the roll cannot disagree.
+ */
+export function disarmBonus(hero, entry) {
+  const magical = isArcane(entry.kind, entry.tier);
+  const dispel = Boolean(hero?.has?.dispelWard);
+  const attribute = magical ? DISARM.arcane.attribute : DISARM.mechanical.attribute;
+
+  let bonus = modFor(hero?.attributes?.[attribute]);
+  if (magical) {
+    bonus += hero?.explore?.magicTrap ?? 0;
+    if (dispel) bonus += DISARM.arcane.withDispel;
+  } else {
+    bonus += hero?.explore?.disarm ?? 0;
+  }
+  // "Apply −2 if the trap's type is unknown."
+  if (!entry.typeKnown) bonus += DETECTION.unknownTypePenalty;
+  // An Arcane trap without Dispel Ward is INT with disadvantage, never a
+  // refusal (`03` section 4).
+  return { bonus, disadvantage: magical && !dispel };
+}
+
+/**
  * Disarming a found trap (`03` section 4).
  *
  * @returns {{ ok: boolean, why?: string, roll: number, total: number, tn: number,
@@ -161,20 +185,9 @@ export function disarm(rng, hero, entry, floor) {
   const why = whyNotDisarm(hero, entry);
   if (why) return { ok: false, why, roll: 0, total: 0, tn: 0, disarmed: false, sprung: false, retry: false, xp: 0, steps: 0 };
 
-  const magical = isArcane(entry.kind, entry.tier);
-  const dispel = Boolean(hero?.has?.dispelWard);
-  const attribute = magical ? DISARM.arcane.attribute : DISARM.mechanical.attribute;
-  const roll = rng.d20({ disadvantage: magical && !dispel });
-
-  let total = roll + modFor(hero?.attributes?.[attribute]);
-  if (magical) {
-    total += hero?.explore?.magicTrap ?? 0;
-    if (dispel) total += DISARM.arcane.withDispel;
-  } else {
-    total += hero?.explore?.disarm ?? 0;
-  }
-  // "Apply −2 if the trap's type is unknown."
-  if (!entry.typeKnown) total += DETECTION.unknownTypePenalty;
+  const { bonus, disadvantage } = disarmBonus(hero, entry);
+  const roll = rng.d20({ disadvantage });
+  const total = roll + bonus;
 
   const target = disarmTn(entry.tier, floor);
   const by = total - target;

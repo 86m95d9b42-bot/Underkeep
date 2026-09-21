@@ -11,9 +11,9 @@
  * table it cannot see yet will fill it in.
  */
 import floorsData from '../data/floors.json' with { type: 'json' };
-import { isArcane, rollTrap } from '../data/traps.js';
+import { isArcane, rollChestTrap, rollTrap } from '../data/traps.js';
 import { TILE, isWalkable, distancesFrom } from './floor-builder.js';
-import { rollLockTier, capLock, tn, lockData } from './doors.js';
+import { rollLockTier, tn, lockData } from './doors.js';
 
 const DIRS = [
   [0, -1],
@@ -226,7 +226,20 @@ export function placeChests(floor, rng, traps) {
 
     const deep = room ? deepRooms.has(room.id) : false;
     const bonus = deep ? floorsData.chestDepthBonus.bonus : 0;
-    const lock = capLock(rollLockTier(rng, floor.floor + bonus), 'masterwork');
+    // A chest may be Sealed where a door off the critical path may not: it is
+    // treasure, not a way through, and `03` section 7 lists Sealed among the
+    // five things the chest panel can say.
+    const lock = rollLockTier(rng, floor.floor + bonus);
+
+    // `03` section 7: a chest is locked 30% + 5% a floor, trapped 20% + 5%,
+    // and past floor 4 it may not be a chest at all.
+    const rules = lockData.chests;
+    const chance = (rule) => Math.min(rule.max, rule.base + rule.perFloor * floor.floor);
+    const locked = rng.chance(chance(rules.locked));
+    const trapped = rng.chance(chance(rules.trapped));
+    const mimicOdds = rules.mimic.bands.find((band) => floor.floor <= band.upToFloor)?.chance ?? 0;
+    const mimic = rng.chance(mimicOdds);
+    const trap = trapped ? rollChestTrap(rng, floor.floor) : null;
 
     chests[at] = {
       id: `chest_f${floor.floor}_${String(placed).padStart(2, '0')}`,
@@ -234,10 +247,23 @@ export function placeChests(floor, rng, traps) {
       where: option.why,
       room: room?.id ?? null,
       depthBonus: bonus,
-      lock: lock.lock,
-      tier: lock.tier,
-      pickTn: tn(lockData.tiers[lock.tier].pickTn, floor.floor),
-      trap: null,
+      lock: locked ? lock.lock : 'none',
+      tier: locked ? lock.tier : null,
+      pickTn: locked ? tn(lockData.tiers[lock.tier].pickTn, floor.floor) : 0,
+      trap: trap
+        ? {
+            ...trap,
+            found: false,
+            typeKnown: false,
+            disarmed: false,
+            sprung: false,
+            searches: { normal: false, careful: false },
+          }
+        : null,
+      mimic,
+      searches: { normal: false, careful: false },
+      // `03` section 7: F x 3d10, rolled when it is opened, not now.
+      gold: `${floor.floor}*${lockData.chests.gold.dice}`,
       opened: false,
       restocked: false,
     };

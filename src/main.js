@@ -13,6 +13,7 @@ import { settings as settingsScreen } from './ui/screens/settings.js';
 import { explore } from './ui/screens/explore.js';
 import { pause } from './ui/screens/pause.js';
 import { map } from './ui/screens/map.js';
+import { chest as chestScreen } from './ui/screens/chest.js';
 import { newGame } from './ui/screens/newgame.js';
 import { createStats } from './ui/screens/create-stats.js';
 import { createOrigin } from './ui/screens/create-origin.js';
@@ -31,6 +32,7 @@ import { combatSkills } from './ui/screens/combat-skills.js';
 import { loot } from './ui/screens/loot.js';
 import { levelUp } from './ui/screens/levelup.js';
 import { PLACEHOLDER_HERO } from './systems/run.js';
+import { isWalkable } from './dungeon/floor-builder.js';
 import { createSession } from './systems/session.js';
 import { standInHero } from './systems/fight.js';
 import { chooseOrigin, createDraft, finish, setName } from './systems/creation.js';
@@ -117,6 +119,7 @@ const screens = {
   explore,
   pause,
   map,
+  chest: chestScreen,
   hero: heroScreen,
   skillTree,
   town: townScreen,
@@ -234,6 +237,37 @@ globalThis.underkeep = {
       if (playing.outcome === 'victory') break;
     }
     router.go(screen, screen === 'levelUp' ? { levels: playing?.summary?.levels ?? [] } : {});
+  },
+
+  /**
+   * The Chest screen wants a chest in front of the hero: this finds the
+   * nearest unopened one on the floor and stands them at it.
+   */
+  showChest() {
+    const current = game().run ?? startRun();
+    const floor = current.floor;
+    // A locked, trapped chest is the one worth looking at, so it comes first.
+    const worth = (chest) => (chest.lock !== 'none' ? 2 : 0) + (chest.trap ? 1 : 0);
+    const chests = Object.entries(floor.chests ?? {}).sort((a, b) => worth(b[1]) - worth(a[1]));
+    for (const [at, chest] of chests) {
+      if (chest.opened) continue;
+      const [cx, cy] = at.split(',').map(Number);
+      // North, south, east, west of the chest, facing it.
+      for (const [ox, oy, facing] of [[0, 1, 0], [0, -1, 2], [1, 0, 3], [-1, 0, 1]]) {
+        const [x, y] = [cx + ox, cy + oy];
+        if (!isWalkable(floor.map?.[y]?.[x])) continue;
+        current.ex.pos = [x, y];
+        current.ex.facing = facing;
+        if (current.chestAhead) {
+          // One real Careful Search, so the card shows what a hero would know.
+          current.chestAct('careful');
+          router.go('chest');
+          return at;
+        }
+      }
+    }
+    router.go('chest');
+    return null;
   },
 
   showHero(screen) {

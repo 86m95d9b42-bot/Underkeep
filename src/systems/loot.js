@@ -63,11 +63,12 @@ export const MAX_CATEGORY_ROLLS = 5;
 /**
  * The category roll: d100 + (LCK mod x 5) (`02` section 17).
  * @param {import('../engine/rng.js').Stream} rng the loot stream
- * @param {{ luckMod?: number }} [options]
+ * @param {{ luckMod?: number, bonus?: number }} [options] a chest's lock and
+ *   trap add to the roll (`03` section 7: harder chests give better loot)
  */
-export function rollCategory(rng, { luckMod = 0 } = {}) {
+export function rollCategory(rng, { luckMod = 0, bonus = 0 } = {}) {
   const roll = rng.die(100);
-  const total = roll + luckMod * CATEGORY_ROLL.perLuckMod;
+  const total = roll + luckMod * CATEGORY_ROLL.perLuckMod + bonus;
   const band = categoryFor(total);
   return {
     roll,
@@ -93,10 +94,11 @@ export function rollLoot(rng, context = {}) {
   // The Luck modifier is the hero's unless the caller says otherwise, so no
   // call site has to remember to pass it.
   const luckMod = context.luckMod ?? context.hero?.mods?.luck ?? 0;
+  const bonus = context.bonus ?? 0;
   const rolls = [];
   const drops = [];
   for (let round = 0; round < MAX_CATEGORY_ROLLS; round += 1) {
-    const rolled = rollCategory(rng, { luckMod });
+    const rolled = rollCategory(rng, { luckMod, bonus });
     rolls.push(rolled);
     if (rolled.category) drops.push(...rollOnTable(rng, rolled.category, context));
     if (!rolled.rollAgain) break;

@@ -230,7 +230,12 @@ export const explore = {
     };
 
     const act = () => {
-      run.act();
+      // A chest has a screen of its own (`03` section 7): the run says so
+      // rather than resolving anything itself.
+      if (run.act().openChest) {
+        router.go('chest');
+        return;
+      }
       paintLog();
       paintChips();
       paintContext();

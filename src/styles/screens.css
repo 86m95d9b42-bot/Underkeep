@@ -1000,3 +1000,34 @@
   min-width: 0;
   overflow: hidden;
 }
+
+/* --- Chest / Door (00-build-outline.md, "Chest / Door") --- */
+
+/* The info card: what is known about the thing in front of the hero. */
+.infocard {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: calc(var(--u) * 0.12);
+}
+.infocard__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--gap);
+}
+.infocard__name {
+  font-family: var(--font-label);
+  font-size: calc(var(--u) * 0.5);
+  letter-spacing: 0.04em;
+}
+.infocard .statline__value--danger {
+  color: var(--danger);
+}
+
+/* The nine keys of the chest sequence, three by three in both frames. */
+.actiongrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  gap: var(--gap);
+}
