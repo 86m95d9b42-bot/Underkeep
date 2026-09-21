@@ -11,6 +11,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { checkCondition } from '../src/engine/ai.js';
 import { parsePart } from '../src/engine/damage.js';
 import { PENDING, TRAITS } from '../src/engine/monster-traits.js';
+import { BOSS_TRAITS } from '../src/engine/boss-traits.js';
 import { HANDLERS, PENDING as SKILLS_PENDING } from '../src/engine/skill-hooks.js';
 import { HANDLERS as ITEM_HANDLERS, PENDING as ITEMS_PENDING } from '../src/engine/item-hooks.js';
 import { EVENTS } from '../src/engine/hooks.js';
@@ -501,7 +502,7 @@ function checkMonsters(json, ai, combat) {
     for (const entry of block.traits ?? []) {
       const trait = typeof entry === 'string' ? entry : entry.id;
       if (!trait) problems.push(`${where} has a trait with no id`);
-      else if (!TRAITS[trait] && !PENDING[trait]) {
+      else if (!TRAITS[trait] && !BOSS_TRAITS[trait] && !PENDING[trait]) {
         problems.push(`${where} has trait "${trait}", which nothing implements`);
       }
     }

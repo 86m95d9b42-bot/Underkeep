@@ -65,8 +65,17 @@ export function enemies(combat) {
 /**
  * The enemies that count: objects don't, for the crowd cap, for morale, or for
  * the hero's flee roll (`06` sections 2, 13 and 14).
+ *
+ * Neither does a **part**. A Hydra's head is not another enemy, it is more of
+ * the same one — and `02` section 8 lets it grow to five heads beside a body,
+ * which the five-enemy cap would otherwise forbid.
  */
 export function countedEnemies(combat) {
+  return enemies(combat).filter((unit) => !unit.object && !unit.part);
+}
+
+/** Every enemy that can be hit, parts included: what the target picker sees. */
+export function targetableEnemies(combat) {
   return enemies(combat).filter((unit) => !unit.object);
 }
 

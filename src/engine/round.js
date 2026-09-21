@@ -24,11 +24,13 @@
  */
 import data from '../data/combat.json' with { type: 'json' };
 import { rollInitiative } from './initiative.js';
+import { applyQueuedPhases } from './boss.js';
 import {
   REACTION_FLAGS,
   SURPRISE,
   clearSurprise,
   countedEnemies,
+  targetableEnemies,
   sideOf,
   stillFighting,
   takesTurns,
@@ -72,9 +74,20 @@ export function startRound(combat, { surprise = false } = {}) {
   resetReactions(combat);
   combat.hooks?.resetLimits('round');
 
-  // 3-5. The Grimoire's page, then the start-of-round effects in order, then
-  //      the boss phase changes queued last round. All of them are hooks.
+  // 3-4. The Grimoire's page and the start-of-round effects, in order.
   const payload = combat.hooks?.fire('roundStart', { combat, round: combat.round }) ?? { log: [] };
+
+  // 5. The boss phase changes queued last round now take effect, which is
+  //    what gives the hero a turn between the threshold and what follows it.
+  const changed = applyQueuedPhases(combat);
+  for (const change of changed) {
+    record(combat, { type: 'phaseChange', ...change });
+    // A phase may open with something: Frightful Presence, and the one
+    // Ashbound Knight the dragon calls (`02` section 13).
+    for (const id of change.onEnter ?? []) {
+      combat.onPhaseAbility?.(combat, change.unit, id);
+    }
+  }
 
   // 6. Initiative, over whoever is allowed to act this round. The index is
   //    where the turn order has got to, for a caller taking one turn at a time.
@@ -205,7 +218,7 @@ export function runRound(combat, services = {}) {
 export function combatOver(combat) {
   const hero = combat.hero;
   if (!hero || !hero.alive || hero.fled) return true;
-  return !countedEnemies(combat).some(stillFighting);
+  return !targetableEnemies(combat).some(stillFighting);
 }
 
 /**

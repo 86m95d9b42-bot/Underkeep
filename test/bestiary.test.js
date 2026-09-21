@@ -11,6 +11,7 @@ import { countedEnemies, createCombat } from '../src/engine/field.js';
 import { registerRules } from '../src/engine/rules.js';
 import { makeMonster } from '../src/data/monsters.js';
 import { PENDING, TRAITS } from '../src/engine/monster-traits.js';
+import { BOSS_TRAITS } from '../src/engine/boss-traits.js';
 import { resolveAttack, resolveAction } from '../src/engine/attack.js';
 import { resolveSupport } from '../src/engine/support.js';
 import { chooseAction } from '../src/engine/ai.js';
@@ -75,7 +76,8 @@ describe('every trait is answered', () => {
       if (id.startsWith('_')) continue;
       for (const entry of block.traits ?? []) {
         const trait = typeof entry === 'string' ? entry : entry.id;
-        expect([id, trait, Boolean(TRAITS[trait] || PENDING[trait])]).toEqual([id, trait, true]);
+        const answered = Boolean(TRAITS[trait] || BOSS_TRAITS[trait] || PENDING[trait]);
+        expect([id, trait, answered]).toEqual([id, trait, true]);
       }
     }
   });

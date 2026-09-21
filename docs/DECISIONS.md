@@ -4,6 +4,17 @@ Rulings here override the other documents. Add new entries at the top of each li
 
 ## Decisions
 
+- **2026-09-21 — `bosses.json`, and all ten boss fights.** The ten stat blocks of `02`, the scripts of `06` section 12, and the rules of section 13 that only a boss needs: an escort, arena objects, phases, and — for the Hydra — parts. `src/engine/boss.js` is the machinery, `src/engine/boss-traits.js` is the thirteen traits each boss is built around, and `npm run boss` plays every one of them and checks that its own mechanic fired. Nine rulings:
+  - **A part is not another enemy.** `06` section 13 caps a fight at five enemies, and `02` section 8 lets the Hydra grow to five heads beside a body. A head is more of the same creature rather than another one, so parts are outside the cap and outside morale — and inside the target picker, because a head is still something to hit.
+  - **A boss's article belongs to its name.** Every log line was written "The {who} hits you", which made "The Vyrmathrax the Ashen". The article moved out of the templates and into `logName`, which knows the difference between a kind of thing ("the Giant Rat") and somebody ("The Rat King", "Vyrmathrax the Ashen").
+  - **A telegraphed attack now resolves as itself.** The wind-up remembered only which ability it was, and the turn engine resolved `{ id: 'attack' }` — so every telegraphed blow in the game landed for nothing. It now looks the ability up and resolves it with its dice, its save and its rider, and the blow reaches the log.
+  - **Phases are queued, not immediate.** Crossing a threshold queues the change on `damageTaken`; `06` section 3 step 5 applies it at the start of the next round. That is what gives the hero a turn between "she is under half" and "she is standing in the front row".
+  - **Phase 3 of the last fight is a state machine, and reads like one.** `bosses.json` carries `states` — grounded, takeoff, air 1 to 3 — with what each does and what follows it, because `06` section 12 writes it as a table rather than as rules.
+  - **A monster-only action is still an action.** Summoning, guarding, sacrificing, erasing and pointing a finger are in `combat.json`'s action table with their own tags: without an entry the legality check called them unknown and every boss quietly fell back to swinging.
+  - **The bribe is offered, not decided.** Coward's Gold puts `{ kind: 'cowardsGold', gold: 200 }` on the fight and stops; `fight.answer(true|false)` settles it. Taking it pays the gold and he leaves — no XP, no Kingsplitter, which is what `02` section 6 asks for.
+  - **A boss carries its reward as a drop.** `02` gives each one a unique item, so the boss unit is built with `drops: [{ item, chance: 1 }]` and the loot rules hand it over like anything else. The dragon's `ending: true` is the one flag the loot does not use.
+  - **Malgorath cannot be killed while his Phylactery stands.** The zero-HP ladder already had a `reform` slot; the trait uses the Fallen mechanism the troll uses, with a one-round count and full hit points, so he comes back every time until the vessel is broken.
+
 - **2026-09-20 — The rest of the bestiary: floors 3 to 10, and every encounter table.** `02` sections 6 to 13 as data — 31 more monsters, 41 in all — with section 16's ten tables, and the traits behind them as hooks. Ten rulings:
   - **A trait is a shape, not a monster.** Nineteen new traits cover forty of the document's named abilities, because most of them are the same rule with different numbers: Rot Bloom and Martyr's Flame are one `death_burst`, Stench and Petrifying Gaze are one `aura_save`, Molten Shell and Heat Aura are one `retaliate`, Crushing Blow and Hamstring are one `crit_rider`, Drag Under is the Ghoul's own Feast with `vs: "slowed"`.
   - **An attack may carry its own save.** "Reflex save (DC 13) for half, and Burning on a failed save" is **one** roll: the attack rolls it, the damage is halved on a success, and the rider reuses the same result through `useAttackSave` rather than asking the hero to save twice for one breath.
@@ -538,6 +549,12 @@ Rulings here override the other documents. Add new entries at the top of each li
 - **2026-09-16 — Reaction mockup** shows a Shadow/Arcana hero's options (Lucky, Arcane Shield). The real prompt lists only reactions the hero owns.
 
 ## Open questions
+
+- **A boss fight has no way in yet.** `session.startBoss(floor)` builds the fight and `session.bossBeaten(floor)` opens the stairs, but nothing on the Exploration screen walks into the arena and starts it — the same gap a wandering monster and a Mimic are waiting in. (Default: all three land together when the exploration loop learns to start a fight.)
+
+- **Coward's Gold has no button.** The fight offers it and `fight.answer()` settles it; the Combat screen does not ask. `00`'s Combat: Reaction sheet is where a mid-fight question belongs, and that is Phase 8. (Default: the sheet asks; until then a fight left unanswered simply goes on.)
+
+- **A naive hero loses to the two casters.** `npm run boss` plays every fight with a hero who only swings: that wins eight of the ten and loses to Veyra and to Malgorath, who is unkillable until his Phylactery is broken. Both are working as written — the answer to each is a target choice, not damage — and the balance simulator of the next task is what measures real builds.
 
 - **Two monster traits wait on systems nothing has built.** The Ogre's *Greedy* wants the hero to throw 50 gp as an Item action, and `04` has no such item; the Mimic's *Disguise* wants the exploration loop to start a fight, which is the same thing a wandering monster is still waiting for. Both are in `PENDING` with those reasons, so the data check passes them and nothing pretends they work. (Default: they land with the systems they need.)
 

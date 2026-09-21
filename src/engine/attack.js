@@ -29,7 +29,7 @@
 import data from '../data/combat.json' with { type: 'json' };
 import { attackMods, defMod, defenceMods, isHelpless } from './conditions.js';
 import { rollSave } from './riders.js';
-import { ROWS, countedEnemies, isTargetable, onField, unitById } from './field.js';
+import { ROWS, countedEnemies, targetableEnemies, isTargetable, onField, unitById } from './field.js';
 import { targetsFor } from './actions.js';
 import { resolveDamage } from './damage.js';
 import { zeroHp } from './defeat.js';
@@ -250,6 +250,7 @@ function land(combat, attacker, target, attack, result, services) {
   // dice is not one of these — it is a weapon whose damage is elsewhere.
   if (attack.ability && !attack.damage && !attack.parts) {
     out.effectOnly = true;
+    out.name = attack.name ?? attack.ability;
     const payload = { combat, attacker, unit: attacker, target, attack, result: out, damage: null };
     combat.hooks?.fire('hit', payload);
     return out;
@@ -375,9 +376,24 @@ function asUnit(combat, target) {
  */
 export function resolveAction(combat, unit, action, services = {}) {
   if (action.id !== 'attack') return null;
+  if (action.sequence) return resolveSequence(combat, unit, action, services);
   return action.attacks > 1
     ? resolveAttacks(combat, unit, action, services)
     : resolveAttack(combat, unit, action, services);
+}
+
+/**
+ * Two different blows in one turn: a bite and then a claw. Each is resolved
+ * completely before the next, as every multi-attack is (`06` section 6).
+ */
+export function resolveSequence(combat, attacker, action, services = {}) {
+  const results = [];
+  for (const blow of action.sequence ?? []) {
+    const target = asUnit(combat, action.target) ?? firstTarget(combat, attacker, blow);
+    if (!target) break;
+    results.push(resolveAttack(combat, attacker, { ...blow, target }, services));
+  }
+  return results;
 }
 
 /** Every enemy an attack could reach, for the target picker. */
@@ -387,5 +403,5 @@ export function reachableTargets(combat, attacker, attack = {}) {
 
 /** Whether any enemy at all is standing, which the round's end check wants. */
 export function anyTargets(combat) {
-  return countedEnemies(combat).some((unit) => unit.alive);
+  return targetableEnemies(combat).some((unit) => unit.alive);
 }

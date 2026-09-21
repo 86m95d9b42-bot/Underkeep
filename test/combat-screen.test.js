@@ -13,7 +13,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { combat as combatScreen, REGIONS } from '../src/ui/screens/combat.js';
 import { combatSkills } from '../src/ui/screens/combat-skills.js';
 import { placeRegions, validateScreen, PANEL_COLS } from '../src/shell/layout.js';
-import { createFight, ACTIONS, lineFor } from '../src/systems/fight.js';
+import { createFight, ACTIONS, lineFor, logName } from '../src/systems/fight.js';
 import { makeMonster } from '../src/data/monsters.js';
 import { carriedStreams } from '../src/engine/rng.js';
 import { chanceToBeat, hitChance } from '../src/engine/odds.js';
@@ -343,9 +343,21 @@ describe('the log lines', () => {
 
     const taken = { type: 'action', result: { hit: true, targetName: 'Harrow', damage: { total: 2 } } };
     expect(lineFor(taken, rat)).toMatchObject({
-      text: t('combat.log.theyHit', { who: 'Giant Rat', n: 2 }),
+      // The article belongs to the name rather than to the template, so that
+      // a boss with a name of its own is not "The Vyrmathrax the Ashen".
+      text: t('combat.log.theyHit', { who: 'The Giant Rat', n: 2 }),
       tone: 'danger',
     });
+  });
+
+  it('leaves a boss its own name, and its own article', () => {
+    const dragon = { id: 'vyrmathrax-1', name: 'Vyrmathrax the Ashen', side: 'monsters', boss: true };
+    const king = { id: 'rat_king-1', name: 'The Rat King', side: 'monsters', boss: true };
+    expect(logName(dragon, { start: true })).toBe('Vyrmathrax the Ashen');
+    expect(logName(king, { start: true })).toBe('The Rat King');
+    expect(logName(king)).toBe('the Rat King');
+    expect(logName({ name: 'Giant Rat' }, { start: true })).toBe('The Giant Rat');
+    expect(logName({ name: 'Giant Rat' })).toBe('the Giant Rat');
   });
 
   it('says nothing about a step the player would not see', () => {

@@ -41,7 +41,7 @@ import {
   stunnedStart,
 } from './conditions.js';
 import { legalityOf, tagsOf } from './actions.js';
-import { spend } from './ai.js';
+import { abilityOf, resolvedActionFor, spend } from './ai.js';
 import { monsterFlees, zeroHp } from './defeat.js';
 import { onField } from './field.js';
 
@@ -158,6 +158,12 @@ export function takeMonsterTurn(combat, unit, services = {}) {
     return endTurn(combat, unit, record, { lost: 'stunned' });
   }
 
+  // A shield raised last turn comes down as this one starts.
+  if (unit.guardUntilOwnTurn) {
+    unit.guardDef = 0;
+    unit.guardUntilOwnTurn = false;
+  }
+
   // 3. Damage, then healing. A troll that has been burned since its last turn
   //    does not regenerate, which its own hook reads off the payload.
   fireTurnStart(combat, unit, record);
@@ -184,7 +190,18 @@ export function takeMonsterTurn(combat, unit, services = {}) {
   if (due) {
     step(record, { type: 'telegraphResolves', ability: due.ability });
     unit.telegraph = null;
-    services.resolveAction?.(combat, unit, { id: 'attack', ...due, telegraphed: true });
+    // What the wind-up actually did is a step like any other action's, or the
+    // blow it landed would never reach the log.
+    // The wind-up remembered which ability it was; this is the ability
+    // itself, with its dice, its save and its rider (`06` section 5 step 8).
+    const ability = abilityOf(unit, due.ability);
+    const action = resolvedActionFor(unit, ability) ?? { id: 'attack' };
+    const result = services.resolveAction?.(combat, unit, {
+      ...action,
+      id: action.id ?? 'attack',
+      telegraphed: true,
+    });
+    step(record, { type: 'action', action: 'attack', ability: due.ability, result });
   } else {
     // 9. Otherwise the monster's own script (`06` section 11).
     const action = services.script?.(combat, unit, record);
@@ -372,7 +389,9 @@ export function defend(unit, record) {
 
 /** The DEF a unit gains from Defending this moment (`06` section 4). */
 export function defendBonus(unit) {
-  return unit.defending ? DEFEND.def : 0;
+  // A raised shield counts the same as Defending until the unit's own next
+  // turn: the Bone Warden's Tower Shield (`02` section 5).
+  return (unit.defending ? DEFEND.def : 0) + (unit.guardDef ?? 0);
 }
 
 /** Break Free: d20 + the better of Might or Agility against TN 12. */

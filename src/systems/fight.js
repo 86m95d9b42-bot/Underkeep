@@ -21,8 +21,10 @@ import { registerRules } from '../engine/rules.js';
 import { beginCombat, endRound, peekTurn, startRound, takeNextTurn } from '../engine/round.js';
 import { takeTurn } from '../engine/turn.js';
 import { coverPenalty, resolveAction, reachableTargets } from '../engine/attack.js';
-import { chooseAction } from '../engine/ai.js';
+import { actionFor, chooseAction } from '../engine/ai.js';
 import { resolveSupport } from '../engine/support.js';
+import { answerOffer, resolveBossAction, stateAction, turnThePage } from '../engine/boss.js';
+import { bossParty, rewardOf } from '../data/bosses.js';
 import { registerFor } from '../engine/monster-traits.js';
 import { legalityOf } from '../engine/actions.js';
 import { endCombat, heroFlees, outcomeOf } from '../engine/ending.js';
@@ -64,6 +66,29 @@ export function standInHero(hero) {
 export const ACTIONS = ['attack', 'skill', 'item', 'defend', 'swap', 'flee'];
 
 /**
+ * What the log calls a unit.
+ *
+ * A monster is a kind of thing — "the Giant Rat" — and a boss is somebody:
+ * "Vyrmathrax the Ashen" and "The Rat King" carry their own names, and one of
+ * them carries its own article. So the article lives here rather than in the
+ * templates, in the two forms a sentence needs.
+ *
+ * @param {object} unit
+ * @param {{ start?: boolean }} [where] true at the start of a sentence
+ */
+export function logName(unit, { start = false } = {}) {
+  const name = unit?.name ?? unit?.id ?? '';
+  if (!name) return '';
+  // A proper name is used as written, article and all.
+  // A boss's own article is part of its name: "The Rat King", and "the Rat
+  // King" in the middle of a sentence.
+  if (unit?.boss || unit?.proper) {
+    return start ? name : name.replace(/^The\s+/, 'the ');
+  }
+  return `${start ? 'The' : 'the'} ${name}`;
+}
+
+/**
  * The line one turn step puts in the log, or null when it is not something the
  * player would see. The engine's records are structured; the words are here.
  *
@@ -75,7 +100,7 @@ export function lineFor(step, unit) {
   // A step may name its own actor: a Volley's other archers act inside the
   // volleying archer's turn (`06` section 12).
   const actor = step.by ?? unit;
-  const who = actor?.name ?? actor?.id ?? '';
+  const who = logName(actor, { start: true });
   const mine = actor?.side === 'hero';
   switch (step.type) {
     case 'turnDamage': {
@@ -96,6 +121,8 @@ export function lineFor(step, unit) {
       return { text: t('combat.log.telegraphGone', { who }), tone: 'muted' };
     case 'fled':
       return { text: t('combat.log.monsterFlees', { who }), tone: 'muted' };
+    case 'phaseChange':
+      return step.say ? { text: step.say, tone: 'danger' } : null;
     case 'died':
       // The hero falling is the fight's ending line, not a step of a turn —
       // the same rule a killing blow follows.
@@ -180,6 +207,32 @@ function lineForAction(step, unit, who, mine) {
   }
   if (result?.nothing) return null;
 
+  // What a boss spends a turn on (`02` sections 4 to 13).
+  if (result?.id === 'summon') {
+    return result.arrived?.length
+      ? { text: t('combat.log.summons', { who, n: result.arrived.length }), tone: 'danger' }
+      : null;
+  }
+  if (result?.id === 'guard') {
+    return { text: t('combat.log.guards', { who, n: result.def }), tone: 'muted' };
+  }
+  if (result?.id === 'sacrifice') {
+    return result.fizzled
+      ? { text: t('combat.log.pactFizzles', { who }), tone: 'accent' }
+      : { text: t('combat.log.sacrifices', { who, n: result.healed }), tone: 'danger' };
+  }
+  if (result?.id === 'erase') {
+    return { text: t('combat.log.erases', { who, n: result.fp }), tone: 'danger' };
+  }
+  if (result?.id === 'fingerOfDeath') {
+    return {
+      text: result.toOne
+        ? t('combat.log.fingerLands', { who })
+        : t('combat.log.fingerResisted', { who, n: result.damage?.total ?? 0 }),
+      tone: 'danger',
+    };
+  }
+
   // A skill that healed says what it was worth, not what it hit.
   if (result?.healed !== undefined) {
     const name = t(`skills.${result.skill}.name`);
@@ -242,6 +295,7 @@ function lineForAction(step, unit, who, mine) {
 export function createFight({
   hero,
   monsters,
+  boss: bossId = null,
   floor = 1,
   streams,
   masterSeed = 1,
@@ -252,7 +306,13 @@ export function createFight({
   logKept = LOG_KEPT,
 }) {
   const rng = streams ?? carriedStreams(masterSeed);
-  const rolled = monsters ?? rollEncounter(floor, rng.encounter).monsters;
+  // A boss fight is the boss, what it brought, and what stands in its arena
+  // (`06` section 13). Everything else is the floor's own table.
+  const party = bossId ? bossParty(bossId, { floor: floor ?? undefined }) : null;
+  // A boss guards its own floor, so that is the floor the fight happens on
+  // whatever the caller said (`05` section 1, Boss gates).
+  if (party) floor = party.boss.floorNumber ?? floor;
+  const rolled = party?.units ?? monsters ?? rollEncounter(floor, rng.encounter).monsters;
 
   const combat = createCombat({
     hero,
@@ -263,6 +323,33 @@ export function createFight({
   });
   combat.difficulty = difficulty;
   combat.floor = floor;
+  // There is no running from a boss (`06` section 14), and the arena is the
+  // one fight the game will not let the hero walk out of.
+  if (party) {
+    combat.boss = bossId;
+    combat.bossUnit = combat.units.find((unit) => unit.type === bossId) ?? null;
+  }
+
+  // The Bound Grimoire turns a page at the start of every round, and its own
+  // trait asks the fight to do the rolling (`02` section 11).
+  /**
+   * What a phase opens with: `02` section 13's Frightful Presence and the one
+   * knight the dragon summons. The round asks; the fight resolves it through
+   * the same chain as any other action.
+   */
+  combat.onPhaseAbility = (current, unitId, abilityId) => {
+    const unit = current.units.find((one) => one.id === unitId);
+    const ability = (unit?.abilities ?? []).find((one) => one.id === abilityId);
+    if (!unit?.alive || !ability) return null;
+    if (ability.oncePerCombat && ability.used) return null;
+    ability.used = true;
+    const action = actionFor(unit, ability);
+    const result = services.resolveAction(current, unit, { ...action, target: current.hero.id });
+    say(lineForAction({ result }, unit, unit.name ?? unit.id, false));
+    return result;
+  };
+
+  combat.pageTurner = (current, unit, trait) => turnThePage(current, unit, { rerolls: trait.rerollWhenUseless ?? 1 });
 
   /**
    * What a Shrieker calls in (`02` section 7): a wandering group from this
@@ -311,7 +398,12 @@ export function createFight({
 
   /** The services a turn needs: the AI for monsters, the attack rules for both. */
   const services = {
-    script: chooseAction,
+    /**
+     * What a monster does on its turn. A boss in a state machine — phase 3 of
+     * `06` section 12 — follows the machine; everything else follows its
+     * script.
+     */
+    script: (current, unit) => stateAction(current, unit) ?? chooseAction(current, unit),
     resolveAction: (fight, unit, action) => {
       // A skill action is resolved by the skill rules; everything else is
       // section 6's.
@@ -319,13 +411,14 @@ export function createFight({
         resolveItemAction(fight, unit, action, services) ??
         resolveSkillAction(fight, unit, action, services) ??
         resolveSupport(fight, unit, action) ??
+        resolveBossAction(fight, unit, action) ??
         resolveAction(fight, unit, action);
       // The log wants a name, and the engine deals in ids. A multi-attack
       // action hands back one result per blow, and each of them is a blow
       // the player saw (`06` section 6, Multiple Attacks).
       for (const one of Array.isArray(result) ? result : [result]) {
         if (!one?.target) continue;
-        one.targetName = unitById(one.target)?.name ?? one.target;
+        one.targetName = logName(unitById(one.target)) || one.target;
         one.targetIsHero = one.target === combat.hero.id;
       }
       return result;
@@ -454,6 +547,29 @@ export function createFight({
     get outcome() {
       return summary?.outcome ?? outcomeOf(combat);
     },
+    /**
+     * The bribe a boss is holding out, or null: Grukk's Coward's Gold
+     * (`02` section 6). The screen shows it and answers with `answer`.
+     */
+    get offer() {
+      return combat.offer ?? null;
+    },
+
+    /** Takes the gold and lets him go, or refuses and fights on. */
+    answer(accepted) {
+      const outcome = answerOffer(combat, accepted);
+      if (!outcome) return null;
+      say(
+        outcome.accepted
+          ? { text: t('combat.log.bribeTaken', { n: outcome.gold }), tone: 'accent' }
+          : { text: t('combat.log.bribeRefused'), tone: 'danger' },
+      );
+      // He was the hero's target a moment ago; whoever is left is now.
+      pickTargetIfGone();
+      if (outcome.accepted && combatOver(combat)) finish();
+      return outcome;
+    },
+
     /** Set when a Scroll of Return ended the fight by ending the trip. */
     get leftDungeon() {
       return combat.leftDungeon ?? null;

@@ -18,6 +18,7 @@
     "sweep": "node tools/sweep.js",
     "walk": "node tools/walk.js",
     "fight": "node tools/fight.js",
+    "boss": "node tools/boss.js",
     "climb": "node tools/climb.js",
     "loot": "node tools/loot.js",
     "loop": "node tools/loop.js",

@@ -14,6 +14,7 @@ import { createTown, descend as countTrip } from './town.js';
 import { openShop } from './shop.js';
 import { returnToTown, useMark } from './travel.js';
 import { createFight } from './fight.js';
+import { bossOnFloor } from '../data/bosses.js';
 
 /**
  * @param {object} options
@@ -118,6 +119,39 @@ export function createSession({ hero, seed, difficulty = 'normal', go } = {}) {
         antiMagic: where.antiMagic ?? false,
       });
       return fight;
+    },
+
+    /**
+     * The fight at the bottom of the floor (`05` section 1, Boss gates): the
+     * boss that guards the stairs down, with its escort and its arena.
+     *
+     * A boss that has fallen never comes back, so this answers null for a
+     * floor whose boss the town already remembers.
+     */
+    startBoss({ floor: on, seed: fightSeed } = {}) {
+      const where = run ?? session.descend({ floor: on ?? 1 });
+      const floorNumber = on ?? where.floor.floor;
+      const id = bossOnFloor(floorNumber);
+      if (!id || town.bosses.includes(floorNumber)) return null;
+
+      fight = createFight({
+        hero,
+        boss: id,
+        floor: floorNumber,
+        masterSeed: fightSeed ?? where.masterSeed,
+        difficulty,
+      });
+      return fight;
+    },
+
+    /**
+     * What a beaten boss changes: the floor's stairs open for good, the Shop
+     * moves up a tier, and the Alchemist opens after the second
+     * (`05` section 1, `04` section 12).
+     */
+    bossBeaten(floorNumber) {
+      if (!town.bosses.includes(floorNumber)) town.bosses.push(floorNumber);
+      return town.bosses;
     },
 
     /** Forgets the fight, which is what walking away from one means. */

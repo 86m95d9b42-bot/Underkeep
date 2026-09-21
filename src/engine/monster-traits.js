@@ -19,6 +19,7 @@ import { checkMorale } from './morale.js';
 import { place, countedEnemies, ROWS } from './field.js';
 import { resolveAttack } from './attack.js';
 import { rollSave } from './riders.js';
+import { BOSS_TRAITS } from './boss-traits.js';
 
 /** Traits the documents describe but that need a system no phase has built. */
 export const PENDING = {
@@ -920,7 +921,7 @@ export function registerFor(combat, unit) {
   const off = [];
   for (const entry of unit.traits ?? []) {
     const trait = asTrait(entry);
-    const register = TRAITS[trait.id];
+    const register = TRAITS[trait.id] ?? BOSS_TRAITS[trait.id];
     if (!register) {
       // A trait waiting on another phase is listed in PENDING; anything else
       // is a typo, and the data check catches it before this ever runs.

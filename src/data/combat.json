@@ -199,6 +199,55 @@
       "tags": [
         "wait"
       ]
+    },
+    "_monsterOnly": "06 sections 11 to 13: what a monster spends its turn on when it is not swinging. None of them is ever offered to the hero.",
+    "summon": {
+      "tags": [
+        "summon"
+      ],
+      "_note": "06 section 13: units arrive in the row the ability names."
+    },
+    "heal": {
+      "tags": [
+        "support"
+      ],
+      "_note": "02 section 6: the Goblin Shaman mends its kin."
+    },
+    "buff": {
+      "tags": [
+        "support"
+      ],
+      "_note": "02 section 9: the Cultist's Dark Prayer."
+    },
+    "hex": {
+      "tags": [
+        "spell"
+      ],
+      "_note": "02 section 6: a Mind save, or the hero's next attack goes wide."
+    },
+    "guard": {
+      "tags": [
+        "defend"
+      ],
+      "_note": "02 section 5: the Bone Warden's Tower Shield."
+    },
+    "sacrifice": {
+      "tags": [
+        "spell"
+      ],
+      "_note": "02 section 9: Veyra's Dark Pact."
+    },
+    "erase": {
+      "tags": [
+        "spell"
+      ],
+      "_note": "02 section 11: the Grimoire rubs a spell out."
+    },
+    "fingerOfDeath": {
+      "tags": [
+        "spell"
+      ],
+      "_note": "02 section 12: Malgorath names the hero."
     }
   },
   "legality": {

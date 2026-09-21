@@ -115,6 +115,12 @@ function atom(text, context) {
     const ability = abilityOf(unit, match[1]);
     return Boolean(ability) && !ability.used;
   }
+  if ((match = /^round\s*(<=|>=|<|>|==|=)\s*(\d+)$/i.exec(term))) {
+    return compare(combat?.round ?? 0, match[1], Number(match[2]));
+  }
+  if ((match = /^hero\s+hp\s*(<=|>=|<|>|==|=)\s*(\d+)\s*%$/i.exec(term))) {
+    return compare(hpShare(hero), match[1], Number(match[2]) / 100);
+  }
   if ((match = /^every\(\s*(\d+)\s*\)$/i.exec(term))) {
     const round = combat?.round ?? 0;
     return round > 0 && round % Number(match[1]) === 0;
@@ -247,6 +253,15 @@ export function basicAttack(unit) {
 export function actionFor(unit, ability) {
   if (!ability) return null;
   if (ability.telegraph) return { id: 'telegraph', ability: ability.id, name: ability.name };
+  return resolvedActionFor(unit, ability);
+}
+
+/**
+ * The same action, without the wind-up: what a telegraphed ability becomes on
+ * the turn it lands (`06` section 5 step 8).
+ */
+export function resolvedActionFor(unit, ability) {
+  if (!ability) return null;
   return {
     id: ability.action ?? 'attack',
     kind: ability.kind ?? 'melee',
@@ -269,6 +284,13 @@ export function actionFor(unit, ability) {
     ...(ability.onHit ? { onHit: ability.onHit } : {}),
     ...(ability.heal ? { heal: ability.heal } : {}),
     ...(ability.buff ? { buff: ability.buff } : {}),
+    // What a boss spends its turn on (`02` sections 4 to 13).
+    ...(ability.summon ? { summon: ability.summon } : {}),
+    ...(ability.guard ? { guard: ability.guard } : {}),
+    ...(ability.sacrifice ? { sacrifice: ability.sacrifice } : {}),
+    ...(ability.erase ? { erase: ability.erase } : {}),
+    ...(ability.drains ? { drains: true } : {}),
+    ...(ability.page ? { page: ability.page } : {}),
     ...(ability.allyBelow ? { allyBelow: ability.allyBelow } : {}),
     ...(ability.uses ? { uses: ability.uses } : {}),
   };
@@ -291,6 +313,11 @@ function pick(combat, unit, what, context) {
   }
   if (what === 'phase') {
     return strongest(abilities.filter((ability) => (ability.phase ?? 1) === (unit.phase ?? 1) && ability.role !== 'passive'));
+  }
+  // The Bound Grimoire casts whatever page the round turned up
+  // (`02` section 11).
+  if (what === 'page') {
+    return abilities.find((ability) => ability.id === unit.page) ?? strongest(abilities);
   }
   if (what === 'any') return strongest(abilities);
   return abilities.find((ability) => key(ability.id) === key(what)) ?? null;

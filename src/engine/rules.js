@@ -14,6 +14,7 @@ import { registerConditionHooks } from './condition-hooks.js';
 import { registerDefeatHooks } from './defeat.js';
 import { registerMonsterTraits } from './monster-traits.js';
 import { registerMoraleHooks } from './morale.js';
+import { registerPhases } from './boss.js';
 import { registerRiders, saveBonus } from './riders.js';
 import { registerSkills } from './skill-hooks.js';
 import { registerItems } from './item-hooks.js';
@@ -49,6 +50,9 @@ export function registerRules(combat, services = {}) {
     // standing on the field.
     registerRiders(hooks),
     registerMonsterTraits(combat),
+    // A boss's thresholds: crossing one queues the change, and `06` section 3
+    // step 5 applies it at the start of the next round.
+    registerPhases(hooks),
   ];
 
   // And what the hero brings: the skills they have learned or been lent

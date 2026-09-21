@@ -1,0 +1,828 @@
+{
+  "_source": "02 sections 4 to 13's boss blocks, with 06 section 12's scripts and section 13's rules for summons, rows and anchored units. The summons and the arena objects each boss brings are in `units`; everything else it fields comes from monsters.json.",
+
+  "bosses": {
+    "rat_king": {
+      "name": "The Rat King",
+      "floor": 1,
+      "hd": 3,
+      "hp": 30,
+      "atk": 4,
+      "def": 13,
+      "init": 2,
+      "saves": { "body": 2, "reflex": 2, "mind": 1 },
+      "row": "back",
+      "type": "beast",
+      "morale": 12,
+      "archetype": "boss",
+      "escort": [{ "id": "giant_rat", "count": 2 }],
+      "attacks": [
+        {
+          "name": "bite",
+          "dmg": "1d6+1",
+          "dmgType": "pierce",
+          "onHit": { "_trait": "Plague Bite", "save": "body", "dc": 11, "condition": "weakened" }
+        }
+      ],
+      "abilities": [
+        {
+          "id": "call_the_swarm",
+          "name": "Call the Swarm",
+          "role": "summon",
+          "action": "summon",
+          "summon": { "id": "giant_rat", "count": "1d3", "max": 4, "row": "front" },
+          "power": 5
+        }
+      ],
+      "script": [
+        { "when": "every(3) and count(Giant Rat) < 4", "do": "call_the_swarm" },
+        { "when": "in back row", "do": "wait" },
+        { "when": "always", "do": "attack" }
+      ],
+      "traits": [{ "id": "hiding_in_swarm", "kin": "giant_rat", "bonus": 1 }],
+      "xp": 100,
+      "gold": "3d10",
+      "reward": { "item": "ratcatchers_charm" }
+    },
+
+    "bone_warden": {
+      "name": "The Bone Warden",
+      "floor": 2,
+      "hd": 5,
+      "hp": 50,
+      "atk": 6,
+      "def": 16,
+      "init": 0,
+      "saves": { "body": 3, "reflex": 2, "mind": 3 },
+      "row": "front",
+      "type": "undead",
+      "morale": null,
+      "archetype": "boss",
+      "attacks": [{ "name": "mace", "dmg": "1d8+2", "dmgType": "slash" }],
+      "abilities": [
+        {
+          "id": "raise_the_fallen",
+          "name": "Raise the Fallen",
+          "role": "summon",
+          "action": "summon",
+          "oncePerCombat": true,
+          "summon": { "id": "skeleton", "count": "2", "max": 2, "row": "front" },
+          "power": 6
+        },
+        {
+          "id": "grave_cleave",
+          "name": "Grave Cleave",
+          "role": "melee",
+          "telegraph": "The Warden raises its mace overhead!",
+          "dmg": "2d8+4",
+          "dmgType": "slash",
+          "power": 8
+        },
+        {
+          "id": "tower_shield",
+          "name": "Tower Shield",
+          "role": "defensive",
+          "action": "guard",
+          "telegraph": "The Warden sets its shield.",
+          "guard": { "def": 4, "untilOwnTurn": true },
+          "power": 4
+        }
+      ],
+      "script": [
+        { "when": "hp < 50% and unused(raise_the_fallen)", "do": "raise_the_fallen" },
+        { "when": "every(4)", "do": "grave_cleave" },
+        { "when": "every(3)", "do": "tower_shield" },
+        { "when": "always", "do": "attack" }
+      ],
+      "traits": [],
+      "resist": ["slash", "pierce"],
+      "weak": ["crush", "holy"],
+      "immune": ["poison", "asleep", "feared", "paralyzed"],
+      "xp": 250,
+      "gold": "5d10",
+      "reward": { "item": "wardens_mace" }
+    },
+
+    "grukk": {
+      "name": "Grukk, the Goblin King",
+      "floor": 3,
+      "hd": 6,
+      "hp": 70,
+      "atk": 7,
+      "def": 15,
+      "init": 1,
+      "saves": { "body": 4, "reflex": 2, "mind": 2 },
+      "row": "front",
+      "type": "humanoid",
+      "morale": null,
+      "_morale": "Special: see Coward's Gold (02 section 6).",
+      "archetype": "boss",
+      "escort": [
+        { "id": "orc", "count": 2 },
+        { "id": "goblin_archer", "count": 2 }
+      ],
+      "attacks": [{ "name": "great sword", "dmg": "1d12+3", "dmgType": "slash" }],
+      "abilities": [
+        {
+          "id": "fire_pot",
+          "name": "Fire Pot",
+          "role": "ranged",
+          "kind": "ranged",
+          "telegraph": "The king reaches for a clay pot!",
+          "autoHit": true,
+          "area": true,
+          "dmg": "2d6",
+          "dmgType": "fire",
+          "save": { "type": "reflex", "dc": 13, "half": true },
+          "onHit": { "_trait": "Fire Pot", "useAttackSave": true, "condition": "burning" },
+          "power": 7
+        }
+      ],
+      "script": [
+        { "when": "every(3)", "do": "fire_pot" },
+        { "when": "always", "do": "attack" }
+      ],
+      "traits": [
+        { "id": "royal_temper", "below": 0.5, "atk": 2, "damage": 2, "def": -2 },
+        { "id": "cowards_gold", "below": 0.25, "gold": 200 }
+      ],
+      "xp": 400,
+      "gold": "6d10+50",
+      "reward": { "item": "kingsplitter" }
+    },
+
+    "brood_mother": {
+      "name": "The Brood Mother",
+      "floor": 4,
+      "hd": 8,
+      "hp": 110,
+      "atk": 9,
+      "def": 16,
+      "init": 2,
+      "saves": { "body": 5, "reflex": 4, "mind": 3 },
+      "row": "front",
+      "type": "beast",
+      "morale": 12,
+      "archetype": "boss",
+      "escort": [{ "id": "spiderling", "count": 2 }],
+      "attacks": [
+        {
+          "name": "bite",
+          "dmg": "2d6+2",
+          "dmgType": "pierce",
+          "onHit": {
+            "_trait": "Potent Venom",
+            "save": "body",
+            "dc": 14,
+            "condition": "poisoned",
+            "damage": "1d6"
+          }
+        }
+      ],
+      "abilities": [
+        {
+          "id": "egg_sacs",
+          "name": "Egg Sacs",
+          "role": "summon",
+          "action": "summon",
+          "free": true,
+          "summon": { "id": "spiderling", "count": "1d3", "max": 4, "row": "front" },
+          "power": 5
+        },
+        {
+          "id": "cocoon",
+          "name": "Cocoon",
+          "role": "control",
+          "telegraph": "She rears back, spinnerets glistening.",
+          "autoHit": true,
+          "control": "webbed",
+          "save": { "type": "reflex", "dc": 14 },
+          "onHit": {
+            "_trait": "Cocoon",
+            "useAttackSave": true,
+            "condition": "webbed",
+            "damage": "1d6",
+            "damageType": "poison"
+          },
+          "power": 6
+        }
+      ],
+      "script": [
+        { "when": "every(3)", "do": "egg_sacs", "free": true },
+        { "when": "every(4) and hero can be Webbed", "do": "cocoon" },
+        { "when": "always", "do": "attack" }
+      ],
+      "traits": [],
+      "weak": ["fire"],
+      "immune": ["poison"],
+      "xp": 600,
+      "gold": "8d10+100",
+      "reward": { "item": "silkweave_cloak" }
+    },
+
+    "hydra": {
+      "name": "The Hydra",
+      "floor": 5,
+      "hd": 10,
+      "hp": 60,
+      "atk": 0,
+      "def": 16,
+      "init": 1,
+      "saves": { "body": 6, "reflex": 3, "mind": 3 },
+      "row": "back",
+      "type": "beast",
+      "morale": 12,
+      "archetype": "boss",
+      "anchored": true,
+      "parts": [{ "id": "hydra_head", "count": 3, "max": 5, "row": "front" }],
+      "attacks": [],
+      "script": [{ "when": "always", "do": "wait" }],
+      "traits": [
+        { "id": "shielded_body", "part": "hydra_head", "meleeBlockedWhile": 3 },
+        { "id": "regrowth", "part": "hydra_head", "grows": 2, "max": 5, "stoppedBy": ["fire", "cold"] },
+        { "id": "one_body", "part": "hydra_head" }
+      ],
+      "xp": 800,
+      "gold": "10d10+200",
+      "reward": { "item": "hydra_fang" }
+    },
+
+    "veyra": {
+      "name": "High Priestess Veyra",
+      "floor": 6,
+      "hd": 11,
+      "hp": 150,
+      "atk": 10,
+      "def": 17,
+      "init": 2,
+      "saves": { "body": 5, "reflex": 5, "mind": 8 },
+      "row": "back",
+      "type": "human",
+      "morale": 12,
+      "archetype": "boss",
+      "anchored": true,
+      "escort": [{ "id": "zealot", "count": 2 }],
+      "attacks": [{ "name": "burning strike", "dmg": "2d6+4", "dmgType": "fire", "bonus": 2 }],
+      "phases": [
+        { "phase": 1, "from": 1 },
+        {
+          "phase": 2,
+          "below": 0.5,
+          "_trait": "Ascension",
+          "row": "front",
+          "anchored": false,
+          "atk": 12,
+          "immune": ["fire"],
+          "attacks": 2,
+          "aura": { "dice": "1d6", "damageType": "fire" },
+          "say": "Veyra steps down into the flame."
+        }
+      ],
+      "abilities": [
+        {
+          "id": "dark_pact",
+          "name": "Dark Pact",
+          "role": "spell",
+          "phase": 1,
+          "telegraph": "She reaches toward her faithful.",
+          "action": "sacrifice",
+          "sacrifice": { "id": "zealot", "heal": 30 },
+          "uses": 2,
+          "power": 9
+        },
+        {
+          "id": "summon_zealot",
+          "name": "Summon Zealot",
+          "role": "summon",
+          "phase": 1,
+          "action": "summon",
+          "summon": { "id": "zealot", "count": "1", "max": 2, "row": "front" },
+          "power": 6
+        },
+        {
+          "id": "frost_lance",
+          "name": "Frost Lance",
+          "role": "spell",
+          "phase": 1,
+          "kind": "spell",
+          "autoHit": true,
+          "magic": true,
+          "dmg": "3d8",
+          "dmgType": "cold",
+          "onHit": { "_trait": "Frost Lance", "condition": "slowed" },
+          "power": 7
+        },
+        {
+          "id": "pale_fire",
+          "name": "Pale Fire",
+          "role": "spell",
+          "phase": 1,
+          "kind": "spell",
+          "autoHit": true,
+          "area": true,
+          "magic": true,
+          "dmg": "4d6",
+          "dmgType": "fire",
+          "save": { "type": "reflex", "dc": 15, "half": true },
+          "power": 8
+        }
+      ],
+      "script": [
+        { "when": "phase = 2", "do": "attack" },
+        { "when": "hp < 75% and count(Zealot) >= 1 and unused(dark_pact)", "do": "dark_pact" },
+        { "when": "every(3) and count(Zealot) < 2", "do": "summon_zealot" },
+        { "when": "hero lacks Slowed", "do": "frost_lance" },
+        { "when": "always", "do": "pale_fire" }
+      ],
+      "traits": [],
+      "weak": ["holy"],
+      "xp": 1000,
+      "gold": "12d10+300",
+      "reward": { "item": "pale_flame_staff" }
+    },
+
+    "forge_colossus": {
+      "name": "The Forge Colossus",
+      "floor": 7,
+      "hd": 13,
+      "hp": 220,
+      "atk": 12,
+      "def": 18,
+      "init": -2,
+      "saves": { "body": 8, "reflex": 2, "mind": 0 },
+      "row": "front",
+      "type": "construct",
+      "morale": null,
+      "archetype": "boss",
+      "objects": [{ "id": "coolant_valve", "count": 2, "row": "back" }],
+      "attacks": [{ "name": "slam", "dmg": "2d10+6", "dmgType": "crush" }],
+      "abilities": [
+        {
+          "id": "hammerfall",
+          "name": "Hammerfall",
+          "role": "melee",
+          "telegraph": "The Colossus raises its hammer!",
+          "dmg": "6d8",
+          "dmgType": "crush",
+          "power": 9
+        }
+      ],
+      "script": [
+        { "when": "every(3)", "do": "hammerfall" },
+        { "when": "always", "do": "attack" }
+      ],
+      "traits": [
+        { "id": "stoke_the_furnace", "below": 0.5, "dice": "1d6", "damageType": "fire", "auraDice": "1d4" },
+        { "id": "coolant_valves", "object": "coolant_valve", "stunRounds": 1 }
+      ],
+      "dr": 4,
+      "crushIgnoresDr": 2,
+      "immune": ["fire", "poison", "paralyzed", "feared", "asleep", "blinded", "sickened"],
+      "weak": ["cold"],
+      "coldSlowsAndStripsDr": true,
+      "xp": 1300,
+      "gold": "15d10+400",
+      "reward": { "item": "forgeheart_plate" }
+    },
+
+    "bound_grimoire": {
+      "name": "The Bound Grimoire",
+      "floor": 8,
+      "hd": 14,
+      "hp": 200,
+      "atk": 11,
+      "def": 17,
+      "init": 1,
+      "saves": { "body": 6, "reflex": 5, "mind": 10 },
+      "row": "back",
+      "type": "construct",
+      "morale": null,
+      "archetype": "boss",
+      "anchored": true,
+      "escort": [{ "id": "ink_wraith", "count": 2 }],
+      "attacks": [{ "name": "ink lash", "dmg": "1d8+3", "dmgType": "necrotic" }],
+      "abilities": [
+        {
+          "id": "page_missiles",
+          "name": "Magic Missile",
+          "role": "page",
+          "page": 1,
+          "kind": "spell",
+          "autoHit": true,
+          "magic": true,
+          "attacks": 5,
+          "dmg": "1d4+1",
+          "dmgType": "force",
+          "power": 5
+        },
+        {
+          "id": "page_fireball",
+          "name": "Fireball",
+          "role": "page",
+          "page": 2,
+          "kind": "spell",
+          "autoHit": true,
+          "area": true,
+          "magic": true,
+          "dmg": "8d6",
+          "dmgType": "fire",
+          "save": { "type": "reflex", "dc": 16, "half": true },
+          "power": 9
+        },
+        {
+          "id": "page_sleep",
+          "name": "Sleep",
+          "role": "page",
+          "page": 3,
+          "kind": "spell",
+          "autoHit": true,
+          "magic": true,
+          "control": "asleep",
+          "save": { "type": "mind", "dc": 15 },
+          "onHit": { "_trait": "Sleep", "useAttackSave": true, "condition": "asleep" },
+          "power": 7
+        },
+        {
+          "id": "page_summon",
+          "name": "Summon Ink Wraiths",
+          "role": "page",
+          "page": 4,
+          "action": "summon",
+          "summon": { "id": "ink_wraith", "count": "2", "max": 3, "row": "front" },
+          "power": 6
+        },
+        {
+          "id": "page_frost_lance",
+          "name": "Frost Lance",
+          "role": "page",
+          "page": 5,
+          "kind": "spell",
+          "autoHit": true,
+          "magic": true,
+          "dmg": "4d8",
+          "dmgType": "cold",
+          "onHit": { "_trait": "Frost Lance", "condition": "slowed" },
+          "power": 8
+        },
+        {
+          "id": "page_erase",
+          "name": "Erase",
+          "role": "page",
+          "page": 6,
+          "action": "erase",
+          "erase": { "buffs": 1, "fp": "1d6" },
+          "power": 4
+        }
+      ],
+      "script": [{ "when": "always", "do": "page" }],
+      "traits": [
+        { "id": "turn_the_page", "dice": "d6", "rerollWhenUseless": 1 },
+        { "id": "read_ahead", "needsIntellect": 15, "skill": "lore" },
+        { "id": "warded_binding", "part": "ink_wraith", "share": 0.5 }
+      ],
+      "doubleFrom": ["fire"],
+      "immune": ["poison", "feared", "asleep", "paralyzed"],
+      "xp": 1500,
+      "gold": "16d10+500",
+      "reward": { "item": "the_unbound_page" }
+    },
+
+    "malgorath": {
+      "name": "Malgorath the Lich",
+      "floor": 9,
+      "hd": 16,
+      "hp": 180,
+      "atk": 12,
+      "def": 18,
+      "init": 2,
+      "saves": { "body": 8, "reflex": 8, "mind": 12 },
+      "row": "back",
+      "type": "undead",
+      "morale": null,
+      "archetype": "boss",
+      "escort": [{ "id": "frozen_revenant", "count": 2 }],
+      "objects": [{ "id": "phylactery", "count": 1, "row": "back" }],
+      "attacks": [{ "name": "withering touch", "dmg": "2d6+4", "dmgType": "necrotic" }],
+      "abilities": [
+        {
+          "id": "finger_of_death",
+          "name": "Finger of Death",
+          "role": "spell",
+          "oncePerCombat": true,
+          "telegraph": "Malgorath points at you and speaks your name.",
+          "action": "fingerOfDeath",
+          "save": { "type": "body", "dc": 18 },
+          "dmg": "6d6",
+          "dmgType": "necrotic",
+          "power": 12
+        },
+        {
+          "id": "cone_of_cold",
+          "name": "Cone of Cold",
+          "role": "spell",
+          "kind": "spell",
+          "autoHit": true,
+          "area": true,
+          "magic": true,
+          "dmg": "8d6",
+          "dmgType": "cold",
+          "save": { "type": "reflex", "dc": 17, "half": true },
+          "onHit": { "_trait": "Cone of Cold", "useAttackSave": true, "condition": "slowed" },
+          "power": 10
+        },
+        {
+          "id": "drain_life",
+          "name": "Drain Life",
+          "role": "spell",
+          "kind": "spell",
+          "autoHit": true,
+          "magic": true,
+          "dmg": "4d8",
+          "dmgType": "necrotic",
+          "drains": true,
+          "power": 9
+        },
+        {
+          "id": "paralyzing_gaze",
+          "name": "Paralyzing Gaze",
+          "role": "control",
+          "kind": "spell",
+          "autoHit": true,
+          "magic": true,
+          "control": "paralyzed",
+          "everyOtherRound": 2,
+          "save": { "type": "mind", "dc": 16 },
+          "onHit": { "_trait": "Paralyzing Gaze", "useAttackSave": true, "condition": "paralyzed" },
+          "power": 8
+        },
+        {
+          "id": "raise_the_frozen",
+          "name": "Raise the Frozen",
+          "role": "summon",
+          "action": "summon",
+          "summon": { "id": "frozen_revenant", "count": "2", "max": 2, "row": "front", "refill": true },
+          "power": 7
+        }
+      ],
+      "script": [
+        { "when": "every(4) and count(Frozen Revenant) < 2", "do": "raise_the_frozen" },
+        { "when": "unused(finger_of_death) and round >= 3 and hero hp > 50%", "do": "finger_of_death" },
+        { "when": "hp < 60%", "do": "drain_life" },
+        { "when": "hero can be Paralyzed and ready(paralyzing_gaze)", "do": "paralyzing_gaze" },
+        { "when": "hero lacks Slowed", "do": "cone_of_cold" },
+        { "when": "always", "do": "drain_life" }
+      ],
+      "traits": [{ "id": "undying_vessel", "object": "phylactery" }],
+      "weak": ["holy"],
+      "immune": ["cold", "poison", "asleep", "feared", "paralyzed"],
+      "xp": 1800,
+      "gold": "20d10+800",
+      "reward": { "item": "phylactery_shard" }
+    },
+
+    "vyrmathrax": {
+      "name": "Vyrmathrax the Ashen",
+      "floor": 10,
+      "hd": 15,
+      "hp": 330,
+      "atk": 15,
+      "def": 20,
+      "init": 2,
+      "saves": { "body": 10, "reflex": 7, "mind": 9 },
+      "row": "front",
+      "type": "dragon",
+      "morale": null,
+      "archetype": "boss",
+      "final": true,
+      "attacks": [
+        { "name": "bite", "dmg": "2d10+7", "dmgType": "pierce" },
+        { "name": "claw", "dmg": "2d6+7", "dmgType": "slash" }
+      ],
+      "phases": [
+        { "phase": 1, "from": 1 },
+        {
+          "phase": 2,
+          "below": 0.66,
+          "say": "Vyrmathrax draws itself up, and the air turns to ash.",
+          "onEnter": ["frightful_presence", "summon_knight"]
+        },
+        {
+          "phase": 3,
+          "below": 0.33,
+          "say": "It will not stay on the ground.",
+          "state": "grounded"
+        }
+      ],
+      "states": {
+        "_source": "06 section 12: phase 3 is a state machine, not a list of rules.",
+        "grounded": { "turns": 2, "do": "attack", "next": "takeoff" },
+        "takeoff": { "row": "back", "do": "telegraph", "ability": "ash_breath", "next": "air1", "say": "It rises, embers glowing." },
+        "air1": { "do": "resolve", "next": "air2" },
+        "air2": { "do": "telegraph", "ability": "dive", "next": "air3" },
+        "air3": { "do": "resolve", "next": "grounded", "row": "front", "thenStunned": 1 }
+      },
+      "abilities": [
+        {
+          "id": "tail_sweep",
+          "name": "Tail Sweep",
+          "role": "melee",
+          "dmg": "2d8+7",
+          "dmgType": "crush",
+          "onHit": { "_trait": "Tail Sweep", "save": "reflex", "dc": 17, "condition": "knockedDown" },
+          "power": 7
+        },
+        {
+          "id": "frightful_presence",
+          "name": "Frightful Presence",
+          "role": "control",
+          "autoHit": true,
+          "control": "feared",
+          "save": { "type": "mind", "dc": 17 },
+          "onHit": { "_trait": "Frightful Presence", "useAttackSave": true, "condition": "feared", "rounds": 2 },
+          "power": 6
+        },
+        {
+          "id": "summon_knight",
+          "name": "Summon Ashbound Knight",
+          "role": "summon",
+          "action": "summon",
+          "oncePerCombat": true,
+          "summon": { "id": "ashbound_knight", "count": "1", "max": 1, "row": "front" },
+          "power": 6
+        },
+        {
+          "id": "ash_breath",
+          "name": "Ash Breath",
+          "role": "breath",
+          "recharges": true,
+          "telegraph": "Embers glow between its teeth.",
+          "autoHit": true,
+          "area": true,
+          "dmg": "10d6",
+          "dmgType": "fire",
+          "save": { "type": "reflex", "dc": 18, "half": true },
+          "onHit": { "_trait": "Ash Breath", "useAttackSave": true, "condition": "burning" },
+          "power": 12
+        },
+        {
+          "id": "dive",
+          "name": "Dive",
+          "role": "melee",
+          "telegraph": "It folds its wings and falls like a stone.",
+          "autoHit": true,
+          "dmg": "12d6",
+          "dmgType": "crush",
+          "power": 13
+        }
+      ],
+      "script": [
+        { "when": "phase >= 3", "do": "state" },
+        { "when": "phase = 2 and ready(ash_breath)", "do": "ash_breath" },
+        { "when": "every(3)", "do": "tail_sweep" },
+        { "when": "always", "do": "attack" }
+      ],
+      "traits": [],
+      "_attacks": "02 section 13: a bite and a claw every turn, in that order.",
+      "sequence": true,
+      "desperateRechargeFrom": 4,
+      "desperateBelow": 0.1,
+      "immune": ["fire", "asleep", "feared", "paralyzed"],
+      "weak": ["cold"],
+      "xp": 2500,
+      "gold": "50d10+5000",
+      "reward": { "item": "ashen_fang", "ending": true }
+    }
+  },
+
+  "units": {
+    "spiderling": {
+      "name": "Spiderling",
+      "hd": 1,
+      "hp": 6,
+      "atk": 2,
+      "def": 12,
+      "init": 1,
+      "saves": { "body": 0, "reflex": 1, "mind": 0 },
+      "row": "front",
+      "group": [1, 4],
+      "type": "beast",
+      "morale": null,
+      "archetype": "brute",
+      "attacks": [
+        {
+          "name": "bite",
+          "dmg": "1d4",
+          "dmgType": "pierce",
+          "onHit": { "_trait": "Poison", "save": "body", "dc": 10, "condition": "poisoned" }
+        }
+      ],
+      "traits": [],
+      "weak": ["fire"],
+      "immune": ["poison"],
+      "xp": 5,
+      "gold": "0",
+      "drops": [],
+      "floors": [4],
+      "summonOnly": true
+    },
+
+    "ink_wraith": {
+      "name": "Ink Wraith",
+      "hd": 6,
+      "hp": 20,
+      "atk": 7,
+      "def": 14,
+      "init": 1,
+      "saves": { "body": 3, "reflex": 3, "mind": 4 },
+      "row": "front",
+      "group": [1, 3],
+      "type": "undead",
+      "morale": null,
+      "archetype": "brute",
+      "attacks": [{ "name": "ink", "dmg": "1d8+3", "dmgType": "necrotic" }],
+      "traits": [{ "id": "stone_hide", "_trait": "Incorporeal: resistant to non-magic weapons" }],
+      "immune": ["poison", "asleep", "feared", "paralyzed"],
+      "xp": 30,
+      "gold": "0",
+      "drops": [],
+      "floors": [8],
+      "summonOnly": true
+    },
+
+    "hydra_head": {
+      "name": "Hydra Head",
+      "hd": 3,
+      "hp": 15,
+      "atk": 9,
+      "def": 15,
+      "init": 1,
+      "saves": { "body": 3, "reflex": 2, "mind": 2 },
+      "row": "front",
+      "group": [3, 5],
+      "type": "beast",
+      "morale": null,
+      "archetype": "brute",
+      "attacks": [{ "name": "bite", "dmg": "1d8+3", "dmgType": "pierce" }],
+      "traits": [],
+      "xp": 0,
+      "_xp": "The Hydra's XP is the Hydra's; a head is part of it (02 section 8).",
+      "gold": "0",
+      "drops": [],
+      "floors": [5],
+      "summonOnly": true,
+      "part": true
+    },
+
+    "coolant_valve": {
+      "name": "Coolant Valve",
+      "hd": 1,
+      "hp": 10,
+      "atk": 0,
+      "def": 10,
+      "init": -10,
+      "saves": { "body": 0, "reflex": 0, "mind": 0 },
+      "row": "back",
+      "group": [2, 2],
+      "type": "object",
+      "morale": null,
+      "archetype": "brute",
+      "attacks": [],
+      "script": [{ "when": "always", "do": "wait" }],
+      "traits": [],
+      "object": true,
+      "anchored": true,
+      "immune": ["poison", "asleep", "feared", "paralyzed", "stunned", "slowed", "bleeding", "weakened", "blinded", "sickened", "petrified"],
+      "xp": 0,
+      "gold": "0",
+      "drops": [],
+      "floors": [7],
+      "summonOnly": true
+    },
+
+    "phylactery": {
+      "name": "The Phylactery",
+      "hd": 1,
+      "hp": 60,
+      "atk": 0,
+      "def": 10,
+      "init": -10,
+      "saves": { "body": 0, "reflex": 0, "mind": 0 },
+      "row": "back",
+      "group": [1, 1],
+      "type": "object",
+      "morale": null,
+      "archetype": "brute",
+      "attacks": [],
+      "script": [{ "when": "always", "do": "wait" }],
+      "traits": [{ "id": "warded_vessel", "owner": "malgorath", "share": 0.5 }],
+      "object": true,
+      "anchored": true,
+      "immune": ["poison", "asleep", "feared", "paralyzed", "stunned", "slowed", "bleeding", "weakened", "blinded", "sickened", "petrified"],
+      "xp": 0,
+      "gold": "0",
+      "drops": [],
+      "floors": [9],
+      "summonOnly": true
+    }
+  }
+}

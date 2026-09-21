@@ -146,21 +146,29 @@ function observe(combat) {
 export function playFight({
   seed,
   monsters,
+  boss = null,
   floor = 1,
   difficulty = 'normal',
   play = 'attack',
   hp = 12,
+  hero = null,
+  watch = null,
 } = {}) {
   const streams = carriedStreams(seed);
-  const cast = monsters
-    ? monsters.map((id) => makeMonster(id, { floor }))
-    : rollEncounter(floor, streams.encounter).monsters;
+  // A boss fight builds its own cast — the boss, its escort and its arena
+  // objects (`06` section 13) — so nothing is rolled for it here.
+  const cast = boss
+    ? null
+    : monsters
+      ? monsters.map((id) => makeMonster(id, { floor }))
+      : rollEncounter(floor, streams.encounter).monsters;
 
   /** @type {any} */
   let seen = null;
   const fight = createFight({
-    hero: auditHero(hp),
-    monsters: cast,
+    hero: hero ?? auditHero(hp),
+    monsters: cast ?? undefined,
+    boss,
     floor,
     streams,
     difficulty,
@@ -172,6 +180,9 @@ export function playFight({
     // place before it: a watcher that starts late has not seen the fight.
     watch: (combat) => {
       seen = observe(combat);
+      // A caller may want to watch for more than the rules: the boss harness
+      // watches for the mechanics each boss fight is built around.
+      watch?.(combat);
     },
   });
   let guard = 0;

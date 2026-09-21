@@ -11,12 +11,25 @@
  * and the engine's job is to run what the table says.
  */
 import data from './monsters.json' with { type: 'json' };
+import bosses from './bosses.json' with { type: 'json' };
 import { DERIVED } from './attributes.js';
 
-export const MONSTERS = data.monsters;
+/**
+ * Every stat block the engine can build, which is the bestiary's own monsters
+ * plus the things a boss brings with it: a Spiderling, an Ink Wraith, a Hydra
+ * head, a coolant valve, the Phylactery. Those are monsters like any other —
+ * they are only ever summoned rather than rolled, which `summonOnly` says —
+ * and the bosses themselves live in `bosses.js`.
+ */
+export const MONSTERS = { ...data.monsters, ...bosses.units };
 
-/** Every monster id, in the order the bestiary lists them. */
+/** Every monster id an encounter table may name, in the bestiary's order. */
 export function monsterIds() {
+  return Object.keys(MONSTERS).filter((id) => !id.startsWith('_') && !MONSTERS[id].summonOnly);
+}
+
+/** Every stat block there is, summons and arena objects included. */
+export function unitIds() {
   return Object.keys(MONSTERS).filter((id) => !id.startsWith('_'));
 }
 
@@ -95,7 +108,17 @@ function toAbility(ability) {
  * @param {object} [options.overrides] anything the encounter wants to change
  */
 export function makeMonster(id, { floor = 1, elite = false, overrides = {} } = {}) {
-  const block = statBlock(id);
+  return buildUnit(statBlock(id), { id, floor, elite, overrides });
+}
+
+/**
+ * The same builder, given the block rather than a name: a boss's block lives
+ * in `bosses.json` and is never in the catalog.
+ *
+ * @param {object} block a stat block in the bestiary's own shape
+ * @param {{ id: string, floor?: number, elite?: boolean, overrides?: object }} options
+ */
+export function buildUnit(block, { id, floor = 1, elite = false, overrides = {} }) {
   const at = (value) => scale(value, floor);
   const attacks = (block.attacks ?? []).map(toAttack);
 
@@ -124,13 +147,31 @@ export function makeMonster(id, { floor = 1, elite = false, overrides = {} } = {
     ...(block.script ? { script: block.script } : {}),
     ...(block.actsLast ? { actsLast: true } : {}),
     ...(block.anchored ? { anchored: true } : {}),
-    attack: attacks[0] ?? { damage: '1' },
+    // A monster that strikes with two different weapons on one turn — the
+    // dragon's bite and claw — carries the whole sequence on its attack
+    // (`02` section 13, `06` section 6's Multiple Attacks).
+    attack:
+      block.sequence && attacks.length > 1
+        ? { ...attacks[0], sequence: attacks }
+        : (attacks[0] ?? { damage: '1' }),
     attacks,
     // What the bestiary writes on the monster itself rather than on a blow.
     ...(block.dr ? { dr: block.dr } : {}),
     ...(block.crushIgnoresDr ? { crushIgnoresDr: block.crushIgnoresDr } : {}),
     ...(block.surprise ? { surprise: block.surprise } : {}),
     ...(block.preventsFlight ? { preventsFlight: true } : {}),
+    // An arena object stands there and is hit; it takes no turns (`06`
+    // section 13), and an anchored unit never steps forward.
+    ...(block.object ? { object: true } : {}),
+    ...(block.part ? { part: true } : {}),
+    ...(block.doubleFrom ? { doubleFrom: [...block.doubleFrom] } : {}),
+    ...(block.desperateRechargeFrom ? { desperateRechargeFrom: block.desperateRechargeFrom } : {}),
+    ...(block.desperateBelow ? { desperateBelow: block.desperateBelow } : {}),
+    ...(block.phases ? { phases: block.phases, phase: 1 } : {}),
+    ...(block.states ? { states: block.states } : {}),
+    ...(block.final ? { final: true } : {}),
+    ...(block.coldSlowsAndStripsDr ? { coldSlowsAndStripsDr: true } : {}),
+    ...(block.weakAlsoSlows ? { weakAlsoSlows: block.weakAlsoSlows } : {}),
     ...(block.weakAlsoSlows ? { weakAlsoSlows: block.weakAlsoSlows } : {}),
     ...(block.slowedDefPenalty ? { slowedDefPenalty: block.slowedDefPenalty } : {}),
     abilities: (block.abilities ?? []).map(toAbility),
