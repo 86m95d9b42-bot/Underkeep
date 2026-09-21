@@ -1,5 +1,5 @@
 {
-  "_source": "02 sections 4 and 5, in the JSON shape of section 19. Floors 1-2 only; floors 3-10 arrive in Phase 7, and the two bosses live in bosses.json. Scripts are 06 section 12, written in the vocabulary of section 11.",
+  "_source": "02 sections 4 to 13, in the JSON shape of section 19. Every regular monster of floors 1-10; the bosses live in bosses.json, and the rare wanderers are the last two entries. Scripts are 06 section 12, written in the vocabulary of section 11.",
 
   "monsters": {
     "giant_rat": {
@@ -54,7 +54,7 @@
       "xp": 10,
       "gold": "1d6",
       "drops": [{ "item": "dagger", "chance": 0.15 }],
-      "floors": [1]
+      "floors": [1, 3]
     },
 
     "goblin_archer": {
@@ -110,7 +110,7 @@
       "xp": 10,
       "gold": "1d8",
       "drops": [{ "item": "shortbow", "chance": 0.1 }],
-      "floors": [1]
+      "floors": [1, 3]
     },
 
     "green_slime": {
@@ -284,6 +284,1101 @@
       "drops": [],
       "floors": [2, 5],
       "rareOn": [2]
+    },
+
+    "orc": {
+      "name": "Orc",
+      "hd": 3,
+      "hp": 15,
+      "atk": 4,
+      "def": 13,
+      "init": 0,
+      "saves": { "body": 2, "reflex": 1, "mind": 1 },
+      "row": "front",
+      "group": [1, 4],
+      "type": "humanoid",
+      "morale": 8,
+      "archetype": "brute",
+      "attacks": [{ "name": "axe", "dmg": "1d6+3", "dmgType": "slash" }],
+      "traits": [{ "id": "ferocity", "oneIn": 2, "hp": 1, "turns": 1 }],
+      "xp": 30,
+      "gold": "2d8",
+      "drops": [{ "item": "spear", "chance": 0.05 }],
+      "floors": [3]
+    },
+
+    "goblin_shaman": {
+      "name": "Goblin Shaman",
+      "hd": 2,
+      "hp": 10,
+      "atk": 3,
+      "def": 12,
+      "init": 1,
+      "saves": { "body": 1, "reflex": 1, "mind": 3 },
+      "row": "back",
+      "group": [1, 1],
+      "type": "humanoid",
+      "morale": 6,
+      "archetype": "support",
+      "attacks": [{ "name": "fire spark", "dmg": "1d6", "dmgType": "fire", "kind": "ranged" }],
+      "abilities": [
+        {
+          "id": "mend_kin",
+          "name": "Mend Kin",
+          "role": "heal",
+          "action": "heal",
+          "heal": "2d4",
+          "allyBelow": 0.5,
+          "uses": 3,
+          "power": 3
+        },
+        {
+          "id": "hex",
+          "name": "Hex",
+          "role": "debuff",
+          "action": "hex",
+          "oncePerCombat": true,
+          "control": "disadvantage",
+          "save": { "type": "mind", "dc": 11 },
+          "applies": "hexed",
+          "power": 2
+        }
+      ],
+      "traits": [],
+      "xp": 30,
+      "gold": "2d6",
+      "drops": [
+        { "item": "healing_herb", "chance": 0.25 },
+        { "pool": "uncommon_scroll", "chance": 0.1 }
+      ],
+      "floors": [3]
+    },
+
+    "worg": {
+      "name": "Worg",
+      "hd": 3,
+      "hp": 16,
+      "atk": 4,
+      "def": 13,
+      "init": 3,
+      "saves": { "body": 2, "reflex": 2, "mind": 1 },
+      "row": "front",
+      "group": [1, 3],
+      "type": "beast",
+      "morale": 7,
+      "archetype": "brute",
+      "attacks": [{ "name": "bite", "dmg": "1d6+2", "dmgType": "pierce" }],
+      "traits": [
+        { "id": "pounce", "round": 1, "bonus": 2, "save": "reflex", "dc": 11, "condition": "knockedDown" },
+        { "id": "howl", "needsKin": 2, "bonus": 1, "family": "humanoid" }
+      ],
+      "xp": 45,
+      "gold": "0",
+      "drops": [{ "item": "worg_pelt", "chance": 0.2 }],
+      "floors": [3]
+    },
+
+    "hobgoblin_captain": {
+      "name": "Hobgoblin Captain",
+      "hd": 4,
+      "hp": 24,
+      "atk": 5,
+      "def": 16,
+      "init": 0,
+      "saves": { "body": 3, "reflex": 1, "mind": 2 },
+      "row": "front",
+      "group": [1, 1],
+      "type": "humanoid",
+      "morale": 10,
+      "archetype": "brute",
+      "attacks": [{ "name": "long sword", "dmg": "1d8+2", "dmgType": "slash" }],
+      "traits": [
+        { "id": "leader", "bonus": 1, "morale": 10 },
+        { "id": "shield_block", "bonus": 2, "perRound": 1 }
+      ],
+      "xp": 60,
+      "gold": "4d10",
+      "drops": [
+        { "item": "chain_mail", "chance": 0.25 },
+        { "item": "long_sword", "chance": 0.2 },
+        { "pool": "base_weapon", "bonus": 1, "chance": 0.1 }
+      ],
+      "floors": [3]
+    },
+
+    "shrieker": {
+      "name": "Shrieker",
+      "hd": 1,
+      "hp": 10,
+      "atk": 0,
+      "def": 8,
+      "init": -5,
+      "saves": { "body": 1, "reflex": 0, "mind": 0 },
+      "row": "back",
+      "group": [1, 2],
+      "type": "fungus",
+      "morale": null,
+      "archetype": "brute",
+      "attacks": [],
+      "script": [{ "when": "always", "do": "wait" }],
+      "traits": [{ "id": "shriek", "oneIn": 6, "upTo": 2, "maxTimes": 2 }],
+      "weak": ["fire"],
+      "immune": ["feared", "asleep"],
+      "xp": 15,
+      "gold": "0",
+      "drops": [{ "item": "spore_sac", "chance": 0.3 }],
+      "floors": [4]
+    },
+
+    "myconid_sporecaller": {
+      "name": "Myconid Sporecaller",
+      "hd": 3,
+      "hp": 18,
+      "atk": 4,
+      "def": 12,
+      "init": -1,
+      "saves": { "body": 2, "reflex": 0, "mind": 2 },
+      "row": "front",
+      "group": [1, 3],
+      "type": "fungus",
+      "morale": 9,
+      "archetype": "controller",
+      "attacks": [{ "name": "fist", "dmg": "1d6+1", "dmgType": "crush" }],
+      "abilities": [
+        {
+          "id": "sleep_spores",
+          "name": "Sleep Spores",
+          "role": "control",
+          "oncePerCombat": true,
+          "autoHit": true,
+          "control": "asleep",
+          "onHit": { "_trait": "Sleep Spores", "save": "mind", "dc": 11, "condition": "asleep" },
+          "power": 3
+        }
+      ],
+      "traits": [{ "id": "death_burst", "_trait": "Rot Bloom", "save": "body", "dc": 11, "condition": "poisoned" }],
+      "weak": ["fire"],
+      "immune": ["poison"],
+      "xp": 45,
+      "gold": "1d6",
+      "drops": [{ "item": "healing_herb", "chance": 0.25 }],
+      "floors": [4]
+    },
+
+    "giant_spider": {
+      "name": "Giant Spider",
+      "hd": 4,
+      "hp": 22,
+      "atk": 5,
+      "def": 14,
+      "init": 2,
+      "saves": { "body": 2, "reflex": 3, "mind": 1 },
+      "row": "front",
+      "group": [1, 2],
+      "type": "beast",
+      "morale": 8,
+      "archetype": "controller",
+      "attacks": [
+        {
+          "name": "bite",
+          "dmg": "1d6+2",
+          "dmgType": "pierce",
+          "onHit": { "_trait": "Venom", "save": "body", "dc": 12, "condition": "poisoned" }
+        }
+      ],
+      "abilities": [
+        {
+          "id": "web",
+          "name": "Web",
+          "role": "control",
+          "recharges": true,
+          "autoHit": true,
+          "control": "webbed",
+          "onHit": { "_trait": "Web", "save": "reflex", "dc": 12, "condition": "webbed" },
+          "power": 3
+        }
+      ],
+      "traits": [],
+      "_trait": "Ceiling Drop: surprises the hero on a 1-3 instead of a 1.",
+      "surprise": 3,
+      "weak": ["fire"],
+      "immune": ["poison"],
+      "xp": 60,
+      "gold": "0",
+      "swallowedGold": "3d10",
+      "drops": [{ "item": "spider_silk", "chance": 0.2 }],
+      "floors": [4]
+    },
+
+    "rot_crawler": {
+      "name": "Rot Crawler",
+      "hd": 4,
+      "hp": 26,
+      "atk": 4,
+      "def": 13,
+      "init": 0,
+      "saves": { "body": 3, "reflex": 1, "mind": 1 },
+      "row": "front",
+      "group": [1, 1],
+      "type": "aberration",
+      "morale": 9,
+      "archetype": "brute",
+      "attacks": [
+        {
+          "name": "tentacles",
+          "dmg": "1d4+1",
+          "dmgType": "crush",
+          "attacks": 2,
+          "onHit": { "_trait": "Tentacles", "save": "body", "dc": 12, "condition": "paralyzed" }
+        }
+      ],
+      "traits": [],
+      "xp": 60,
+      "gold": "0",
+      "swallowedGold": "2d10",
+      "drops": [],
+      "floors": [4]
+    },
+
+    "ghast": {
+      "name": "Ghast",
+      "hd": 6,
+      "hp": 30,
+      "atk": 7,
+      "def": 15,
+      "init": 1,
+      "saves": { "body": 4, "reflex": 3, "mind": 3 },
+      "row": "front",
+      "group": [1, 2],
+      "type": "undead",
+      "morale": null,
+      "archetype": "brute",
+      "attacks": [
+        {
+          "name": "claw",
+          "dmg": "1d8+3",
+          "dmgType": "slash",
+          "onHit": { "_trait": "Paralyzing Claw", "save": "body", "dc": 13, "condition": "paralyzed" }
+        }
+      ],
+      "traits": [{ "id": "aura_save", "_trait": "Stench", "save": "body", "dc": 13, "condition": "sickened" }],
+      "weak": ["holy", "fire"],
+      "immune": ["poison", "asleep", "feared"],
+      "xp": 90,
+      "gold": "3d10",
+      "drops": [{ "pool": "base_weapon", "bonus": 1, "chance": 0.15 }],
+      "floors": [5, 6]
+    },
+
+    "lizardfolk_warrior": {
+      "name": "Lizardfolk Warrior",
+      "hd": 5,
+      "hp": 28,
+      "atk": 6,
+      "def": 15,
+      "init": 0,
+      "saves": { "body": 3, "reflex": 2, "mind": 2 },
+      "row": "front",
+      "group": [2, 3],
+      "type": "humanoid",
+      "morale": 9,
+      "archetype": "brute",
+      "attacks": [{ "name": "spear", "dmg": "1d8+2", "dmgType": "pierce" }],
+      "abilities": [
+        {
+          "id": "tail_sweep",
+          "name": "Tail Sweep",
+          "role": "melee",
+          "when": "every(2)",
+          "dmg": "1d6",
+          "dmgType": "crush",
+          "onHit": { "_trait": "Tail Sweep", "save": "reflex", "dc": 12, "condition": "knockedDown" },
+          "power": 2
+        }
+      ],
+      "script": [
+        { "when": "every(2)", "do": "tail_sweep" },
+        { "when": "always", "do": "attack" }
+      ],
+      "traits": [{ "id": "submerge", "oneIn": 6, "bonus": 4 }],
+      "weak": ["cold"],
+      "_weak": "Any cold damage also Slows it (02 section 8).",
+      "weakAlsoSlows": "cold",
+      "xp": 75,
+      "gold": "3d8",
+      "drops": [
+        { "item": "spear", "chance": 0.2 },
+        { "item": "shield", "chance": 0.1 }
+      ],
+      "floors": [5]
+    },
+
+    "giant_leech": {
+      "name": "Giant Leech",
+      "hd": 4,
+      "hp": 22,
+      "atk": 5,
+      "def": 11,
+      "init": -1,
+      "saves": { "body": 2, "reflex": 0, "mind": 0 },
+      "row": "front",
+      "group": [1, 3],
+      "type": "beast",
+      "morale": null,
+      "archetype": "brute",
+      "attacks": [{ "name": "bite", "dmg": "1d4", "dmgType": "pierce" }],
+      "traits": [{ "id": "latch", "dice": "1d6", "pullOffTn": 12 }],
+      "weak": ["fire"],
+      "xp": 60,
+      "gold": "0",
+      "drops": [],
+      "floors": [5]
+    },
+
+    "drowned_dead": {
+      "name": "Drowned Dead",
+      "hd": 5,
+      "hp": 36,
+      "atk": 5,
+      "def": 12,
+      "init": -3,
+      "saves": { "body": 4, "reflex": 0, "mind": 2 },
+      "row": "front",
+      "group": [2, 4],
+      "type": "undead",
+      "morale": null,
+      "archetype": "brute",
+      "attacks": [
+        {
+          "name": "grasp",
+          "dmg": "1d8+2",
+          "dmgType": "crush",
+          "onHit": { "_trait": "Waterlogged Grip", "save": "body", "dc": 12, "condition": "slowed" }
+        }
+      ],
+      "traits": [{ "id": "feast", "_trait": "Drag Under", "dice": "1d6", "vs": "slowed" }],
+      "resist": ["fire"],
+      "weak": ["holy"],
+      "immune": ["poison", "asleep", "feared"],
+      "xp": 75,
+      "gold": "2d6",
+      "drops": [],
+      "floors": [5]
+    },
+
+    "cultist": {
+      "name": "Cultist",
+      "hd": 4,
+      "hp": 20,
+      "atk": 5,
+      "def": 12,
+      "init": 0,
+      "saves": { "body": 2, "reflex": 2, "mind": 3 },
+      "row": "back",
+      "group": [2, 3],
+      "type": "human",
+      "morale": 7,
+      "archetype": "support",
+      "attacks": [
+        {
+          "name": "frost shard",
+          "dmg": "2d6",
+          "dmgType": "cold",
+          "kind": "ranged",
+          "onHit": { "_trait": "Frost Shard", "save": "reflex", "dc": 12, "condition": "slowed" }
+        }
+      ],
+      "abilities": [
+        {
+          "id": "dark_prayer",
+          "name": "Dark Prayer",
+          "role": "buff",
+          "action": "buff",
+          "oncePerCombat": true,
+          "buff": { "atk": 2 },
+          "power": 3
+        }
+      ],
+      "traits": [],
+      "xp": 60,
+      "gold": "3d8",
+      "drops": [
+        { "pool": "uncommon_scroll", "chance": 0.2 },
+        { "item": "focus_tonic", "chance": 0.2 }
+      ],
+      "floors": [6, 8]
+    },
+
+    "zealot": {
+      "name": "Zealot",
+      "hd": 5,
+      "hp": 26,
+      "atk": 6,
+      "def": 13,
+      "init": 1,
+      "saves": { "body": 3, "reflex": 2, "mind": 4 },
+      "row": "front",
+      "group": [1, 3],
+      "type": "human",
+      "morale": 12,
+      "archetype": "brute",
+      "attacks": [{ "name": "flail", "dmg": "1d8+2", "dmgType": "slash" }],
+      "traits": [
+        {
+          "id": "death_burst",
+          "_trait": "Martyr's Flame",
+          "dice": "2d6",
+          "damageType": "fire",
+          "save": "reflex",
+          "dc": 12,
+          "half": true,
+          "unlessKilledBy": ["cold"],
+          "glowBelow": 0.25
+        }
+      ],
+      "immune": ["feared"],
+      "xp": 75,
+      "gold": "2d10",
+      "drops": [],
+      "floors": [6]
+    },
+
+    "gargoyle": {
+      "name": "Gargoyle",
+      "hd": 6,
+      "hp": 32,
+      "atk": 7,
+      "def": 17,
+      "init": 1,
+      "saves": { "body": 4, "reflex": 3, "mind": 2 },
+      "row": "front",
+      "group": [1, 2],
+      "type": "construct",
+      "morale": 12,
+      "archetype": "brute",
+      "attacks": [{ "name": "claws", "dmg": "1d6+2", "dmgType": "slash", "attacks": 2 }],
+      "traits": [
+        { "id": "stone_hide", "_trait": "Resistant to non-magic weapons", "except": ["crush"] },
+        { "id": "take_flight", "below": 0.25, "bonus": 4 }
+      ],
+      "_trait": "Statue: surprises the hero on a 1-4, unless they have Keen Senses.",
+      "surprise": 4,
+      "immune": ["poison", "asleep", "paralyzed"],
+      "xp": 90,
+      "gold": "0",
+      "drops": [{ "item": "gemstone", "chance": 0.1 }],
+      "floors": [6]
+    },
+
+    "ember_hound": {
+      "name": "Ember Hound",
+      "hd": 6,
+      "hp": 30,
+      "atk": 7,
+      "def": 15,
+      "init": 3,
+      "saves": { "body": 3, "reflex": 4, "mind": 2 },
+      "row": "front",
+      "group": [2, 2],
+      "type": "beast",
+      "morale": 9,
+      "archetype": "breather",
+      "attacks": [
+        {
+          "name": "bite",
+          "dmg": "1d8+3",
+          "dmgType": "pierce",
+          "parts": ["1d8+3 pierce", "1d4 fire"]
+        }
+      ],
+      "abilities": [
+        {
+          "id": "flame_breath",
+          "name": "Flame Breath",
+          "role": "breath",
+          "recharges": true,
+          "autoHit": true,
+          "area": true,
+          "dmg": "3d6",
+          "dmgType": "fire",
+          "save": { "type": "reflex", "dc": 13, "half": true },
+          "onHit": { "_trait": "Flame Breath", "useAttackSave": true, "condition": "burning" },
+          "power": 5
+        }
+      ],
+      "traits": [],
+      "immune": ["fire"],
+      "weak": ["cold"],
+      "xp": 90,
+      "gold": "0",
+      "drops": [{ "item": "ember_heart", "chance": 0.25 }],
+      "floors": [6]
+    },
+
+    "ogre": {
+      "name": "Ogre",
+      "hd": 7,
+      "hp": 45,
+      "atk": 8,
+      "def": 14,
+      "init": -1,
+      "saves": { "body": 5, "reflex": 1, "mind": 2 },
+      "row": "front",
+      "group": [1, 2],
+      "type": "giant",
+      "morale": 8,
+      "archetype": "brute",
+      "attacks": [{ "name": "club", "dmg": "2d6+6", "dmgType": "crush" }],
+      "traits": [
+        { "id": "crit_rider", "_trait": "Crushing Blow", "conditions": ["knockedDown", "stunned"] },
+        { "id": "greedy", "gold": 50, "inSix": 2 }
+      ],
+      "xp": 105,
+      "gold": "5d10",
+      "drops": [{ "item": "greater_healing_potion", "chance": 0.2 }],
+      "floors": [7]
+    },
+
+    "animated_armor": {
+      "name": "Animated Armor",
+      "hd": 7,
+      "hp": 35,
+      "atk": 8,
+      "def": 19,
+      "init": 0,
+      "saves": { "body": 4, "reflex": 1, "mind": 0 },
+      "row": "front",
+      "group": [1, 3],
+      "type": "construct",
+      "morale": null,
+      "archetype": "brute",
+      "attacks": [{ "name": "greatsword", "dmg": "1d10+3", "dmgType": "slash" }],
+      "dr": 2,
+      "crushIgnoresDr": "all",
+      "traits": [{ "id": "empty_shell" }],
+      "immune": [
+        "poison",
+        "asleep",
+        "feared",
+        "paralyzed",
+        "stunned",
+        "weakened",
+        "blinded",
+        "sickened",
+        "bleeding",
+        "petrified"
+      ],
+      "xp": 105,
+      "gold": "0",
+      "drops": [{ "pool": "base_armor", "bonus": 1, "chance": 0.1 }],
+      "floors": [7, 8]
+    },
+
+    "magma_beetle": {
+      "name": "Magma Beetle",
+      "hd": 6,
+      "hp": 30,
+      "atk": 7,
+      "def": 17,
+      "init": 0,
+      "saves": { "body": 4, "reflex": 2, "mind": 1 },
+      "row": "front",
+      "group": [2, 3],
+      "type": "beast",
+      "morale": 9,
+      "archetype": "brute",
+      "attacks": [{ "name": "mandibles", "dmg": "1d8+3", "dmgType": "fire" }],
+      "traits": [
+        { "id": "retaliate", "_trait": "Molten Shell", "dice": "1d4", "damageType": "fire", "needsMetal": true }
+      ],
+      "immune": ["fire"],
+      "weak": ["cold"],
+      "_weak": "While Slowed it also loses 4 DEF (02 section 10).",
+      "slowedDefPenalty": 4,
+      "xp": 90,
+      "gold": "0",
+      "drops": [{ "item": "magma_gland", "chance": 0.2 }],
+      "floors": [7]
+    },
+
+    "salamander": {
+      "name": "Salamander",
+      "hd": 8,
+      "hp": 44,
+      "atk": 9,
+      "def": 16,
+      "init": 2,
+      "saves": { "body": 4, "reflex": 4, "mind": 4 },
+      "row": "front",
+      "group": [1, 2],
+      "type": "elemental",
+      "morale": 9,
+      "archetype": "brute",
+      "attacks": [
+        { "name": "spear", "dmg": "1d8+4", "dmgType": "pierce", "parts": ["1d8+4 pierce", "1d6 fire"] }
+      ],
+      "abilities": [
+        {
+          "id": "constrict",
+          "name": "Constrict",
+          "role": "melee",
+          "when": "every(3)",
+          "dmg": "1d6",
+          "dmgType": "crush",
+          "onHit": { "_trait": "Constrict", "condition": "grabbed", "damage": "1d6", "damageType": "fire" },
+          "power": 3
+        }
+      ],
+      "script": [
+        { "when": "every(3)", "do": "constrict" },
+        { "when": "always", "do": "attack" }
+      ],
+      "traits": [{ "id": "retaliate", "_trait": "Heat Aura", "dice": "1d6", "damageType": "fire" }],
+      "immune": ["fire"],
+      "weak": ["cold"],
+      "xp": 120,
+      "gold": "4d10",
+      "drops": [{ "item": "spear", "bonus": 1, "chance": 0.2 }],
+      "floors": [7]
+    },
+
+    "wraith": {
+      "name": "Wraith",
+      "hd": 8,
+      "hp": 36,
+      "atk": 9,
+      "def": 16,
+      "init": 2,
+      "saves": { "body": 4, "reflex": 4, "mind": 5 },
+      "row": "front",
+      "group": [1, 2],
+      "type": "undead",
+      "morale": null,
+      "archetype": "brute",
+      "attacks": [
+        {
+          "name": "touch",
+          "dmg": "1d8+4",
+          "dmgType": "necrotic",
+          "onHit": { "_trait": "Life Drain", "save": "body", "dc": 14, "condition": "drained" }
+        }
+      ],
+      "traits": [{ "id": "stone_hide", "_trait": "Incorporeal: resistant to non-magic weapons" }],
+      "_trait": "Through the Walls: surprises the hero on a 1-3.",
+      "surprise": 3,
+      "weak": ["holy"],
+      "immune": ["poison", "asleep", "feared", "paralyzed"],
+      "xp": 120,
+      "gold": "0",
+      "drops": [{ "item": "ectoplasm", "chance": 0.2 }],
+      "floors": [8]
+    },
+
+    "mimic": {
+      "name": "Mimic",
+      "hd": 8,
+      "hp": 50,
+      "atk": 9,
+      "def": 15,
+      "init": 0,
+      "saves": { "body": 5, "reflex": 1, "mind": 3 },
+      "row": "front",
+      "group": [1, 1],
+      "type": "aberration",
+      "morale": 12,
+      "archetype": "brute",
+      "attacks": [
+        {
+          "name": "maw",
+          "dmg": "2d6+4",
+          "dmgType": "crush",
+          "onHit": { "_trait": "Adhesive", "condition": "grabbed" }
+        }
+      ],
+      "traits": [{ "id": "disguise", "detectTn": 18 }],
+      "xp": 120,
+      "gold": "5d10",
+      "drops": [{ "item": "uncommon", "chance": 1 }],
+      "floors": [8]
+    },
+
+    "dark_mage": {
+      "name": "Dark Mage",
+      "hd": 8,
+      "hp": 36,
+      "atk": 9,
+      "def": 14,
+      "init": 1,
+      "saves": { "body": 3, "reflex": 3, "mind": 6 },
+      "row": "back",
+      "group": [1, 1],
+      "type": "human",
+      "morale": 8,
+      "archetype": "caster",
+      "attacks": [{ "name": "staff", "dmg": "1d6+1", "dmgType": "crush" }],
+      "abilities": [
+        {
+          "id": "fireball",
+          "name": "Fireball",
+          "role": "spell",
+          "oncePerCombat": true,
+          "autoHit": true,
+          "area": true,
+          "magic": true,
+          "dmg": "6d6",
+          "dmgType": "fire",
+          "save": { "type": "reflex", "dc": 14, "half": true },
+          "power": 9
+        },
+        {
+          "id": "magic_missile",
+          "name": "Magic Missile",
+          "role": "spell",
+          "autoHit": true,
+          "magic": true,
+          "attacks": 3,
+          "dmg": "1d4+1",
+          "dmgType": "force",
+          "power": 4
+        }
+      ],
+      "traits": [
+        { "id": "blink", "below": 0.5, "missChance": 0.5, "rounds": 3 },
+        { "id": "counterspell", "oncePerCombat": true }
+      ],
+      "xp": 120,
+      "gold": "6d10",
+      "drops": [
+        { "pool": "uncommon_scroll", "chance": 0.3 },
+        { "item": "focus_tonic", "chance": 0.15 },
+        { "item": "staff", "bonus": 1, "chance": 0.1 }
+      ],
+      "floors": [8, 10]
+    },
+
+    "banshee": {
+      "name": "Banshee",
+      "hd": 9,
+      "hp": 40,
+      "atk": 10,
+      "def": 16,
+      "init": 2,
+      "saves": { "body": 4, "reflex": 4, "mind": 6 },
+      "row": "front",
+      "group": [1, 1],
+      "type": "undead",
+      "morale": null,
+      "archetype": "controller",
+      "attacks": [{ "name": "touch", "dmg": "1d8+4", "dmgType": "necrotic" }],
+      "abilities": [
+        {
+          "id": "wail",
+          "name": "Wail",
+          "role": "control",
+          "when": "every(3)",
+          "autoHit": true,
+          "area": true,
+          "control": "feared",
+          "save": { "type": "mind", "dc": 14 },
+          "onHit": {
+            "_trait": "Wail",
+            "useAttackSave": true,
+            "condition": "feared",
+            "rounds": 2,
+            "failBy": 5,
+            "failDamage": "3d6",
+            "failDamageType": "necrotic"
+          },
+          "power": 5
+        }
+      ],
+      "script": [
+        { "when": "every(3)", "do": "wail" },
+        { "when": "always", "do": "attack" }
+      ],
+      "traits": [
+        { "id": "stone_hide", "_trait": "Incorporeal: resistant to non-magic weapons" },
+        { "id": "advantage_vs", "_trait": "Sorrow", "condition": "feared" }
+      ],
+      "weak": ["holy"],
+      "immune": ["poison", "asleep", "feared", "paralyzed"],
+      "xp": 135,
+      "gold": "0",
+      "drops": [{ "item": "silver_locket", "chance": 0.2 }],
+      "floors": [8]
+    },
+
+    "troll": {
+      "name": "Troll",
+      "hd": 9,
+      "hp": 60,
+      "atk": 10,
+      "def": 15,
+      "init": 1,
+      "saves": { "body": 6, "reflex": 2, "mind": 2 },
+      "row": "front",
+      "group": [1, 2],
+      "type": "giant",
+      "morale": 10,
+      "archetype": "brute",
+      "attacks": [{ "name": "claws", "dmg": "1d8+4", "dmgType": "slash", "attacks": 2 }],
+      "traits": [
+        { "id": "regeneration", "hp": 5, "stoppedBy": ["fire", "holy"] },
+        { "id": "wont_stay_down", "rounds": 3, "hp": 10 }
+      ],
+      "weak": ["fire"],
+      "xp": 135,
+      "gold": "5d10",
+      "drops": [{ "item": "troll_blood", "chance": 0.2 }],
+      "floors": [9, 10]
+    },
+
+    "rime_wolf": {
+      "name": "Rime Wolf",
+      "hd": 8,
+      "hp": 40,
+      "atk": 9,
+      "def": 16,
+      "init": 3,
+      "saves": { "body": 4, "reflex": 5, "mind": 2 },
+      "row": "front",
+      "group": [2, 3],
+      "type": "beast",
+      "morale": 8,
+      "archetype": "breather",
+      "attacks": [{ "name": "bite", "dmg": "1d10+4", "dmgType": "pierce" }],
+      "abilities": [
+        {
+          "id": "frost_breath",
+          "name": "Frost Breath",
+          "role": "breath",
+          "recharges": true,
+          "autoHit": true,
+          "area": true,
+          "dmg": "4d6",
+          "dmgType": "cold",
+          "save": { "type": "reflex", "dc": 14, "half": true },
+          "onHit": { "_trait": "Frost Breath", "useAttackSave": true, "condition": "slowed" },
+          "power": 6
+        }
+      ],
+      "traits": [
+        { "id": "pack_tactics", "_trait": "Pack", "bonus": 1, "max": 99 },
+        { "id": "crit_rider", "_trait": "Hamstring", "conditions": ["slowed"] }
+      ],
+      "immune": ["cold"],
+      "weak": ["fire"],
+      "xp": 120,
+      "gold": "0",
+      "drops": [{ "item": "rime_pelt", "chance": 0.2 }],
+      "floors": [9]
+    },
+
+    "frozen_revenant": {
+      "name": "Frozen Revenant",
+      "hd": 10,
+      "hp": 50,
+      "atk": 11,
+      "def": 17,
+      "init": 0,
+      "saves": { "body": 6, "reflex": 3, "mind": 5 },
+      "row": "front",
+      "group": [1, 2],
+      "type": "undead",
+      "morale": null,
+      "archetype": "brute",
+      "attacks": [
+        {
+          "name": "frozen blade",
+          "dmg": "1d10+5",
+          "dmgType": "cold",
+          "onHit": {
+            "_trait": "Grip of Winter",
+            "save": "body",
+            "dc": 15,
+            "condition": "slowed",
+            "rounds": 2,
+            "damage": "1d6",
+            "damageType": "cold"
+          }
+        }
+      ],
+      "traits": [],
+      "_trait": "Grudge: the hero cannot Flee from it (02 section 12).",
+      "preventsFlight": true,
+      "weak": ["fire", "holy"],
+      "immune": ["cold", "poison", "asleep", "feared", "paralyzed"],
+      "xp": 150,
+      "gold": "6d10",
+      "drops": [{ "pool": "base_armor", "bonus": 2, "chance": 0.15 }],
+      "floors": [9]
+    },
+
+    "frost_giant": {
+      "name": "Frost Giant",
+      "hd": 12,
+      "hp": 80,
+      "atk": 13,
+      "def": 17,
+      "init": -1,
+      "saves": { "body": 8, "reflex": 3, "mind": 4 },
+      "row": "front",
+      "group": [1, 1],
+      "type": "giant",
+      "morale": 10,
+      "archetype": "brute",
+      "attacks": [{ "name": "greataxe", "dmg": "2d10+6", "dmgType": "slash" }],
+      "abilities": [
+        {
+          "id": "stomp",
+          "name": "Stomp",
+          "role": "melee",
+          "when": "every(3)",
+          "telegraph": "The giant lifts its foot!",
+          "autoHit": true,
+          "area": true,
+          "dmg": "4d10",
+          "dmgType": "crush",
+          "onHit": { "_trait": "Stomp", "condition": "knockedDown" },
+          "power": 8
+        }
+      ],
+      "script": [
+        { "when": "every(3)", "do": "stomp" },
+        { "when": "always", "do": "attack" }
+      ],
+      "traits": [],
+      "immune": ["cold"],
+      "weak": ["fire"],
+      "xp": 180,
+      "gold": "8d10",
+      "drops": [{ "pool": "base_weapon", "bonus": 2, "chance": 0.25 }],
+      "floors": [9, 10]
+    },
+
+    "drake": {
+      "name": "Drake",
+      "hd": 10,
+      "hp": 60,
+      "atk": 11,
+      "def": 17,
+      "init": 2,
+      "saves": { "body": 6, "reflex": 5, "mind": 4 },
+      "row": "front",
+      "group": [1, 2],
+      "type": "dragon",
+      "morale": 9,
+      "archetype": "breather",
+      "attacks": [{ "name": "bite", "dmg": "2d8+5", "dmgType": "pierce" }],
+      "abilities": [
+        {
+          "id": "flame_spit",
+          "name": "Flame Spit",
+          "role": "breath",
+          "recharges": true,
+          "autoHit": true,
+          "area": true,
+          "dmg": "5d6",
+          "dmgType": "fire",
+          "save": { "type": "reflex", "dc": 15, "half": true },
+          "power": 7
+        },
+        {
+          "id": "wing_buffet",
+          "name": "Wing Buffet",
+          "role": "melee",
+          "when": "every(3)",
+          "autoHit": true,
+          "save": { "type": "reflex", "dc": 15 },
+          "onHit": { "_trait": "Wing Buffet", "useAttackSave": true, "condition": "knockedDown" },
+          "power": 3
+        }
+      ],
+      "script": [
+        { "when": "always", "do": "role:breath" },
+        { "when": "every(3)", "do": "wing_buffet" },
+        { "when": "always", "do": "attack" }
+      ],
+      "traits": [],
+      "immune": ["fire"],
+      "xp": 150,
+      "gold": "0",
+      "drops": [{ "item": "dragon_scale", "chance": 0.3 }],
+      "floors": [10]
+    },
+
+    "ashbound_knight": {
+      "name": "Ashbound Knight",
+      "hd": 12,
+      "hp": 75,
+      "atk": 13,
+      "def": 20,
+      "init": 0,
+      "saves": { "body": 8, "reflex": 3, "mind": 6 },
+      "row": "front",
+      "group": [1, 2],
+      "type": "human",
+      "morale": 12,
+      "archetype": "brute",
+      "attacks": [
+        { "name": "ashen blade", "dmg": "2d8+6", "dmgType": "slash", "parts": ["2d8+6 slash", "1d6 fire"] }
+      ],
+      "abilities": [
+        {
+          "id": "shield_bash",
+          "name": "Shield Bash",
+          "role": "melee",
+          "when": "every(3)",
+          "autoHit": true,
+          "save": { "type": "body", "dc": 16 },
+          "onHit": { "_trait": "Shield Bash", "useAttackSave": true, "condition": "stunned" },
+          "power": 4
+        }
+      ],
+      "script": [
+        { "when": "every(3)", "do": "shield_bash" },
+        { "when": "always", "do": "attack" }
+      ],
+      "traits": [{ "id": "guardian", "perRound": 1 }],
+      "resist": ["fire"],
+      "xp": 180,
+      "gold": "10d10",
+      "drops": [
+        { "item": "long_sword", "bonus": 2, "chance": 0.125 },
+        { "item": "plate", "bonus": 2, "chance": 0.125 }
+      ],
+      "floors": [10]
+    },
+
+    "basilisk": {
+      "name": "Basilisk",
+      "hd": 11,
+      "hp": 70,
+      "atk": 12,
+      "def": 17,
+      "init": -1,
+      "saves": { "body": 7, "reflex": 2, "mind": 5 },
+      "row": "front",
+      "group": [1, 1],
+      "type": "beast",
+      "morale": 9,
+      "archetype": "brute",
+      "attacks": [{ "name": "bite", "dmg": "2d8+5", "dmgType": "pierce" }],
+      "traits": [
+        {
+          "id": "aura_save",
+          "_trait": "Petrifying Gaze",
+          "save": "body",
+          "dc": 16,
+          "condition": "petrified",
+          "skipIfDefending": true,
+          "skipIfAverted": true
+        }
+      ],
+      "xp": 165,
+      "gold": "6d10",
+      "drops": [{ "item": "basilisk_eye", "chance": 0.2 }],
+      "floors": [10]
     },
 
     "coin_imp": {

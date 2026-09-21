@@ -330,8 +330,16 @@ export function dropsFrom(unit, rng, context = {}) {
   const drops = [];
   for (const line of unit?.drops ?? []) {
     if (!rng.chance(line.chance ?? 1)) continue;
-    if (CATEGORIES.includes(line.item)) drops.push(...rollOnTable(rng, line.item, context));
-    else drops.push(makeDrop(rng, line.item, { count: line.count ?? 1 }, context));
+    // A line names a loot table ("uncommon"), a pool with the bonus the
+    // bestiary promises ("20% +1 spear", "15% +2 armor"), or one item.
+    if (line.pool) {
+      const baseId = chooseBase(rng, poolFor(line.pool), context.hero);
+      drops.push(makeDrop(rng, baseId, { count: line.count ?? 1, bonus: line.bonus ?? 0 }, context));
+    } else if (CATEGORIES.includes(line.item)) {
+      drops.push(...rollOnTable(rng, line.item, context));
+    } else {
+      drops.push(makeDrop(rng, line.item, { count: line.count ?? 1, bonus: line.bonus ?? 0 }, context));
+    }
   }
   return drops;
 }

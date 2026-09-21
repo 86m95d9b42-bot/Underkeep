@@ -28,6 +28,7 @@
  */
 import data from '../data/combat.json' with { type: 'json' };
 import { attackMods, defMod, defenceMods, isHelpless } from './conditions.js';
+import { rollSave } from './riders.js';
 import { ROWS, countedEnemies, isTargetable, onField, unitById } from './field.js';
 import { targetsFor } from './actions.js';
 import { resolveDamage } from './damage.js';
@@ -234,9 +235,38 @@ function land(combat, attacker, target, attack, result, services) {
     return out;
   }
 
+  // A breath weapon or a burst allows one save, rolled before the dice, and
+  // the same save decides the rider: "Reflex save for half, and Burning on a
+  // failed save" is one roll, not two (`02` sections 9 and 12).
+  if (attack.save) {
+    out.save = rollSave(target, attack.save.type ?? 'reflex', attack.save.dc ?? 10, combat.rng, {
+      advantage: Boolean(attack.telegraphed && target.defending),
+    });
+  }
+
+  // Some abilities carry no dice at all: a Web, a Wing Buffet, a Wail. They
+  // land, they do something, and there is nothing to add up (`02` sections 7
+  // and 13), so the damage rules are never asked. A plain attack with no
+  // dice is not one of these — it is a weapon whose damage is elsewhere.
+  if (attack.ability && !attack.damage && !attack.parts) {
+    out.effectOnly = true;
+    const payload = { combat, attacker, unit: attacker, target, attack, result: out, damage: null };
+    combat.hooks?.fire('hit', payload);
+    return out;
+  }
+
   // 9. HIT: section 7 does the arithmetic.
   const damage = services.damage ?? resolveDamage;
-  out.damage = damage(combat, { attacker, target, attack, result: out }) ?? null;
+  const saved = out.save?.passed ?? false;
+  const halved = saved && attack.save?.half;
+  out.damage =
+    saved && attack.save && !attack.save.half
+      ? null
+      : damage(
+          combat,
+          { attacker, target, attack, result: out },
+          halved ? { allPartsMultiplier: 0.5 } : {},
+        ) ?? null;
 
   // 13. ZERO HP? Section 9's ladder: the traits that catch it, then the fall.
   if (target.hp <= 0 && target.alive) {

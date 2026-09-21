@@ -206,7 +206,7 @@ export function clearCombatState(unit) {
   return unit;
 }
 
-function toUnit(template, side, ordinal) {
+export function toUnit(template, side, ordinal) {
   const type = template.type ?? template.id ?? 'monster';
   const fields = {
     type,
@@ -249,9 +249,14 @@ export function rollSurprise(combat) {
   const monstersSurprised =
     heroRoll <= (hero?.surpriseOn ?? SURPRISE.heroSurprisesUpTo) &&
     monsters.some((unit) => !unit.cannotBeSurprised);
-  const heroSurprised =
-    monsterRoll <= (combat.monsterSurpriseOn ?? SURPRISE.monstersSurpriseUpTo) &&
-    !hero?.cannotBeSurprised;
+  // A monster may be better at it than the die allows: a Giant Spider drops
+  // from the ceiling on a 1-3, a Gargoyle stands still until a 4
+  // (`02` sections 7 and 9). The best ambusher on the field sets the band.
+  const band = Math.max(
+    combat.monsterSurpriseOn ?? SURPRISE.monstersSurpriseUpTo,
+    ...monsters.filter((unit) => unit.alive).map((unit) => unit.surprise ?? 0),
+  );
+  const heroSurprised = monsterRoll <= band && !hero?.cannotBeSurprised;
 
   // Both or neither surprised means no surprise round at all.
   const side = monstersSurprised === heroSurprised ? null : monstersSurprised ? 'hero' : 'monsters';

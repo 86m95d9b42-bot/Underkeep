@@ -62,6 +62,15 @@ function toAttack(attack) {
     damage: `${attack.dmg}${attack.dmgType ? ` ${attack.dmgType}` : ''}`,
     ...(attack.bonus !== undefined ? { bonus: attack.bonus } : {}),
     ...(attack.onHit ? { onHit: attack.onHit } : {}),
+    // A blow of two kinds at once — the Ember Hound's bite and its fire —
+    // is written as parts, which `06` section 7 sums separately.
+    ...(attack.parts ? { parts: attack.parts } : {}),
+    // Two claws, three missiles (`06` section 6, Multiple Attacks).
+    ...(attack.attacks ? { attacks: attack.attacks } : {}),
+    ...(attack.autoHit ? { autoHit: true } : {}),
+    ...(attack.area ? { area: true } : {}),
+    ...(attack.magic ? { magic: true } : {}),
+    ...(attack.save ? { save: attack.save } : {}),
   };
 }
 
@@ -117,6 +126,13 @@ export function makeMonster(id, { floor = 1, elite = false, overrides = {} } = {
     ...(block.anchored ? { anchored: true } : {}),
     attack: attacks[0] ?? { damage: '1' },
     attacks,
+    // What the bestiary writes on the monster itself rather than on a blow.
+    ...(block.dr ? { dr: block.dr } : {}),
+    ...(block.crushIgnoresDr ? { crushIgnoresDr: block.crushIgnoresDr } : {}),
+    ...(block.surprise ? { surprise: block.surprise } : {}),
+    ...(block.preventsFlight ? { preventsFlight: true } : {}),
+    ...(block.weakAlsoSlows ? { weakAlsoSlows: block.weakAlsoSlows } : {}),
+    ...(block.slowedDefPenalty ? { slowedDefPenalty: block.slowedDefPenalty } : {}),
     abilities: (block.abilities ?? []).map(toAbility),
     traits: [...(block.traits ?? [])],
     // The damage rules read these three names.

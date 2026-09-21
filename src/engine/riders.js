@@ -14,6 +14,7 @@
  * always succeeds and a natural 1 always fails.
  */
 import { applyCondition, blockedFrom } from './conditions.js';
+import { resolveDamage } from './damage.js';
 import { remember } from './ai.js';
 import { effectDcOf } from '../data/monsters.js';
 
@@ -69,14 +70,34 @@ export function applyRider(combat, attacker, target, attack, result = {}) {
 
   // Most stat blocks state the DC; anything that does not falls back to the
   // monster's own, which is `01` section 4's 10 + floor(HD / 2).
-  const dc = rider.dc ?? effectDcOf(attacker);
-  const save = rider.save
-    ? rollSave(target, rider.save, dc, combat.rng, {
-        // A telegraphed attack's saves get advantage while the hero Defends.
-        advantage: Boolean(attack.telegraphed && target.defending),
-      })
-    : null;
+  const dc = rider.dc ?? attack.save?.dc ?? effectDcOf(attacker);
+  // One save can do two jobs: a breath weapon's Reflex save halves the damage
+  // *and* decides the Burning, so the rider reuses the roll the attack made
+  // rather than asking for a second one (`02` sections 9 and 12).
+  const save = rider.useAttackSave
+    ? (result.save ?? null)
+    : rider.save
+      ? rollSave(target, rider.save, dc, combat.rng, {
+          // A telegraphed attack's saves get advantage while the hero Defends.
+          advantage: Boolean(attack.telegraphed && target.defending),
+        })
+      : null;
   if (save?.passed) return { condition: rider.condition, applied: false, why: 'saved', save };
+
+  // "Failing by 5 or more also deals 3d6": the Banshee's Wail is the one
+  // rider that hurts as well as frightens (`02` section 11).
+  if (rider.failBy && save && save.total <= save.dc - rider.failBy && rider.failDamage) {
+    resolveDamage(combat, {
+      attacker,
+      target,
+      attack: {
+        name: rider._trait ?? 'wail',
+        kind: 'burst',
+        damage: `${rider.failDamage}${rider.failDamageType ? ` ${rider.failDamageType}` : ''}`,
+        noAttributeDamage: true,
+      },
+    });
+  }
 
   const applied = applyCondition(target, rider.condition, {
     dc,

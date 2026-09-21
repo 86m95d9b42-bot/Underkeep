@@ -58,6 +58,9 @@ function fixRolls(combat, { d20, die, dice, roll } = {}) {
   if (roll !== undefined) combat.rng.roll = () => roll;
 }
 
+/** Every floor the bestiary writes a table for (`02` sections 4 to 13). */
+const FLOORS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
 describe('the stat blocks (02 sections 4 and 5)', () => {
   it('has the nine monsters of floors 1 and 2, and the Coin Imp', () => {
     expect(monstersOnFloor(1)).toEqual(['giant_rat', 'kobold', 'goblin_archer', 'green_slime']);
@@ -114,6 +117,75 @@ describe('the stat blocks (02 sections 4 and 5)', () => {
     expect(archer.abilities.every((ability) => ability.ready)).toBe(true);
   });
 
+  it('gives every floor the monsters 02 lists for it', () => {
+    expect(monstersOnFloor(3)).toEqual(
+      expect.arrayContaining(['orc', 'goblin_shaman', 'worg', 'hobgoblin_captain']),
+    );
+    expect(monstersOnFloor(4)).toEqual([
+      'shrieker',
+      'myconid_sporecaller',
+      'giant_spider',
+      'rot_crawler',
+    ]);
+    expect(monstersOnFloor(6)).toEqual(
+      expect.arrayContaining(['cultist', 'zealot', 'gargoyle', 'ember_hound']),
+    );
+    expect(monstersOnFloor(9)).toEqual(['troll', 'rime_wolf', 'frozen_revenant', 'frost_giant']);
+    expect(monstersOnFloor(10)).toEqual(
+      expect.arrayContaining(['drake', 'ashbound_knight', 'basilisk']),
+    );
+    // 31 more than floors 1 and 2's nine, plus the Coin Imp.
+    expect(monsterIds()).toHaveLength(41);
+  });
+
+  it('transcribes the deeper floors, row by row of 02', () => {
+    // One line of each floor's table, read straight off the document.
+    const rows = [
+      ['orc', { hd: 3, hp: 15, atk: 4, def: 13, init: 0, xp: 30 }],
+      ['hobgoblin_captain', { hd: 4, hp: 24, atk: 5, def: 16, init: 0, xp: 60 }],
+      ['giant_spider', { hd: 4, hp: 22, atk: 5, def: 14, init: 2, xp: 60 }],
+      ['ghast', { hd: 6, hp: 30, atk: 7, def: 15, init: 1, xp: 90 }],
+      ['gargoyle', { hd: 6, hp: 32, atk: 7, def: 17, init: 1, xp: 90 }],
+      ['salamander', { hd: 8, hp: 44, atk: 9, def: 16, init: 2, xp: 120 }],
+      ['banshee', { hd: 9, hp: 40, atk: 10, def: 16, init: 2, xp: 135 }],
+      ['frost_giant', { hd: 12, hp: 80, atk: 13, def: 17, init: -1, xp: 180 }],
+      ['ashbound_knight', { hd: 12, hp: 75, atk: 13, def: 20, init: 0, xp: 180 }],
+      ['basilisk', { hd: 11, hp: 70, atk: 12, def: 17, init: -1, xp: 165 }],
+    ];
+    for (const [id, numbers] of rows) {
+      expect([id, makeMonster(id)]).toEqual([id, expect.objectContaining(numbers)]);
+    }
+  });
+
+  it('carries what the stat block writes on the monster itself', () => {
+    // DR 2 that crush goes straight through (`02` section 10).
+    expect(makeMonster('animated_armor')).toMatchObject({ dr: 2, crushIgnoresDr: 'all' });
+    // Ambushers: the Giant Spider drops on a 1-3, the Gargoyle waits for a 4.
+    expect(makeMonster('giant_spider').surprise).toBe(3);
+    expect(makeMonster('gargoyle').surprise).toBe(4);
+    expect(makeMonster('wraith').surprise).toBe(3);
+    // Grudge: there is no running from a Frozen Revenant.
+    expect(makeMonster('frozen_revenant').preventsFlight).toBe(true);
+    // Two claws, three missiles.
+    expect(makeMonster('troll').attack.attacks).toBe(2);
+    expect(makeMonster('rot_crawler').attack.attacks).toBe(2);
+    const missiles = makeMonster('dark_mage').abilities.find((one) => one.id === 'magic_missile');
+    expect(missiles).toMatchObject({ attacks: 3, autoHit: true });
+  });
+
+  it('gives a breath weapon its recharge and its one save', () => {
+    const hound = makeMonster('ember_hound');
+    const breath = hound.abilities.find((one) => one.id === 'flame_breath');
+    expect(breath).toMatchObject({
+      recharges: true,
+      ready: true,
+      damage: '3d6 fire',
+      save: { type: 'reflex', dc: 13, half: true },
+    });
+    // The Burning rides the same save, rather than asking for another.
+    expect(breath.onHit).toMatchObject({ useAttackSave: true, condition: 'burning' });
+  });
+
   it('scales the Coin Imp to the floor it is met on', () => {
     expect(scale('floor * 4', 3)).toBe(12);
     expect(scale('14 + floor / 2', 5)).toBe(16);
@@ -168,9 +240,37 @@ describe('the encounter tables (02 section 16)', () => {
   });
 
   it('only ever names monsters that exist on that floor', () => {
-    for (const floor of [1, 2]) {
+    for (const floor of FLOORS) {
       for (const id of idsOnTable(floor)) {
         expect([id, MONSTERS[id]?.floors]).toEqual([id, expect.arrayContaining([floor])]);
+      }
+    }
+  });
+
+  it('reads the deeper tables line by line', () => {
+    // 02 section 16, one line from each.
+    expect(lineFor(3, 1).monsters.map((row) => row.id)).toEqual(['orc', 'goblin_archer']);
+    expect(lineFor(4, 5).monsters).toEqual([{ id: 'rot_crawler', count: [1, 1] }]);
+    expect(lineFor(5, 2).monsters).toEqual([{ id: 'ghoul', count: [2, 3] }]);
+    expect(lineFor(6, 11).monsters).toEqual([{ id: 'ghast', count: [2, 2] }]);
+    expect(lineFor(7, 6).monsters).toEqual([{ id: 'magma_beetle', count: [2, 3] }]);
+    expect(lineFor(8, 7).monsters).toEqual([{ id: 'mimic', count: [1, 1] }]);
+    expect(lineFor(9, 9).monsters.map((row) => row.id)).toEqual(['frost_giant', 'rime_wolf']);
+    expect(lineFor(10, 11).monsters.map((row) => row.id)).toEqual(['frost_giant', 'troll']);
+  });
+
+  it('builds a fight from every roll of every floor', () => {
+    for (const floor of FLOORS) {
+      for (let roll = 1; roll <= 11; roll += 1) {
+        const rng = createStream(`f${floor}r${roll}`, 'encounter');
+        const queue = [roll];
+        const die = rng.die;
+        rng.die = (sides) => (queue.length ? queue.shift() : die(sides));
+        const result = rollEncounter(floor, rng);
+        expect([floor, roll, result.monsters.length > 0]).toEqual([floor, roll, true]);
+        for (const unit of result.monsters) {
+          expect([floor, roll, unit.hp > 0]).toEqual([floor, roll, true]);
+        }
       }
     }
   });
@@ -208,7 +308,7 @@ describe('the encounter tables (02 section 16)', () => {
   });
 
   it('covers every roll on the die, with no gap and no overlap', () => {
-    for (const floor of [1, 2]) {
+    for (const floor of FLOORS) {
       const table = tableFor(floor);
       let previous = 0;
       for (const row of table) {

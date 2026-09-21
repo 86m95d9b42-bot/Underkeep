@@ -74,8 +74,22 @@ describe('the table in 01 section 7', () => {
         'asleep', 'bleeding', 'blinded', 'burning', 'drained', 'feared', 'grabbed', 'hidden',
         'knockedDown', 'paralyzed', 'petrified', 'poisoned', 'sickened', 'slowed', 'stunned',
         'weakened', 'webbed',
+        // Hexed is the one condition neither table names: `02` section 6
+        // gives the Goblin Shaman a Hex that is exactly Knocked Down's
+        // "disadvantage on your next attack" and nothing else
+        // (docs/DECISIONS.md).
+        'hexed',
       ].sort(),
     );
+  });
+
+  it('gives Hex the one effect 02 section 6 describes', () => {
+    expect(spec('hexed')).toMatchObject({
+      nextAttackAtDisadvantage: true,
+      endsAfterOwnAttack: true,
+      rounds: 1,
+    });
+    expect(spec('hexed').defMod).toBe(undefined);
   });
 
   it('gives each one the numbers the table gives', () => {

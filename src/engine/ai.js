@@ -251,6 +251,7 @@ export function actionFor(unit, ability) {
     id: ability.action ?? 'attack',
     kind: ability.kind ?? 'melee',
     ability: ability.id,
+    name: ability.name,
     ...(ability.tags ? { tags: ability.tags } : {}),
     ...(ability.damage ? { damage: ability.damage } : {}),
     ...(ability.parts ? { parts: ability.parts } : {}),
@@ -258,6 +259,18 @@ export function actionFor(unit, ability) {
     ...(ability.fp !== undefined ? { fp: ability.fp } : {}),
     ...(ability.applies ? { applies: ability.applies } : {}),
     ...(ability.target ? { target: ability.target } : {}),
+    // A breath weapon, a burst, a wail: the ability's own shape travels with
+    // the action, so `06` section 6 resolves it like any other blow.
+    ...(ability.attacks ? { attacks: ability.attacks } : {}),
+    ...(ability.autoHit ? { autoHit: true } : {}),
+    ...(ability.area ? { area: true } : {}),
+    ...(ability.magic ? { magic: true } : {}),
+    ...(ability.save ? { save: ability.save } : {}),
+    ...(ability.onHit ? { onHit: ability.onHit } : {}),
+    ...(ability.heal ? { heal: ability.heal } : {}),
+    ...(ability.buff ? { buff: ability.buff } : {}),
+    ...(ability.allyBelow ? { allyBelow: ability.allyBelow } : {}),
+    ...(ability.uses ? { uses: ability.uses } : {}),
   };
 }
 

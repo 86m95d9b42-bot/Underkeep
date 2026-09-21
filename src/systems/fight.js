@@ -11,7 +11,7 @@
  * monster turn after it, up to the hero's next — before the screen is told
  * anything (CLAUDE.md; `06` section 1).
  */
-import { createCombat, countedEnemies, isTargetable, onField } from '../engine/field.js';
+import { createCombat, countedEnemies, isTargetable, onField, place, toUnit } from '../engine/field.js';
 import { createHooks } from '../engine/hooks.js';
 import { actionForSkill, resolveSkillAction } from '../engine/skill-actions.js';
 import { clearCombatBuffs, resolveItemAction } from '../engine/item-actions.js';
@@ -22,6 +22,8 @@ import { beginCombat, endRound, peekTurn, startRound, takeNextTurn } from '../en
 import { takeTurn } from '../engine/turn.js';
 import { coverPenalty, resolveAction, reachableTargets } from '../engine/attack.js';
 import { chooseAction } from '../engine/ai.js';
+import { resolveSupport } from '../engine/support.js';
+import { registerFor } from '../engine/monster-traits.js';
 import { legalityOf } from '../engine/actions.js';
 import { endCombat, heroFlees, outcomeOf } from '../engine/ending.js';
 import { combatOver } from '../engine/round.js';
@@ -95,7 +97,9 @@ export function lineFor(step, unit) {
     case 'fled':
       return { text: t('combat.log.monsterFlees', { who }), tone: 'muted' };
     case 'died':
-      return { text: t('combat.log.dies', { who }) };
+      // The hero falling is the fight's ending line, not a step of a turn —
+      // the same rule a killing blow follows.
+      return mine ? null : { text: t('combat.log.dies', { who }) };
     case 'breakFree':
       return { text: t(step.freed ? 'combat.log.freed' : 'combat.log.stillHeld'), tone: step.freed ? 'accent' : 'muted' };
     case 'illegal':
@@ -149,9 +153,33 @@ function lineForItem(result, mine) {
 
 function lineForAction(step, unit, who, mine) {
   const result = step.result;
+  // Two claws, three missiles: each attack of a multi-attack action spoke for
+  // itself, so each gets its line (`06` section 6, Multiple Attacks).
+  if (Array.isArray(result)) {
+    return result.flatMap((one) => lineForAction({ ...step, result: one }, unit, who, mine) ?? []);
+  }
   // An item says what it was and what it did (`04` section 16's loot card is
   // the same idea: the player is told what they got out of it).
   if (result?.item && !result.hit) return lineForItem(result, mine);
+  // A monster's support ability: a Shaman mends kin, a Cultist prays, a Hex
+  // lands or is shrugged off (`02` sections 6 and 9).
+  if (result?.id === 'heal' && result.attacker !== undefined) {
+    return {
+      text: t('combat.log.mends', { who, target: result.target, n: result.healed }),
+      tone: 'danger',
+    };
+  }
+  if (result?.id === 'buff') {
+    return { text: t('combat.log.blesses', { who, target: result.target }), tone: 'danger' };
+  }
+  if (result?.id === 'hex') {
+    return {
+      text: t(result.condition ? 'combat.log.hexed' : 'combat.log.hexResisted', { who }),
+      tone: result.condition ? 'danger' : 'muted',
+    };
+  }
+  if (result?.nothing) return null;
+
   // A skill that healed says what it was worth, not what it hit.
   if (result?.healed !== undefined) {
     const name = t(`skills.${result.skill}.name`);
@@ -162,7 +190,18 @@ function lineForAction(step, unit, who, mine) {
       tone: 'accent',
     };
   }
-  // A multi-attack action hands back a list; each attack spoke for itself.
+  // An ability with no dice: the Web, the Wail, the Wing Buffet. What it did
+  // is the condition it left, which the rider's own line says.
+  if (result?.effectOnly) {
+    return {
+      text: t(mine ? 'combat.log.youUse' : 'combat.log.theyUse', {
+        who,
+        what: result.name ?? result.ability ?? '',
+      }),
+      tone: mine ? 'accent' : 'danger',
+    };
+  }
+
   if (!result || result.hit === undefined) return null;
   const target = result.targetName ?? result.target ?? '';
   if (!result.hit) {
@@ -224,6 +263,27 @@ export function createFight({
   });
   combat.difficulty = difficulty;
   combat.floor = floor;
+
+  /**
+   * What a Shrieker calls in (`02` section 7): a wandering group from this
+   * floor's own table, joining the fight as any monster does. The crowd cap
+   * of five turns away whatever will not fit (`02` section 2).
+   */
+  combat.reinforce = (current, { floor: on = floor } = {}) => {
+    const rolled = rollEncounter(on, rng.encounter);
+    const joined = [];
+    for (const template of rolled.monsters) {
+      // The ordinal is per kind, as it is when the fight is set up: a third
+      // kobold is "kobold-3", whatever else is on the field.
+      const kind = template.type ?? template.id ?? 'monster';
+      const ordinal = current.units.filter((unit) => unit.type === kind).length;
+      const unit = toUnit(template, 'monsters', ordinal);
+      if (!place(current, unit, { overflow: true }).placed) break;
+      registerFor(current, unit);
+      joined.push(unit);
+    }
+    return joined;
+  };
   // A fight inside an Anti-Magic Field is fought without Arcana, Spirit or
   // scrolls (`03` section 8); `engine/actions.js` is what refuses them.
   combat.antiMagic = antiMagic;
@@ -258,11 +318,15 @@ export function createFight({
       const result =
         resolveItemAction(fight, unit, action, services) ??
         resolveSkillAction(fight, unit, action, services) ??
+        resolveSupport(fight, unit, action) ??
         resolveAction(fight, unit, action);
-      // The log wants a name, and the engine deals in ids.
-      if (result && !Array.isArray(result) && result.target) {
-        result.targetName = unitById(result.target)?.name ?? result.target;
-        result.targetIsHero = result.target === combat.hero.id;
+      // The log wants a name, and the engine deals in ids. A multi-attack
+      // action hands back one result per blow, and each of them is a blow
+      // the player saw (`06` section 6, Multiple Attacks).
+      for (const one of Array.isArray(result) ? result : [result]) {
+        if (!one?.target) continue;
+        one.targetName = unitById(one.target)?.name ?? one.target;
+        one.targetIsHero = one.target === combat.hero.id;
       }
       return result;
     },

@@ -490,6 +490,10 @@
       "name": "KNOCKED DOWN",
       "effect": "−2 DEF, and your next attack is at disadvantage."
     },
+    "hexed": {
+      "name": "HEXED",
+      "effect": "Your next attack is at disadvantage."
+    },
     "webbed": {
       "name": "WEBBED",
       "effect": "You cannot attack or flee. Break free, or burn it away."
@@ -619,7 +623,14 @@
       "itemBuff": "You feel it take hold.",
       "throw": "You throw the {name}.",
       "shrugsOff": "The {who} shrugs it off.",
-      "condition": "The {who} is {what}."
+      "condition": "The {who} is {what}.",
+      "mends": "{who} mends {target} for {n}.",
+      "blesses": "{who} prays over {target}.",
+      "hexed": "{who} hexes you. Your next swing will go wide.",
+      "hexResisted": "{who} hexes you, and nothing happens.",
+      "joins": "Something else arrives.",
+      "youUse": "You use {what}.",
+      "theyUse": "{who} uses {what}."
     },
     "end": {
       "victory": "Nothing else is standing.",

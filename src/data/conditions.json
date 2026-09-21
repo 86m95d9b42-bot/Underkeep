@@ -1,24 +1,43 @@
 {
   "_source": "01 section 7 (Conditions, Solo Hero Protections) and 06 section 10. Player-facing names and effect lines live in strings.json under `conditions`.",
-
-  "controlConditions": ["stunned", "asleep", "paralyzed", "petrified", "webbed"],
+  "controlConditions": [
+    "stunned",
+    "asleep",
+    "paralyzed",
+    "petrified",
+    "webbed"
+  ],
   "controlImmunityTurns": 2,
   "gritLostTurns": 2,
   "breakFreeTn": 12,
-
   "_startOfTurnDamageOrder": "06 section 4 step 5. The entries after `bleeding` are monster and boss effects (Latch, Grip of Winter, Veyra's aura, Colossus heat), which arrive with their monsters.",
-  "startOfTurnDamageOrder": ["poisoned", "burning", "bleeding"],
-
+  "startOfTurnDamageOrder": [
+    "poisoned",
+    "burning",
+    "bleeding"
+  ],
   "_endOfTurnSaveOrder": "06 section 4 step 13.",
-  "endOfTurnSaveOrder": ["poisoned", "burning", "feared", "paralyzed"],
-
+  "endOfTurnSaveOrder": [
+    "poisoned",
+    "burning",
+    "feared",
+    "paralyzed"
+  ],
   "afterCombat": {
     "_source": "06 section 10, After Combat.",
-    "keep": ["weakened", "drained"],
-    "becomesExploration": ["poisoned"],
-    "explorationPoison": { "damage": "1d4", "everySteps": 10, "save": "body" }
+    "keep": [
+      "weakened",
+      "drained"
+    ],
+    "becomesExploration": [
+      "poisoned"
+    ],
+    "explorationPoison": {
+      "damage": "1d4",
+      "everySteps": 10,
+      "save": "body"
+    }
   },
-
   "conditions": {
     "poisoned": {
       "damagePerTurn": "1d4",
@@ -56,7 +75,9 @@
     },
     "feared": {
       "save": "mind",
-      "blocks": ["melee"]
+      "blocks": [
+        "melee"
+      ]
     },
     "blinded": {
       "rounds": 2,
@@ -78,7 +99,10 @@
       "persists": true
     },
     "grabbed": {
-      "blocks": ["flee", "swap"],
+      "blocks": [
+        "flee",
+        "swap"
+      ],
       "endsOnHittingSource": true
     },
     "knockedDown": {
@@ -87,11 +111,29 @@
       "nextAttackAtDisadvantage": true,
       "endsAfterOwnAttack": true
     },
+    "hexed": {
+      "_source": "02 section 6, the Goblin Shaman's Hex: a Mind save or disadvantage on the hero's next attack.",
+      "rounds": 1,
+      "nextAttackAtDisadvantage": true,
+      "endsAfterOwnAttack": true
+    },
     "webbed": {
       "control": true,
-      "blocks": ["attack", "flee", "swap"],
-      "breakFree": { "tn": 12, "attributes": ["might", "agility"] },
-      "freedByFire": { "damage": "1d4" }
+      "blocks": [
+        "attack",
+        "flee",
+        "swap"
+      ],
+      "breakFree": {
+        "tn": 12,
+        "attributes": [
+          "might",
+          "agility"
+        ]
+      },
+      "freedByFire": {
+        "damage": "1d4"
+      }
     },
     "sickened": {
       "attacksAtDisadvantage": true,

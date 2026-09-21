@@ -93,6 +93,9 @@ function observe(combat) {
           damage: payload.damage,
           dealt: pending?.target === payload.target?.id ? pending.dealt : null,
           killed: event === 'kill',
+          // An ability with no dice — a Web, a Wail, a Wing Buffet — lands
+          // without being a blow, and says so in its own words.
+          effectOnly: Boolean(payload.result?.effectOnly),
         });
         pending = null;
       },
@@ -254,8 +257,8 @@ export function audit(fight, seen, turnsTaken) {
   }
 
   /* 3. Every hit, miss and death has a line, and the log invents nothing. */
-  const hits = seen.attacks.filter((a) => !a.missed).length;
-  const misses = seen.attacks.filter((a) => a.missed).length;
+  const hits = seen.attacks.filter((a) => !a.missed && !a.effectOnly).length;
+  const misses = seen.attacks.filter((a) => a.missed && !a.effectOnly).length;
   const hitLines = lines.filter((line) => looksLike(line, ['youHit', 'youCrit', 'theyHit', 'theyCrit'])).length;
   const missLines = lines.filter((line) => looksLike(line, ['youMiss', 'theyMiss'])).length;
   const deathLines = lines.filter((line) => looksLike(line, ['dies'])).length;

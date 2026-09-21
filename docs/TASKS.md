@@ -94,7 +94,7 @@ Work top to bottom. Check a box when the task is done and tested. Each phase end
 - [x] Doors and locks, including keyed, sealed, barred, one-way, secret (`03` section 6, `05` section 3 step 7)
 - [x] Chest generation and the chest sequence; Chest / Door screen (`03` section 7)
 - [x] Hazards and theme features (`03` section 8, `05` sections 3 and 6)
-- [ ] Remaining monsters, floors 3–10, and all encounter tables
+- [x] Remaining monsters, floors 3–10, and all encounter tables
 - [ ] `bosses.json` and all ten boss fights, including arena objects and state machines
 - [ ] Elite traits, rare wanderers, Hollow Stalker
 - [ ] Graves (Adventurer mode)

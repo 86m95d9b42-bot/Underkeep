@@ -222,8 +222,14 @@ export function calcDamage(combat, { attacker, target, attack = {}, result = {} 
     crit: Boolean(result.crit),
     critDice: attack.mastery ? DAMAGE.critDiceWithMastery : DAMAGE.critDice,
     dr: 0,
+    // A save that halves is a multiplier on every part, which is step 6's own
+    // vocabulary: the caller sets it, and a hook may still change it.
+    ...(options.allPartsMultiplier !== undefined
+      ? { allPartsMultiplier: options.allPartsMultiplier }
+      : {}),
   }) ?? {
     parts: gatherParts(attack),
+    allPartsMultiplier: options.allPartsMultiplier,
     flat: (attack.flat ?? 0) + weaponMod(attacker, attack) + gearDamage(attacker, attack) + weaponVsBonus(attacker, target, attack),
     crit: Boolean(result.crit),
   };
