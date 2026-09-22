@@ -42,11 +42,26 @@ const TYPES = {
   '.json': 'application/json',
 };
 
+/**
+ * Flipped on for the last check: from then on the server hands out a service
+ * worker with a different version stamp, which is exactly what a deploy looks
+ * like to a browser that already has the game.
+ */
+let deployed = false;
+
 const server = createServer(async (req, res) => {
   const path = req.url === '/' ? '/index.html' : req.url.split('?')[0];
   try {
-    const body = await readFile(join(DIST, path));
-    res.writeHead(200, { 'Content-Type': TYPES[extname(path)] ?? 'application/octet-stream' }).end(body);
+    let body = await readFile(join(DIST, path));
+    if (deployed && path === '/sw.js') {
+      body = Buffer.from(String(body).replace(/underkeep-/, 'underkeep-next-'));
+    }
+    res.writeHead(200, {
+      'Content-Type': TYPES[extname(path)] ?? 'application/octet-stream',
+      // A worker the browser is told it may reuse would never be fetched
+      // again, and the update check below would have nothing to find.
+      'Cache-Control': 'no-cache',
+    }).end(body);
   } catch {
     res.writeHead(404).end('not found');
   }
@@ -229,6 +244,45 @@ try {
   }
   await chrome.page('Emulation.setSafeAreaInsetsOverride', { insets: { top: 0, bottom: 0, left: 0, right: 0 } });
   seen.push('notched phones: the frame sits inside the safe area, tall and wide, and fills it');
+
+  /* -- a new build tells the player (DECISIONS, 2026-09-22) -------------- */
+
+  // A deploy, as the installed game meets one: the page is already controlled
+  // by the old worker, the server starts serving a new one, and the game asks
+  // whether to restart. Nothing is reloaded here — that is the whole point.
+  await chrome.setSize(390, 844, 3);
+  await chrome.open(`${ORIGIN}/`, 1200);
+  deployed = true;
+  const asked = await chrome.evaluate(`(async () => {
+    const registration = await navigator.serviceWorker.getRegistration();
+    if (!registration) return 'no registration';
+    await registration.update();
+    for (let i = 0; i < 40; i += 1) {
+      const sheet = document.querySelector('[data-region="update.sheet"]');
+      if (sheet) return sheet.textContent.includes('RESTART NOW') ? 'asked' : 'wrong sheet';
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    return 'never asked';
+  })()`);
+  if (asked !== 'asked') problems.push(`a new build did not reach the player: ${asked}`);
+  else seen.push('a new build: the game notices the deploy and offers a restart');
+
+  // And RESTART NOW puts the player on it: the page comes back fresh, with
+  // nothing left to ask about and the Title screen up.
+  if (asked === 'asked') {
+    await chrome.evaluate(`[...document.querySelectorAll('[data-region="update.sheet"] button')]
+      .find((node) => node.textContent.includes('RESTART NOW')).click()`);
+    await wait(2000);
+    const after = JSON.parse(await chrome.evaluate(`JSON.stringify({
+      asked: underkeep.updates.asked,
+      controlled: Boolean(navigator.serviceWorker.controller),
+      screen: document.querySelector('[data-region]')?.dataset.region ?? 'none',
+    })`));
+    if (after.asked) problems.push('RESTART NOW did not reload the page');
+    else if (!after.controlled || !after.screen.startsWith('title.')) {
+      problems.push(`after RESTART NOW the game came back as ${after.screen}, controlled: ${after.controlled}`);
+    } else seen.push('RESTART NOW: the page reloads onto the new build and opens on the Title screen');
+  }
 } finally {
   await chrome.close();
   server.close();

@@ -37,6 +37,8 @@ import { levelUp } from './ui/screens/levelup.js';
 import { death } from './ui/screens/death.js';
 import { hall } from './ui/screens/hall.js';
 import { reaction } from './ui/screens/reaction.js';
+import { update as updateSheet } from './ui/screens/update.js';
+import { watchForUpdates } from './shell/updates.js';
 import { isWalkable } from './dungeon/floor-builder.js';
 import { createSession } from './systems/session.js';
 import { standInHero } from './systems/fight.js';
@@ -369,6 +371,7 @@ const screens = {
   death,
   hall,
   reaction,
+  update: updateSheet,
 };
 
 /**
@@ -468,6 +471,14 @@ const ctx = {
   fall,
   exportSave,
   importSave,
+  /**
+   * RESTART NOW on the Update sheet: anything still queued is written, then
+   * the page is reloaded onto the build the service worker already holds.
+   */
+  async restart() {
+    await saver.flush().catch(() => null);
+    location.reload();
+  },
   /** Why EXPORT and IMPORT are dimmed, if they are (`05` section 11). */
   get transfer() {
     const mode = slot && session ? session.hero.mode : lastSummary?.mode;
@@ -503,12 +514,40 @@ const ctx = {
 
 router = createRouter({ app, screens, frame: () => watcher.frame, ctx });
 
-// Every screen change is a save point (`00`, Screen flow).
+/* -- a new build is ready (docs/DECISIONS.md, 2026-09-22) ------------------ */
+
+/** True once the service worker has fetched a build newer than this one. */
+let updateReady = false;
+/** True once the sheet has asked. It asks once a session, never twice. */
+let updateAsked = false;
+
+/** Screens a question must never cover: a fight, and the prompt inside one. */
+const NEVER_ASK_OVER = ['combat', 'reaction', 'combatSkills'];
+
+/**
+ * Asks whether to restart, but only where the player can answer: never over a
+ * fight or the prompt inside one, never over a sheet that is already open, and
+ * never while a random outcome is still being written (`05` section 11). A
+ * moment that is not right now comes round again on the next screen change.
+ *
+ * The test is the screen, not `session.fight`: a game the tools opened for a
+ * screenshot carries a stand-in fight it is not in.
+ */
+function askAboutUpdate() {
+  if (!updateReady || updateAsked || holding) return;
+  if (router.currentSheet || NEVER_ASK_OVER.includes(router.current?.id)) return;
+  updateAsked = true;
+  router.openSheet('update');
+}
+
+// Every screen change is a save point (`00`, Screen flow), and the moment a
+// screen changes is also the moment it is safe to ask about a new build.
 for (const name of ['go', 'replace', 'openSheet', 'closeSheet']) {
   const original = router[name];
   router[name] = (...args) => {
     const out = original(...args);
     commit();
+    askAboutUpdate();
     return out;
   };
 }
@@ -547,6 +586,10 @@ globalThis.underkeep = {
     startRun(hero);
     router.go('explore');
     return saver.flush();
+  },
+  /** The new-build watch, for `npm run install-check`. */
+  get updates() {
+    return { watching: Boolean(updates), ready: updateReady, asked: updateAsked };
   },
   /** The carried streams' state, for `npm run force-close`: a roll made twice would show here. */
   luck: () => (session ? JSON.stringify(serializeStreams(session.rng)) : ''),
@@ -675,6 +718,9 @@ document.addEventListener('visibilitychange', () => {
     saver.flush().catch(() => {});
   } else {
     lastTick = Date.now();
+    // Coming back to the game is the one moment a player would notice a new
+    // build, so that is when it is worth asking the server for one.
+    updates?.check();
   }
 });
 window.addEventListener('pagehide', () => {
@@ -711,11 +757,19 @@ app.addEventListener(
 // pinch gesture inside a web app unless it is refused outright.
 document.addEventListener('gesturestart', (event) => event.preventDefault());
 
+/** The service worker watch, once it has been started. */
+let updates = null;
+
 if (isBuild && 'serviceWorker' in navigator) {
-  const register = () =>
-    navigator.serviceWorker.register('./sw.js').catch(() => {
-      // Offline play is a bonus; a failed registration must never stop a game.
+  const register = () => {
+    updates = watchForUpdates({
+      container: navigator.serviceWorker,
+      onReady: () => {
+        updateReady = true;
+        askAboutUpdate();
+      },
     });
+  };
   // The saves are opened before this line runs, so the page may well have
   // finished loading already — and a `load` listener added after that never
   // fires, which left the game with no offline copy at all.

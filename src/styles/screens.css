@@ -1310,3 +1310,22 @@
   font-size: calc(var(--u) * 0.32);
   line-height: 1.05;
 }
+
+/* --- The Update sheet (docs/DECISIONS.md, 2026-09-22) --- */
+
+/* The message fills what is left over the two keys, which stay a comfortable
+   tap in both frames. */
+.update__body {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) calc(var(--u) * 1.5) calc(var(--u) * 1.5);
+  gap: var(--gap);
+  min-height: 0;
+}
+.update__text {
+  margin: 0;
+  align-self: center;
+  padding: 0 calc(var(--u) * 0.15);
+  color: var(--bone);
+  font-size: var(--fs-body);
+  line-height: 1.35;
+}

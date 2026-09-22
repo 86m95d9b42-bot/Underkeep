@@ -871,6 +871,13 @@
     "seedRandom": "New seed",
     "begin": "BEGIN"
   },
+  "update": {
+    "title": "UPDATE READY",
+    "body": "A new version of Underkeep is ready. Your game is saved.",
+    "restart": "RESTART NOW",
+    "later": "NOT NOW",
+    "laterHint": "You will get it next time you open the game."
+  },
   "create": {
     "title": "ROLL HERO",
     "step1": "1 / 2",
