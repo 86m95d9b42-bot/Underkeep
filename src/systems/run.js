@@ -41,7 +41,7 @@ import { t } from '../data/strings.js';
 import { attune, whyNotLeaveByStone } from './travel.js';
 import { refreshGear } from './kit.js';
 import { applySkillSheet } from '../engine/skill-hooks.js';
-import { applyMemory, memoryFor, restockFloor } from './floor-memory.js';
+import { applyMemory, memoryFor, recordFloor, restockFloor } from './floor-memory.js';
 import { clearGrave, graveOn, open as openGrave } from './graves.js';
 import { search as searchTrap, trigger as fireTrap } from './traps.js';
 import {
@@ -274,6 +274,100 @@ export function firstReason(door, ex, hero) {
  * @param {(options?: object) => void} [options.leaveDungeon] the way up, which
  *   the session owns: a Waystone offers it, `travel.js` does it
  */
+/**
+ * What an event says about who hurt the hero: a trap that went off, deep water,
+ * a ward's backlash, a foul fountain. Null for everything else.
+ * @param {object} event
+ */
+export function hurtBy(event) {
+  switch (event.type) {
+    case 'trapSprung':
+      return (event.trap?.damage ?? 0) > 0 || event.trap?.condition ? { kind: 'trap', id: event.trap?.kind ?? null } : null;
+    case 'drowning':
+      return { kind: 'hazard', id: 'deep_water' };
+    case 'backlash':
+      return { kind: 'backlash' };
+    case 'fountain':
+      return event.result === 'poisoned' || event.result === 'condition' ? { kind: 'fountain' } : null;
+    default:
+      return null;
+  }
+}
+
+/**
+ * The floor's side tables — what is on a tile rather than what the tile is.
+ * The map itself is rebuilt from the seed and never saved (`05` section 14).
+ */
+export const SIDE_TABLES = [
+  'doors',
+  'keys',
+  'secrets',
+  'traps',
+  'chests',
+  'hazards',
+  'lairs',
+  'curiosities',
+  'features',
+  'secretStash',
+];
+
+/** A deep copy of every side table, for comparing against later. */
+function tablesOf(floor) {
+  const out = {};
+  for (const name of SIDE_TABLES) {
+    if (floor[name] !== undefined) out[name] = structuredClone(floor[name]);
+  }
+  return out;
+}
+
+/** Equal as data: the same keys holding the same values, at every depth. */
+function same(a, b) {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+/**
+ * Every side-table entry that differs from the baseline: changed or new ones
+ * whole, and gone ones as null. A table that is not keyed (an array, a single
+ * value) is kept whole when it changed at all.
+ */
+function changesFrom(baseline, floor) {
+  const changes = {};
+  for (const name of SIDE_TABLES) {
+    const before = baseline[name];
+    const now = floor[name];
+    if (same(before, now)) continue;
+    const keyed = now && typeof now === 'object' && !Array.isArray(now) && before && typeof before === 'object' && !Array.isArray(before);
+    if (!keyed) {
+      changes[name] = { whole: structuredClone(now ?? null) };
+      continue;
+    }
+    const entries = {};
+    for (const [at, value] of Object.entries(now)) {
+      if (!same(before[at], value)) entries[at] = structuredClone(value);
+    }
+    for (const at of Object.keys(before)) if (!(at in now)) entries[at] = null;
+    changes[name] = { entries };
+  }
+  return changes;
+}
+
+/** Puts saved changes back onto a floor rebuilt from its seed. */
+function applyChanges(floor, changes) {
+  for (const [name, change] of Object.entries(changes ?? {})) {
+    if (!SIDE_TABLES.includes(name)) continue;
+    if ('whole' in change) {
+      floor[name] = structuredClone(change.whole);
+      continue;
+    }
+    floor[name] ??= {};
+    for (const [at, value] of Object.entries(change.entries ?? {})) {
+      if (value === null) delete floor[name][at];
+      else floor[name][at] = structuredClone(value);
+    }
+  }
+  return floor;
+}
+
 export function createRun({
   masterSeed,
   floor: floorNumber = 1,
@@ -282,6 +376,7 @@ export function createRun({
   startAt,
   town,
   leaveDungeon,
+  restore,
 }) {
   const rng = streams ?? carriedStreams(masterSeed);
   let floor = buildFloor(floorNumber, masterSeed, layoutStream);
@@ -296,12 +391,18 @@ export function createRun({
 
   const memory = town ? memoryFor(town, floorNumber) : null;
   if (memory) {
-    restockFloor({ floor, memory, town, masterSeed, isWalkable });
+    // A run picked up from a save is the same visit, not a new one: it was
+    // counted, and restocked, when the hero first came down (`05` section 11).
+    if (!restore) restockFloor({ floor, memory, town, masterSeed, isWalkable });
     applyMemory(floor, memory);
-    memory.visits += 1;
+    if (!restore) memory.visits += 1;
     // The hero is here today, so today is not a return they missed.
     memory.restockedOnDay = town.day;
   }
+  // What the floor looked like when this visit began, so a save can store
+  // only what changed since (`05` section 11: "a seed plus a list of changes").
+  const baseline = tablesOf(floor);
+  if (restore?.changes) applyChanges(floor, restore.changes);
 
   let ex = createExploration(floor, memory);
   // A trip that begins at a Return Mark begins where the scroll was read
@@ -310,16 +411,23 @@ export function createRun({
     ex.pos = [...startAt.at];
     if (startAt.facing) ex.facing = startAt.facing;
   }
+  // A saved run stands where it was saved, with its clock where it was.
+  if (restore?.ex) Object.assign(ex, restore.ex, { pos: [...restore.ex.pos] });
   let wasSafe = inSafeZone(floor, ex.pos);
 
   /** @type {{ text: string, tone?: string }[]} oldest first */
-  const log = [];
+  const log = restore?.log ? [...restore.log] : [];
+
+  /** What last hurt the hero out here, for the Death screen (`05` section 12). */
+  let lastHurt = restore?.lastHurt ?? null;
 
   /** @param {object[]} events */
   function record(events) {
     for (const event of events) {
       const line = lineFor(event);
       if (line) log.push(line);
+      const hurt = hurtBy(event);
+      if (hurt) lastHurt = hurt;
     }
     if (log.length > LOG_KEPT) log.splice(0, log.length - LOG_KEPT);
     return events;
@@ -437,12 +545,15 @@ export function createRun({
   }
 
   // The hero is standing on the up stairs and its waystone, so the log opens
-  // with what is underfoot — the same events as walking onto the tile.
-  const arriving = arrivalEvents(floor, ex.pos, ex);
-  // Arriving on the stone is standing on it (`05` section 9).
-  if (town && arriving.some((event) => event.type === 'waystone')) attune(town, floor.floor);
-  record(arriving);
-  remember(floor, ex);
+  // with what is underfoot — the same events as walking onto the tile. A
+  // saved run has already arrived, and its log says so.
+  if (!restore) {
+    const arriving = arrivalEvents(floor, ex.pos, ex);
+    // Arriving on the stone is standing on it (`05` section 9).
+    if (town && arriving.some((event) => event.type === 'waystone')) attune(town, floor.floor);
+    record(arriving);
+    remember(floor, ex);
+  }
 
   const run = {
     get masterSeed() {
@@ -462,6 +573,34 @@ export function createRun({
     },
     get rng() {
       return rng;
+    },
+
+    /**
+     * The run as the save file carries it (`05` sections 11 and 14): where
+     * the hero stands and the clock, the log, and every entry of the floor's
+     * side tables that differs from how this visit found it. The map and the
+     * doors are in the town's floor memory, which is saved with the town.
+     */
+    /** What last hurt the hero on this trip, if anything did. */
+    get causeOfDeath() {
+      return lastHurt;
+    },
+
+    toSave() {
+      if (memory) recordFloor(floor, memory);
+      const { explored, seen, doorsOpened, secretsFound, hazardsCleared, keysTaken, ...clock } = ex;
+      return {
+        floor: floor.floor,
+        lastHurt,
+        ex: structuredClone({ ...clock, pos: [...ex.pos] }),
+        log: log.slice(-LOG_KEPT),
+        changes: changesFrom(baseline, floor),
+      };
+    },
+
+    /** Copies what the hero did into the floor's memory before it is let go. */
+    remember() {
+      if (memory) recordFloor(floor, memory);
     },
 
     /** What the movement pad's centre key does here (`00`, Exploration). */

@@ -26,27 +26,27 @@ import {
   skillIds,
 } from '../data/skills.js';
 import { DERIVED, modFor } from '../data/attributes.js';
+import combatData from '../data/combat.json' with { type: 'json' };
+import { SKIP } from './hooks.js';
+import { resolveAttack } from './attack.js';
+import { dealDamage, gatherParts } from './damage.js';
+import { applyCondition, has, isHelpless } from './conditions.js';
+import { isTargetable, targetableEnemies } from './field.js';
+import { zeroHp } from './defeat.js';
+import { buffOf, whyNotPlayable } from './skill-actions.js';
+
+/** `06` section 17's Auto setting for the reactions a prompt would ask about. */
+export const REACTIONS = combatData.reactions;
 
 /**
  * Handlers whose systems have not been built yet. Each says what it is waiting
  * for, the way the monster traits and the lock methods do.
  */
 export const PENDING = {
-  cleave: 'The free attack needs the Victory and Loot flow to count its kills (Phase 4).',
-  riposte: 'A reaction spends the hero’s FP outside their turn, which the Reaction prompt adds (Phase 8).',
-  backstab: 'The extra weapon dice need a weapon to take them from (`04`, Phase 5).',
-  evasion: 'Area effects arrive with the spells that make them (Phase 4, later).',
-  envenom: 'A buff that waits for the next hit needs the Skills sheet to cast it (Phase 4, later).',
-  lucky: 'The reroll is offered by the Reaction prompt (Phase 8).',
-  arcaneShield: 'The same prompt: a reaction after a hit has landed (Phase 8).',
-  blink: 'Cast as an action, which the Skills sheet will offer (Phase 4, later).',
-  archmage: 'The free spell needs the spell list first (Phase 4, later).',
-  spellblade: 'Spending FP on a hit needs the pack and the prompt (Phase 5, Phase 8).',
-  arcaneTrickster: 'Backstab dice on a spell, so it waits on Backstab.',
-  mystic: 'Temporary HP from overhealing needs the healing skills (Phase 4, later).',
+  archmage: 'The free cast is a second action in one turn, which the Combat screen does not offer yet (Phase 8, Auto-Fight).',
+  mystic: 'Temporary HP from overhealing: no example build takes Mystic, so it waits for the balance pass that wants it.',
   mysticDrain: 'The same: a damage spell to drain from.',
-  forager: 'The herb is an item (`04`, Phase 5).',
-  spiritWard: 'Cast as an action, which the Skills sheet will offer (Phase 4, later).',
+  forager: 'The herb comes after the fight, which the Victory flow will roll (Phase 8).',
 };
 
 /* -------------------------------------------------------------------------- */
@@ -130,6 +130,7 @@ export function applySkillSheet(hero) {
   // time rather than only when they are set, or a penalty would outlive the
   // armour that caused it.
   hero.spellFizzle = sheet.spellFizzle ?? 0;
+  hero.ignoresHalfCover = Boolean(sheet.ignoresHalfCover);
   hero.stealth = sheet.stealth ?? 0;
   hero.init = sheet.initiative ?? hero.init;
   hero.slots = sheet.slots ?? hero.slots;
@@ -411,7 +412,7 @@ export const HANDLERS = {
       hooks.on(
         'zeroHP',
         (payload) => {
-          if (payload.unit !== unit) return;
+          if (payload.unit !== unit) return SKIP;
           payload.saved = true;
           payload.savedBy = 'undying';
           payload.recoverTo = effect.shareOfMaxHp ?? 0.5;
@@ -425,7 +426,312 @@ export const HANDLERS = {
       ),
     ];
   },
+
+  /**
+   * Cleave: drop a front-row enemy and swing at another one, once a turn
+   * (`01` section 6).
+   */
+  cleave(hooks, unit, effect) {
+    return [
+      hooks.on(
+        'kill',
+        (payload) => {
+          const { combat, attacker, target, attack } = payload;
+          if (attacker !== unit || !combat || !target) return SKIP;
+          if ((attack?.kind ?? 'melee') !== 'melee' || target.row !== 'front') return SKIP;
+          const next = targetableEnemies(combat).find(
+            (enemy) => enemy !== target && enemy.alive && isTargetable(enemy) && enemy.row === 'front' && !enemy.object,
+          );
+          if (!next || !unit.alive) return SKIP;
+          const swing = resolveAttack(combat, unit, { ...unit.attack, kind: 'melee', target: next, cleave: true });
+          followUp(payload, 'cleave', swing);
+          return undefined;
+        },
+        { name: 'cleave', owner: unit.id, source: 'skills', limit: effect.limit },
+      ),
+    ];
+  },
+
+  /** Riposte: a melee attack misses you, and you answer it (`01` section 6). */
+  riposte(hooks, unit, effect) {
+    const cost = skill('riposte').fp ?? 0;
+    return [
+      hooks.on(
+        'miss',
+        (payload) => {
+          const { combat, attacker, target, attack } = payload;
+          if (target !== unit || !combat || !attacker?.alive) return SKIP;
+          if (effect.meleeOnly && (attack?.kind ?? 'melee') !== 'melee') return SKIP;
+          if (!unit.alive || isHelpless(unit) || (unit.fp ?? 0) < cost) return SKIP;
+          const swing = resolveAttack(combat, unit, { ...unit.attack, kind: 'melee', target: attacker, riposte: true });
+          if (!swing.legal) return SKIP;
+          unit.fp -= cost;
+          followUp(payload, 'riposte', swing);
+          return undefined;
+        },
+        { name: 'riposte', owner: unit.id, source: 'skills', limit: effect.limit },
+      ),
+    ];
+  },
+
+  /**
+   * Backstab: +2 weapon dice against a Surprised, Stunned, Asleep or Blinded
+   * target, or from hiding (`01` section 6, and Hidden in section 7).
+   */
+  backstab(hooks, unit, effect) {
+    return [
+      hooks.on(
+        'damageCalc',
+        (payload) => {
+          if (payload.attacker !== unit || !payload.weapon || payload.overTime) return;
+          if (!opening(payload, effect.vs)) return;
+          addDiceOfMain(payload, effect.weaponDice ?? 2, 'backstab');
+        },
+        { name: 'backstab', owner: unit.id, source: 'skills' },
+      ),
+    ];
+  },
+
+  /**
+   * Arcane Trickster: a damage spell from hiding, or against a Surprised
+   * target, gets the Backstab dice — of its own die, a spell having no weapon
+   * (docs/DECISIONS.md).
+   */
+  arcaneTrickster(hooks, unit) {
+    const dice = hookEffects('backstab', 1)[0]?.weaponDice ?? 2;
+    return [
+      hooks.on(
+        'damageCalc',
+        (payload) => {
+          if (payload.attacker !== unit || payload.weapon || payload.overTime) return;
+          if (!(payload.attack?.fromHiding || payload.target?.surprised)) return;
+          addDiceOfMain(payload, dice, 'arcaneTrickster');
+        },
+        { name: 'arcaneTrickster', owner: unit.id, source: 'skills' },
+      ),
+    ];
+  },
+
+  /**
+   * Evasion rank 2: a Reflex save made against an area effect means no damage
+   * at all. Anything that halves on a Reflex save is an area effect for this.
+   */
+  evasion(hooks, unit, effect, rank) {
+    if (rank < (effect.fromRank ?? 2)) return [];
+    return [
+      hooks.on(
+        'damageCalc',
+        (payload) => {
+          if (payload.target !== unit) return;
+          const save = payload.result?.save;
+          if (!save?.passed || save.save !== 'reflex') return;
+          if (!(payload.attack?.area || payload.attack?.save?.half)) return;
+          payload.allPartsMultiplier = 0;
+        },
+        { name: 'evasion', owner: unit.id, source: 'skills' },
+      ),
+    ];
+  },
+
+  /**
+   * Lucky: once a combat, a d20 is thrown again. Played on Auto — the attack
+   * against you that would take more than a quarter of your hit points.
+   */
+  lucky(hooks, unit, effect) {
+    return [
+      hooks.on(
+        'attackRoll',
+        (payload) => {
+          if (payload.phase !== 'judge' || payload.target !== unit || !payload.hit) return SKIP;
+          if (!worthAReaction(unit, payload.attack, payload.crit)) return SKIP;
+          payload.reroll = true;
+          return undefined;
+        },
+        { name: 'lucky', owner: unit.id, source: 'skills', limit: effect.limit },
+      ),
+    ];
+  },
+
+  /** Arcane Shield: +4 DEF against a hit, after the roll; on Auto (`06` section 17). */
+  arcaneShield(hooks, unit, effect) {
+    const cost = skill('arcane_shield').fp ?? 0;
+    return [
+      hooks.on(
+        'attackRoll',
+        (payload) => {
+          if (payload.phase !== 'judge' || payload.target !== unit || !payload.hit) return SKIP;
+          // A natural 20 hits whatever the DEF, so the shield would be wasted.
+          if (payload.roll === 20 || (unit.fp ?? 0) < cost || isHelpless(unit)) return SKIP;
+          if (payload.total >= payload.def + (effect.def ?? 4)) return SKIP;
+          if (!worthAReaction(unit, payload.attack, payload.crit)) return SKIP;
+          unit.fp -= cost;
+          payload.bonusDef = (payload.bonusDef ?? 0) + (effect.def ?? 4);
+          return undefined;
+        },
+        { name: 'arcaneShield', owner: unit.id, source: 'skills', limit: effect.limit },
+      ),
+    ];
+  },
+
+  /** Blink: while it holds, a hit against you misses half the time. */
+  blink(hooks, unit, effect) {
+    return [
+      hooks.on(
+        'attackRoll',
+        (payload) => {
+          if (payload.phase !== 'judge' || payload.target !== unit || !payload.hit) return;
+          if (!buffOf(payload.combat, unit, 'blink')) return;
+          if (payload.combat.rng.chance(effect.chance ?? 0.5)) payload.hit = false;
+        },
+        { name: 'blink', owner: unit.id, source: 'skills' },
+      ),
+    ];
+  },
+
+  /**
+   * Spellblade: a melee hit takes up to 3 FP, 1d6 each. The extra dice are
+   * part of the same hit, so they are added after it rather than run through
+   * the damage order again (DR once per hit, `06` section 7 step 9).
+   */
+  spellblade(hooks, unit, effect) {
+    return [
+      hooks.on(
+        'hit',
+        (payload) => {
+          const { combat, attacker, target, attack, result } = payload;
+          if (attacker !== unit || !combat || !target?.alive) return;
+          if ((attack?.kind ?? 'melee') !== 'melee' || result?.effectOnly) return;
+          const spend = Math.min(effect.maxFp ?? 3, unit.fp ?? 0);
+          if (spend <= 0) return;
+          unit.fp -= spend;
+          const [count, sides] = String(effect.dicePerFp ?? '1d6').split('d').map(Number);
+          const amount = combat.rng.dice(count * spend, sides);
+          dealDamage(combat, target, amount, { attacker: unit, attack, kind: 'spellblade' });
+          if (result?.damage) result.damage.total = (result.damage.total ?? 0) + amount;
+          if (target.hp <= 0 && target.alive) {
+            const zero = zeroHp(combat, target, { attacker: unit, attack, result, cause: 'attack' });
+            if (zero.died && result) result.killed = true;
+          }
+        },
+        { name: 'spellblade', owner: unit.id, source: 'skills' },
+      ),
+    ];
+  },
+
+  /** Envenom: the next hit this combat Poisons its target. */
+  envenom(hooks, unit) {
+    return [
+      hooks.on(
+        'hit',
+        (payload) => {
+          const { combat, attacker, target, result } = payload;
+          if (attacker !== unit || !combat || !target?.alive || result?.effectOnly) return;
+          const state = combat.skillState?.[unit.id];
+          if (!state?.buffs?.envenom) return;
+          state.buffs.envenom = null;
+          const applied = applyCondition(target, 'poisoned', { source: unit.id, onOwnTurn: false });
+          if (applied.applied) payload.say(`${target.id} is poisoned`);
+        },
+        { name: 'envenom', owner: unit.id, source: 'skills' },
+      ),
+    ];
+  },
+
+  /** Spirit Ward: DR 3 for the rest of the combat. */
+  spiritWard(hooks, unit, effect) {
+    return [
+      hooks.on(
+        'damageCalc',
+        (payload) => {
+          if (payload.target !== unit || payload.overTime) return;
+          if (!buffOf(payload.combat, unit, 'spiritWard')) return;
+          payload.dr = (payload.dr ?? 0) + (effect.dr ?? 3);
+        },
+        { name: 'spiritWard', owner: unit.id, source: 'skills' },
+      ),
+    ];
+  },
+
+  /** Hunter's Mark: +2 to hit and +1d6 damage against the marked foe (Ranger). */
+  huntersMark(hooks, unit) {
+    const marked = (payload) => {
+      const mark = buffOf(payload.combat, unit, 'huntersMark');
+      return mark && payload.attacker === unit && payload.target?.id === mark.target ? mark : null;
+    };
+    return [
+      hooks.on(
+        'attackRoll',
+        (payload) => {
+          if (payload.phase !== 'gather') return;
+          const mark = marked(payload);
+          if (mark) payload.bonus = (payload.bonus ?? 0) + (mark.toHit ?? 0);
+        },
+        { name: 'huntersMark', owner: unit.id, source: 'skills' },
+      ),
+      hooks.on(
+        'damageCalc',
+        (payload) => {
+          const mark = marked(payload);
+          if (!mark?.extraDice || payload.overTime) return;
+          payload.parts = [...(payload.parts ?? []), { ...parseDice(mark.extraDice), extra: true }];
+        },
+        { name: 'huntersMark', owner: unit.id, source: 'skills' },
+      ),
+    ];
+  },
 };
+
+
+/* -------------------------------------------------------------------------- */
+/* What the handlers share                                                    */
+/* -------------------------------------------------------------------------- */
+
+/** A free blow a skill threw, hung on the result that caused it for the log. */
+function followUp(payload, skillId, result) {
+  const host = payload.result;
+  if (!host) return;
+  host.followUps = [...(host.followUps ?? []), { skill: skillId, result }];
+}
+
+/** Whether the target is open to a Backstab: listed conditions, surprise, or hiding. */
+function opening(payload, vs = []) {
+  const target = payload.target;
+  if (payload.attack?.fromHiding) return true;
+  if (!target) return false;
+  return vs.some((id) => (id === 'surprised' ? target.surprised : has(target, id)));
+}
+
+/** Adds more of the main part's own dice, which is what "weapon dice" are. */
+function addDiceOfMain(payload, times, tag) {
+  const main = (payload.parts ?? []).find((part) => part.main) ?? payload.parts?.[0];
+  if (!main || !main.count) return;
+  const extra = [];
+  for (let i = 0; i < times; i += 1) {
+    extra.push({ count: main.count, sides: main.sides, flat: 0, ...(main.type ? { type: main.type } : {}), extra: true, [tag]: true });
+  }
+  payload.parts = [...payload.parts, ...extra];
+}
+
+/** A dice string as a part, for an extra die a buff adds. */
+function parseDice(text) {
+  const [head, type] = String(text).split(' ');
+  const [count, sides] = head.split('d').map(Number);
+  return { count: count || 1, sides, flat: 0, ...(type ? { type } : {}) };
+}
+
+/**
+ * `06` section 17's Auto rule: a reaction is spent on a hit that would take
+ * more than a quarter of the hero's maximum. What it "would take" is its
+ * average, with the dice doubled on a critical.
+ */
+export function worthAReaction(unit, attack, crit = false) {
+  let average = 0;
+  for (const part of gatherParts(attack ?? {})) {
+    const dice = part.count * (crit ? 2 : 1);
+    average += (dice * (part.sides + 1)) / 2 + (part.flat ?? 0);
+  }
+  return average > (unit.maxHp ?? 0) * REACTIONS.autoShareOfMaxHp;
+}
 
 /**
  * Registers a hero's hook effects on a fight.
@@ -454,23 +760,15 @@ export function registerSkills(combat, unit = combat.hero) {
 }
 
 /**
- * An active skill is an action, and the Combat: Skills sheet has nothing to
- * resolve one with yet — it lists what the hero knows and stops there. The
- * action blocks in the data are what that resolver will read.
- */
-export const ACTIVE_PENDING =
-  'Using a skill needs the Combat: Skills sheet to resolve an action (Phase 4, later).';
-
-/**
  * True when everything a skill declares is applied by something that exists
- * today: its sheet numbers, its dungeon bonuses, and a handler for each of its
- * hooks. An active skill is not live until its action can be used.
+ * today: its sheet numbers, its dungeon bonuses, a handler for each of its
+ * hooks, and — for a skill with an action — a resolver for the action.
  */
 export function isLive(id) {
   const entry = skill(id);
-  if (entry.type === 'active') return false;
+  if (entry.action && whyNotPlayable(id) !== null) return false;
   const effects = entry.effects ?? [];
-  if (effects.length === 0) return false;
+  if (effects.length === 0) return Boolean(entry.action);
   return effects.every(
     (effect) => effect.sheet || effect.explore || (effect.handler && HANDLERS[effect.handler]),
   );

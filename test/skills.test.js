@@ -313,10 +313,13 @@ describe('what a skill does in a fight', () => {
   });
 
   it('registers nothing for a skill whose handler is still waiting', () => {
+    expect(isLive('mystic')).toBe(false);
+    expect(PENDING.mystic).toBeTruthy();
+    // Cleave has its handler now: it registers on kill, and it is live.
     const combat = fightWith([{ id: 'cleave', rank: 1 }]);
     expect(combat.hooks.count('kill')).toBeGreaterThan(0);
-    expect(isLive('cleave')).toBe(false);
-    expect(PENDING.cleave).toMatch(/Phase/);
+    expect(isLive('cleave')).toBe(true);
+    expect(PENDING.cleave).toBeUndefined();
   });
 
   it('refuses a handler that is neither written nor listed', () => {

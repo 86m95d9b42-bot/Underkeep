@@ -21,7 +21,7 @@ export const title = {
     settings: { tall: [1, 9, 17, 18], tap: true },
   },
 
-  build({ router, save }) {
+  build({ router, save, continueGame }) {
     const last = save?.lastPlayed ?? null;
 
     const logo = el(
@@ -87,7 +87,7 @@ export const title = {
         label: t('title.continue'),
         kind: 'primary',
         reason: last && router.has('explore') ? undefined : t('title.continueDisabled'),
-        onTap: () => router.go('explore'),
+        onTap: () => (continueGame ? continueGame() : router.go('explore')),
       }),
       newGame: button({
         label: t('title.newGame'),

@@ -31,13 +31,20 @@ import { combat } from './ui/screens/combat.js';
 import { combatSkills } from './ui/screens/combat-skills.js';
 import { loot } from './ui/screens/loot.js';
 import { levelUp } from './ui/screens/levelup.js';
-import { PLACEHOLDER_HERO } from './systems/run.js';
+import { death } from './ui/screens/death.js';
+import { hall } from './ui/screens/hall.js';
 import { isWalkable } from './dungeon/floor-builder.js';
 import { createSession } from './systems/session.js';
 import { standInHero } from './systems/fight.js';
 import { chooseOrigin, createDraft, finish, setName } from './systems/creation.js';
 import { awardXp, xpNeeded } from './systems/levelling.js';
 import { learn } from './systems/skill-tree.js';
+import { openStore, summaryOf } from './save/store.js';
+import { createSaver } from './save/saver.js';
+import { restoreSession, slotFor, takeSnapshot } from './save/snapshot.js';
+import { serializeStreams } from './engine/rng.js';
+import { t } from './data/strings.js';
+import saving from './data/saving.json' with { type: 'json' };
 
 const app = /** @type {HTMLElement} */ (document.getElementById('app'));
 const isBuild = document.documentElement.dataset.build === '1';
@@ -53,10 +60,10 @@ function applySettings(values) {
 applySettings(settings.all);
 
 /**
- * Until the save layer arrives (Phase 8) a session holds one run in memory.
- * Creation makes one from the hero it rolled; opening a screen without having
- * made a hero — the tools do, through the URL fragment — rolls one from the
- * demonstration seed, so every screen has a real hero to draw.
+ * Creation makes a session from the hero it rolled, and Continue picks one up
+ * from its save. Opening a screen without either — the tools do, through the
+ * URL fragment — rolls one from the demonstration seed, so every screen has a
+ * real hero to draw. A demonstration game is never saved.
  */
 const DEMO_SEED = 20260918;
 
@@ -69,6 +76,125 @@ function demoHero() {
 
 /** @type {ReturnType<typeof createSession> | null} */
 let session = null;
+
+/* -- saving (`05` section 11) --------------------------------------------- */
+
+/** The save slots, once IndexedDB has opened; null where there is none. */
+let store = null;
+/** The slot the game in progress writes to; null for a demonstration game. */
+let slot = null;
+/**
+ * True for a real game — one creation began or Continue picked up — from the
+ * moment it exists, before its slot has even been chosen. Only a
+ * demonstration game lets drawing a screen start a trip or a fight.
+ */
+let realGame = false;
+/** What the Title screen shows of the last game, read at launch. */
+let lastSummary = null;
+/** True while a random outcome is being written, before it may be shown. */
+let holding = false;
+/** The Hall of the Dead as last read, for the screen to draw (`05` section 12). */
+let hallRecords = [];
+
+/** Reads the Hall again after it has changed. */
+async function refreshHall() {
+  if (!store) return;
+  hallRecords = await store.hall().catch(() => hallRecords);
+}
+/** When play time was last counted. It only runs while the game is in front. */
+let lastTick = Date.now();
+
+/** The session as a save, with the play time since the last one added. */
+function snapshot() {
+  const now = Date.now();
+  if (document.visibilityState === 'visible') session.played((now - lastTick) / 1000);
+  lastTick = now;
+  return takeSnapshot(session, { screen: router?.current?.id ?? null });
+}
+
+const saver = createSaver({
+  store: { write: (where, save) => store.write(where, save) },
+  slot: () => (store && session ? slot : null),
+  snapshot,
+  // Any carried stream that moved means the action rolled something.
+  luck: () => (session ? JSON.stringify(serializeStreams(session.rng)) : ''),
+  onError: (error) => console.warn('underkeep: the game could not be saved', error),
+});
+
+/** Commits now, and never lets a failed write stop the game. */
+function commit() {
+  return saver.commit().catch(() => null);
+}
+
+/**
+ * A new game's slot: the first free Adventurer slot, or an Ironman's own
+ * (`05` section 11). Written the moment it is chosen.
+ */
+async function claimSlot(hero) {
+  if (!store) return;
+  slot = slotFor(hero, await store.list(), saving.slots.adventurer);
+  await commit();
+}
+
+/** True while a fall is being written, so a second tap cannot fall twice. */
+let falling = false;
+
+async function fall({ cause = null } = {}) {
+  if (falling) return;
+  falling = true;
+  try {
+    const fell = game().heroFell({ cause });
+    if (fell.mode === 'ironman') {
+      // No write may land after the burial: the slot is let go first, so
+      // nothing more is queued for it, and any write already running is
+      // waited out before the save is deleted.
+      const buried = slot;
+      slot = null;
+      lastSummary = null;
+      await saver.commit().catch(() => null);
+      if (store && buried) {
+        await store.bury(buried, fell.record).catch((error) => console.warn('underkeep: the Ironman save could not be buried', error));
+        await refreshHall();
+      }
+    } else {
+      await commit();
+    }
+    // Replaced, not pushed: there is no going back into the fight that ended.
+    router.replace('death', { record: fell.record, grave: fell.grave, mode: fell.mode });
+  } finally {
+    falling = false;
+  }
+}
+
+/**
+ * Continue (`05` section 13): the last slot, as it was left. A damaged main
+ * save falls back on the backup, and the player is told so.
+ */
+async function continueGame() {
+  if (!store) return;
+  const last = await store.lastSlot();
+  const { save, recovered } = last ? await store.read(last) : { save: null };
+  if (!save) {
+    lastSummary = null;
+    router.render();
+    return;
+  }
+  session = restoreSession(save, { go: (to, params) => router.go(to, params) });
+  slot = last;
+  realGame = true;
+  lastTick = Date.now();
+  const underground = Boolean(session.run);
+  const notice = recovered ? t('save.recovered') : null;
+  if (notice && underground) session.run.log.push({ text: notice, tone: 'danger' });
+  // Mid-fight, the fight: its last three lines are already in its log
+  // (`05` section 13).
+  if (session.fight) {
+    if (notice) session.fight.log.push({ round: session.fight.round, text: notice, tone: 'danger' });
+    router.go('combat');
+    return;
+  }
+  router.go(underground ? 'explore' : 'town', notice && !underground ? { notice } : {});
+}
 
 /**
  * The game in progress. Creation makes one from the hero it rolled; opening
@@ -85,8 +211,21 @@ function startRun(newHero) {
       difficulty: newHero?.difficulty ?? settings.all.difficulty ?? 'normal',
       go: (to, params) => router.go(to, params),
     });
+    slot = null;
+    realGame = Boolean(newHero);
+    if (newHero) claimSlot(newHero);
   }
   return session.run ?? session.descend({ floor: 1 });
+}
+
+/**
+ * What the town-side screens read while the hero is in town: the hero, the
+ * carried streams, and no floor. Asking for the run must never start a trip
+ * (`05` section 12: a trip is counted by the Dungeon Gate, not by a screen).
+ */
+function townView() {
+  const current = game();
+  return { hero: current.hero, rng: current.rng, floor: null, log: [], masterSeed: current.masterSeed };
 }
 
 /** The session, made on the first ask. */
@@ -95,17 +234,27 @@ function game() {
   return /** @type {ReturnType<typeof createSession>} */ (session);
 }
 
+/** Play time the way the Last Played card shows it: 45m, 3h 20m. */
+function playedText(seconds) {
+  const minutes = Math.floor((seconds ?? 0) / 60);
+  return minutes >= 60 ? `${Math.floor(minutes / 60)}h ${minutes % 60}m` : `${minutes}m`;
+}
+
 const save = {
-  hasGame: true,
+  get hasGame() {
+    return Boolean(slot || lastSummary);
+  },
+  /** The game in progress if it is a saved one, otherwise the last saved game. */
   get lastPlayed() {
-    const who = session?.hero ?? PLACEHOLDER_HERO;
+    const live = slot && session ? summaryOf(takeSnapshot(session)) : lastSummary;
+    if (!live) return null;
     return {
-      name: who.name,
-      level: who.level,
-      floor: session?.run?.floor.floor ?? 1,
-      theme: session?.run?.floor.spec.theme ?? '',
-      mode: who.mode === 'ironman' ? 'Ironman' : 'Adventurer',
-      played: '0m',
+      name: live.name,
+      level: live.level,
+      floor: live.floor ?? 1,
+      theme: live.place === 'town' ? t('town.title') : '',
+      mode: live.mode === 'ironman' ? 'Ironman' : 'Adventurer',
+      played: playedText(live.playTimeSec),
     };
   },
 };
@@ -136,6 +285,8 @@ const screens = {
   combatSkills,
   loot,
   levelUp,
+  death,
+  hall,
 };
 
 /**
@@ -169,11 +320,37 @@ const ctx = {
   // Every screen reads the game in progress; `systems/session.js` is what
   // one is, and this hands the screens their way into it.
   get run() {
-    return game().run ?? startRun();
+    const current = game();
+    if (current.run) return current.run;
+    // A saved game in town stays in town; only a demonstration game walks
+    // straight down, so the tools always have a floor to draw.
+    return realGame ? townView() : startRun();
   },
   startRun,
+  continueGame,
+  /** True while a random outcome is being written, before it may be shown. */
+  get holding() {
+    return holding;
+  },
+  /**
+   * Resolves an action and saves it the way `05` section 11 says: a random
+   * outcome is committed before the promise hands it back to be shown.
+   */
+  after(resolve) {
+    holding = true;
+    return saver.after(resolve).finally(() => {
+      holding = false;
+    });
+  },
+  /**
+   * The fight in front of the hero. Every render reads this (the router
+   * spreads the context), so in a saved game it only ever answers — a fight
+   * is started by the encounter, never by drawing a screen. A demonstration
+   * game still rolls one, so the tools can open the Combat screen.
+   */
   get fight() {
-    return game().fight ?? startFight();
+    const current = game();
+    return current.fight ?? (realGame ? null : startFight());
   },
   get town() {
     return game().town;
@@ -188,16 +365,43 @@ const ctx = {
     return game().leaveDungeon(options);
   },
   /**
-   * The hero fell (`01` section 12). The Death screen is Phase 8's; the rules
-   * are here, so whatever asks gets the same answer: an Adventurer wakes in
-   * town with a grave behind them, and an Ironman's run is over.
+   * The hero fell (`01` section 12, `05` sections 9, 11 and 12). The fall is
+   * resolved and written before the Death screen shows it: an Adventurer's
+   * grave is saved with them waking in town; an Ironman's save is deleted
+   * and their tombstone goes to the Hall in the same transaction.
+   * @param {{ cause?: object }} [options]
    */
-  heroFell() {
-    return game().heroFell();
+  fall,
+  /** The Hall of the Dead, best first (`05` section 12). */
+  get hall() {
+    return hallRecords;
+  },
+  /**
+   * A boss has fallen. Beating the last one finishes the game, and a finished
+   * game goes to the Hall of the Dead, whichever the mode (`05` section 12).
+   */
+  async bossBeaten(floor) {
+    const beaten = game().bossBeaten(floor);
+    if (beaten.finished && store) {
+      await store.addToHall(beaten.finished).catch((error) => console.warn('underkeep: the victory could not be recorded', error));
+      await refreshHall();
+    }
+    await commit();
+    return beaten;
   },
 };
 
 router = createRouter({ app, screens, frame: () => watcher.frame, ctx });
+
+// Every screen change is a save point (`00`, Screen flow).
+for (const name of ['go', 'replace', 'openSheet', 'closeSheet']) {
+  const original = router[name];
+  router[name] = (...args) => {
+    const out = original(...args);
+    commit();
+    return out;
+  };
+}
 
 // A settings change repaints whatever screen is open.
 settings.subscribe((values) => {
@@ -220,6 +424,30 @@ globalThis.underkeep = {
   settings,
   // `npm run shots` opens Create: Origin, which needs a hero half-made.
   newDraft: (options) => createDraft({ seed: DEMO_SEED, rollMode: 'standard', ...options }),
+
+  /**
+   * A real, saved new game, as creation would start one: the save checks use
+   * it to play, close the page, and pick the game back up.
+   */
+  newGame({ seed = DEMO_SEED, origin = 'sellsword', mode = 'adventurer' } = {}) {
+    const hero = finish(setName(chooseOrigin(createDraft({ seed, rollMode: 'standard' }), origin), 'Harrow'));
+    hero.mode = mode;
+    startRun(hero);
+    router.go('explore');
+    return saver.flush();
+  },
+  /** The save layer, for the tools that check it. */
+  saves: {
+    get slot() {
+      return slot;
+    },
+    get store() {
+      return store;
+    },
+    commit,
+    flush: () => saver.flush(),
+    continueGame,
+  },
 
   /**
    * And the Hero screens want a hero who has been somewhere: this levels the
@@ -294,9 +522,49 @@ globalThis.underkeep = {
   },
 };
 
+/**
+ * Opens the save slots and reads what the Title screen shows of the last game.
+ * A browser with no IndexedDB still plays; it just cannot keep the game.
+ */
+async function openSaves() {
+  try {
+    store = await openStore();
+    const last = await store.lastSlot();
+    const { save } = last ? await store.read(last) : { save: null };
+    lastSummary = save ? summaryOf(save) : null;
+    await refreshHall();
+  } catch (error) {
+    store = null;
+    console.warn('underkeep: saving is unavailable here', error);
+  }
+}
+
 // The URL fragment may name a screen, which is how tools/shots.js opens each
 // one for a frame check. Anything unknown just starts at the Title screen.
+await openSaves();
 router.go(screens[location.hash.slice(1)] ? location.hash.slice(1) : 'title');
+
+// Any tap that changed the game — a purchase, an equip, a learned skill — is
+// written straight away (`05` section 11). This listener runs after the
+// button's own, and a write nobody needed costs one small record.
+app.addEventListener('click', () => {
+  if (slot) commit();
+});
+
+// Going to the background writes anything pending; coming back restarts the
+// play-time clock.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    if (session && slot) session.played((Date.now() - lastTick) / 1000);
+    lastTick = Date.now();
+    saver.flush().catch(() => {});
+  } else {
+    lastTick = Date.now();
+  }
+});
+window.addEventListener('pagehide', () => {
+  saver.flush().catch(() => {});
+});
 
 // A panel flashes its outline for 150 ms on a tap; no other animation is needed
 // to understand the game (00-build-outline.md, "Feedback").

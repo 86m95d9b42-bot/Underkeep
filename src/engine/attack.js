@@ -90,6 +90,8 @@ export function coverPenalty(combat, attacker, target, attack = {}) {
   const kind = attack.kind ?? 'melee';
   if (kind === 'melee' || attack.autoHit) return 0;
   if (target.row !== ROWS[1]) return 0;
+  // Ranger and the Seeking property (`01` section 6, `04` section 4).
+  if (attacker?.ignoresHalfCover && kind === 'ranged') return 0;
   const frontStands = combat.units.some(
     (unit) =>
       unit.side === target.side && unit.row === ROWS[0] && unit.alive && onField(unit),

@@ -74,7 +74,7 @@ export const town = {
   pattern: 'fold',
   regions: REGIONS,
 
-  build({ router, run, town: here, descend }) {
+  build({ router, run, town: here, descend, params = {} }) {
     const hero = run.hero;
 
     const bars = el('div', { class: 'region bars' }, [
@@ -128,7 +128,8 @@ export const town = {
     return {
       topBar: topBar({
         title: t('town.title'),
-        sub: subtitleFor(here),
+        // A game picked up from its backup says so, once (`05` section 11).
+        sub: params.notice ?? subtitleFor(here),
         chips: [
           chip(t('town.level', { n: hero.level ?? 1 })),
           chip(t('town.gold', { n: hero.gold ?? 0 }), { tone: 'accent' }),

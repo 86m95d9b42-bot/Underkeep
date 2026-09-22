@@ -593,7 +593,8 @@
         "area": true,
         "damage": {
           "perLevel": "1d6",
-          "maxDice": 10
+          "maxDice": 10,
+          "type": "fire"
         },
         "save": "reflex",
         "onSave": "half"
@@ -914,6 +915,10 @@
       "effects": [
         {
           "sheet": "ignoresHalfCover"
+        },
+        {
+          "hook": "attackRoll",
+          "handler": "huntersMark"
         }
       ]
     },

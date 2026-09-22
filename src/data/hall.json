@@ -1,0 +1,12 @@
+{
+  "_source": "05 section 12, Hall of the Dead. Score = XP + gold carried + (deepest floor x 1,000) + (bosses defeated x 500), doubled for a victory and x1.5 for Ironman. The screen shows the top 20 records.",
+  "score": {
+    "perFloor": 1000,
+    "perBoss": 500,
+    "victory": 2,
+    "ironman": 1.5
+  },
+  "kept": 20,
+  "_bestItem": "The best item owned: the rarest one the hero carries, and the dearest of those at the Shop's price (docs/DECISIONS.md).",
+  "rarityOrder": ["common", "uncommon", "rare", "unique"]
+}

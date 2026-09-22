@@ -19,6 +19,7 @@ import { FACING_LETTER } from '../../dungeon/movement.js';
 import { createView, createAnimator, poseFor, doorOffsets } from '../../dungeon/view.js';
 import { inDarkness } from '../../dungeon/step-clock.js';
 import { onSwipe, SWIPE_COMMANDS } from '../../shell/swipe.js';
+import { commitThenShow } from '../commit.js';
 
 /**
  * Where everything sits, right-handed. Tall placements come from the screen
@@ -132,7 +133,8 @@ export const explore = {
     return true;
   },
 
-  build({ router, run, frame, haptics }) {
+  build(ctx) {
+    const { router, run, frame, haptics, fall } = ctx;
     const floor = run.floor;
     const ex = run.ex;
 
@@ -217,8 +219,15 @@ export const explore = {
     };
 
     /** Resolve, then draw: the state has already moved when the tween starts. */
-    const press = (command) => {
-      const { outcome } = run.press(command);
+    /** A trap, deep water or a foul fountain can end the hero out here too. */
+    const fell = () => {
+      if ((run.hero.hp ?? 1) > 0 || !fall) return false;
+      fall({ cause: run.causeOfDeath });
+      return true;
+    };
+
+    const press = (command) => commitThenShow(ctx, () => run.press(command), ({ outcome }) => {
+      if (fell()) return;
       paintLog();
       paintChips();
       if (outcome.blocked) haptics?.buzz?.('bump');
@@ -227,12 +236,13 @@ export const explore = {
       if (!view) return;
       view.setLight(inDarkness(floor, ex.pos) ? 'darkness' : 'torch');
       animator.moveTo(poseFor(ex.pos, ex.facing));
-    };
+    });
 
-    const act = () => {
+    const act = () => commitThenShow(ctx, () => run.act(), (acted) => {
+      if (fell()) return;
       // A chest has a screen of its own (`03` section 7): the run says so
       // rather than resolving anything itself.
-      if (run.act().openChest) {
+      if (acted.openChest) {
         router.go('chest');
         return;
       }
@@ -240,7 +250,7 @@ export const explore = {
       paintChips();
       paintContext();
       animator?.redraw();
-    };
+    });
 
     /* -- the keys ------------------------------------------------------- */
 

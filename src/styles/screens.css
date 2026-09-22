@@ -1031,3 +1031,142 @@
   grid-template-rows: repeat(3, minmax(0, 1fr));
   gap: var(--gap);
 }
+
+/* --- Death (00, "Combat and Rewards") ------------------------------------ */
+
+.banner--death .banner__word {
+  font-size: calc(var(--u) * 0.36);
+  color: var(--danger);
+}
+
+/* The stone: rounded at the top, square at the foot, as the mockup draws it. */
+.stonebox {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  min-height: 0;
+}
+.stone,
+.wake {
+  box-sizing: border-box;
+  width: min(100%, calc(var(--u) * 6.6));
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--u) * 0.22);
+  padding: 0 calc(var(--u) * 0.36);
+  text-align: center;
+  background: var(--panel);
+  border: calc(var(--u) * 0.09) solid var(--bone);
+  overflow: hidden;
+}
+.stone {
+  border-radius: calc(var(--u) * 3.3) calc(var(--u) * 3.3) var(--radius) var(--radius);
+}
+.wake {
+  border-radius: var(--radius);
+  border-color: var(--accent);
+}
+.stone__lies {
+  font-family: var(--font-label);
+  font-size: calc(var(--u) * 0.42);
+  color: var(--muted);
+}
+.stone__name,
+.wake__title {
+  font-family: var(--font-label);
+  font-size: calc(var(--u) * 0.92);
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+.wake__title {
+  font-size: calc(var(--u) * 0.6);
+  color: var(--accent);
+}
+.stone__line,
+.wake__gold {
+  font-size: var(--fs-body);
+  font-weight: 700;
+}
+.wake__gold {
+  color: var(--accent);
+}
+.stone__cause {
+  font-size: calc(var(--u) * 0.42 * var(--text-scale));
+  font-weight: 700;
+  color: var(--danger);
+}
+.stone__where {
+  font-size: var(--fs-body);
+  font-weight: 700;
+  color: var(--muted);
+}
+
+/* The score, and the run under it. */
+.scorebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 calc(var(--u) * 0.28);
+  border-color: var(--accent);
+}
+.scorebar__label {
+  font-family: var(--font-label);
+  font-size: calc(var(--u) * 0.42);
+}
+.scorebar__value {
+  font-family: var(--font-label);
+  font-size: calc(var(--u) * 0.7);
+  color: var(--accent);
+}
+.runstats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: center;
+  text-align: center;
+  border-color: var(--rule);
+}
+.runstat {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 0.04);
+  min-width: 0;
+}
+.runstat__label {
+  font-family: var(--font-label);
+  font-size: calc(var(--u) * 0.26);
+  color: var(--muted);
+}
+.runstat__value {
+  font-size: calc(var(--u) * 0.35 * var(--text-scale));
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 calc(var(--u) * 0.08);
+}
+
+/* --- Hall of the Dead (05 section 12) ------------------------------------ */
+
+.hall__empty {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 0.12);
+  padding: calc(var(--u) * 0.3);
+}
+.stone--victory {
+  border-color: var(--accent);
+}
+.stone--victory .stone__lies {
+  color: var(--accent);
+}
+.stone__cause--victory {
+  color: var(--accent);
+}
+.stone__score {
+  font-family: var(--font-label);
+  font-size: calc(var(--u) * 0.4);
+  color: var(--accent);
+}

@@ -58,6 +58,8 @@ export function whyNotUse(hero, instance, { inCombat = true } = {}) {
     const wanted = entry.school === 'spirit' ? 11 : 11;
     if (score < wanted) return needs === 'wits' ? 'needsWits' : 'needsIntellect';
   }
+  // A torch in a fight is fire, not light (`02` section 2, Torches as Tools).
+  if (inCombat && entry.fireSource) return null;
   if (waitingOn(entry.use)) return 'notHere';
   if (!inCombat && entry.use?.thrown) return 'notInAFight';
   return null;
@@ -111,7 +113,7 @@ export function actionForItem(hero, instanceId, { target, inCombat = true, floor
   const name = nameOf(instance, hero.identification);
 
   if (entry.casts) {
-    const built = actionForSkill(hero, entry.casts, { target });
+    const built = actionForSkill(hero, entry.casts, { target, fromItem: true });
     if (!built.action) return { why: built.why };
     return {
       action: {
@@ -125,6 +127,14 @@ export function actionForItem(hero, instanceId, { target, inCombat = true, floor
         casts: entry.casts,
         tags: [...(built.action.tags ?? []), 'scroll'],
       },
+    };
+  }
+
+  // Torches as Tools: it sears a Hydra stump or burns a Fallen troll, and
+  // is used up doing it (`02` section 2).
+  if (inCombat && entry.fireSource) {
+    return {
+      action: { id: 'item', item: instanceId, baseId: instance.baseId, name, use: { sear: true }, fp: 0, tags: ['item', entry.category] },
     };
   }
 

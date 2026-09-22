@@ -17,6 +17,7 @@ import { button } from '../parts/button.js';
 import { el } from '../parts/el.js';
 import { t } from '../../data/strings.js';
 import { skillFor } from '../../data/skills.js';
+import { commitThenShow } from '../commit.js';
 
 /** @type {import('../../shell/router.js').Screen} */
 export const combatSkills = {
@@ -29,7 +30,8 @@ export const combatSkills = {
     sheet: { tall: [1, 9, 7, 18], side: 'right' },
   },
 
-  build({ router, fight, params = {} }) {
+  build(ctx) {
+    const { router, fight, params = {} } = ctx;
     const mode = params.mode === 'item' ? 'item' : 'skill';
     const hero = fight?.hero ?? {};
 
@@ -82,8 +84,7 @@ export const combatSkills = {
     const use = () => {
       const entry = entries.find((row) => row.id === chosen);
       if (!entry) return;
-      fight.act(mode, { skill: entry.id, id: entry.id, target: fight.target?.id });
-      close();
+      commitThenShow(ctx, () => fight.act(mode, { skill: entry.id, id: entry.id, target: fight.target?.id }), close);
     };
 
     const paint = () => {

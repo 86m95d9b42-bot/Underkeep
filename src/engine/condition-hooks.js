@@ -201,6 +201,10 @@ export function registerConditionHooks(hooks, { rng, saveBonus = () => 0, hurt }
         const active = tags ? attacked || tags.has('skill') : true;
         const ended = onOwnAction(unit, { attacked, active });
         for (const id of ended) payload.say(`${id} ended`);
+        // Acting ends Hidden before the blow lands, so the blow is told it
+        // came from hiding: Backstab, Death Strike and Arcane Trickster read
+        // this rather than the condition (`01` section 7).
+        if (ended.includes('hidden') && typeof payload.action === 'object') payload.action.fromHiding = true;
       },
       { name: 'legality', source },
     ),

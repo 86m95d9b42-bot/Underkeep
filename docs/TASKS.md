@@ -103,10 +103,10 @@ Work top to bottom. Check a box when the task is done and tested. Each phase end
 
 ## Phase 8 — Polish
 
-- [ ] Saving hardened: commit-before-show, atomic write, checksum, backup recovery, migrations (`05` section 11)
-- [ ] Mid-combat resume with the last three log lines
-- [ ] Ironman mode and the Death screen (both modes)
-- [ ] Hall of the Dead and scoring (`05` section 12)
+- [x] Saving hardened: commit-before-show, atomic write, checksum, backup recovery, migrations (`05` section 11)
+- [x] Mid-combat resume with the last three log lines
+- [x] Ironman mode and the Death screen (both modes)
+- [x] Hall of the Dead and scoring (`05` section 12)
 - [ ] Reaction prompt sheet and setting
 - [ ] Auto-Fight
 - [ ] Haptics and sound

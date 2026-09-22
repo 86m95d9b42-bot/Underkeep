@@ -51,6 +51,8 @@ const SCREENS = [
   'combatSkills',
   'loot',
   'levelUp',
+  'death',
+  'hall',
 ];
 
 if (!existsSync(PAGE)) {

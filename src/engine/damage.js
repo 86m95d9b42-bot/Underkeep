@@ -255,7 +255,10 @@ export function calcDamage(combat, { attacker, target, attack = {}, result = {} 
     // 6. TARGET TYPE. A trait may multiply every part as well — the Cave Bat
     //    Swarm's body, which turns a single-target weapon aside and comes
     //    apart under an area effect.
-    part.multiplier = typeMultiplier(target, part, attack) * (payload.allPartsMultiplier ?? 1);
+    // Death Strike's triple against a boss and Smite's double against the
+    // undead ride on the attack itself.
+    part.multiplier =
+      typeMultiplier(target, part, attack) * (payload.allPartsMultiplier ?? 1) * (attack.damageMultiplier ?? 1);
     amount = Math.floor(amount * part.multiplier);
 
     // 7. TELEGRAPH: a wind-up landing on a hero who is Defending.

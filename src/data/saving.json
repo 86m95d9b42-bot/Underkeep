@@ -1,0 +1,13 @@
+{
+  "_source": "05 section 11, Saving. When the game writes, how many slots a mode has, and how big a save should be.",
+  "stepBatchMs": 250,
+  "_stepBatchMs": "Every step while exploring: batched, written within 250 ms. A step whose outcome was random is written before it is shown instead.",
+  "slots": {
+    "adventurer": ["1", "2", "3"],
+    "_ironman": "One per character: the slot id is 'ironman-' and the hero's master seed."
+  },
+  "resumeLogLines": 3,
+  "_resumeLogLines": "05 sections 13 and 14: a mid-combat save keeps the last three log lines, and a mid-combat resume shows them.",
+  "expectedBytes": 200000,
+  "_expectedBytes": "Expected size: under 200 KB per save. A test holds a played save to it."
+}

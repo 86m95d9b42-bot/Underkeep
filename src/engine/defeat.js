@@ -79,6 +79,14 @@ export function fall(unit, how = {}) {
   unit.alive = false;
   unit.burned = false;
   unit.fallen = { rounds: how.rounds ?? FALLEN.rounds, hp: how.hp ?? FALLEN.hp };
+  // A Lich re-forming is not a body on the floor: nothing can hit it, it
+  // holds no place in the row, and it stands up again where it began
+  // (docs/DECISIONS.md, Malgorath).
+  if (how.untargetable) {
+    unit.untargetable = true;
+    unit.fallen.untargetable = true;
+  }
+  if (how.row) unit.fallen.row = how.row;
   return unit.fallen;
 }
 
@@ -128,6 +136,8 @@ export function tickFallen(combat) {
     if (unit.fallen.rounds > 0) continue;
     unit.hp = unit.fallen.hp;
     unit.alive = true;
+    if (unit.fallen.untargetable) unit.untargetable = false;
+    if (unit.fallen.row) unit.row = unit.fallen.row;
     unit.fallen = null;
     risen.push(unit);
   }

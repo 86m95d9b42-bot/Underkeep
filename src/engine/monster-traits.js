@@ -356,11 +356,12 @@ export const TRAITS = {
    * +1 ATK. When it dies, all allies check morale immediately."
    */
   leader(hooks, unit, trait) {
-    const led = new Set();
+    // Who has had the bonus is written on the ally, not kept here, so a fight
+    // picked up from a save never hands it out twice (`05` section 11).
     const lead = (combat) => {
       for (const ally of countedEnemies(combat)) {
-        if (ally === unit || !ally.alive || led.has(ally.id)) continue;
-        led.add(ally.id);
+        if (ally === unit || !ally.alive || (ally.ledBy ?? []).includes(unit.id)) continue;
+        ally.ledBy = [...(ally.ledBy ?? []), unit.id];
         ally.atk += trait.bonus ?? 1;
         ally.moraleBefore = ally.morale;
         if (ally.morale !== null) ally.morale = trait.morale ?? 10;

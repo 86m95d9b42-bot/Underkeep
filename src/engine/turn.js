@@ -220,6 +220,8 @@ export function takeMonsterTurn(combat, unit, services = {}) {
 /** @returns {TurnRecord} */
 function startRecord(combat, unit, kind) {
   unit.turn = { freeUsed: 0, round: combat.round };
+  // Cleave's "once per turn" comes back with every turn.
+  combat.hooks?.resetLimits('turn');
   return { unit, kind, acted: false, steps: [] };
 }
 

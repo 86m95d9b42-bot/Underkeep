@@ -14,6 +14,7 @@ import { countedEnemies, place, toUnit } from './field.js';
 import { makeMonster } from '../data/monsters.js';
 import { parsePart, resolveDamage } from './damage.js';
 import { registerFor } from './monster-traits.js';
+import { BOSSES } from '../data/bosses.js';
 
 /** Living units of one kind, which is how a part or an escort is counted. */
 function kindOf(combat, kind) {
@@ -30,12 +31,13 @@ export const BOSS_TRAITS = {
    * (`02` section 4).
    */
   hiding_in_swarm(hooks, unit, trait) {
-    const led = new Set();
+    // Who has had the bonus is written on the rat, not kept here, so a fight
+    // picked up from a save never hands it out twice (`05` section 11).
     const lead = (combat) => {
       const rats = kindOf(combat, trait.kin ?? 'giant_rat');
       for (const rat of rats) {
-        if (led.has(rat.id)) continue;
-        led.add(rat.id);
+        if ((rat.ledBy ?? []).includes(unit.id)) continue;
+        rat.ledBy = [...(rat.ledBy ?? []), unit.id];
         rat.atk += trait.bonus ?? 1;
       }
       // Anchored only while at least one rat stands (`06` section 13).
@@ -362,10 +364,17 @@ export const BOSS_TRAITS = {
             (one) => one.type === (trait.object ?? 'phylactery') && one.alive,
           );
           if (!vessel) return;
-          // He falls, and the round after he stands up whole: the window the
-          // hero has is exactly that long.
+          // He falls, stays gone through the round after, and stands up
+          // whole at his vessel: that round is the window `02` gives the hero,
+          // when the Phylactery takes full damage and nothing stands in front
+          // of it (docs/DECISIONS.md).
           payload.fallen = true;
-          payload.fallenFor = { rounds: 1, hp: unit.maxHp };
+          payload.fallenFor = {
+            rounds: trait.gone ?? 2,
+            hp: unit.maxHp,
+            untargetable: true,
+            row: BOSSES[unit.type]?.row ?? unit.row,
+          };
         },
         { name: 'reform', owner: unit.id, source: 'boss' },
       ),

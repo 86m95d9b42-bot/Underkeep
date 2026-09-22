@@ -52,7 +52,7 @@ function fightWith(who, monsters = ['kobold']) {
 
 describe('turning a skill into an action', () => {
   it('swings the weapon the hero is holding', () => {
-    const { action } = actionForSkill(hero(), 'power_strike');
+    const { action } = actionForSkill(hero({ learns: ['power_strike'] }), 'power_strike');
     expect(action).toMatchObject({ id: 'skill', skill: 'power_strike', fp: 2, kind: 'melee' });
     // `01` section 6: -2 to hit, and one extra die of the weapon's own damage.
     expect(action.attack.atkMod).toBe(-2);
@@ -67,14 +67,17 @@ describe('turning a skill into an action', () => {
   });
 
   it('carries the Path as a tag, so an Anti-Magic Field can silence it', () => {
-    const { action } = actionForSkill(hero(), 'mend');
+    const { action } = actionForSkill(hero({ learns: ['mend'] }), 'mend');
     expect(action.tags).toContain('spirit');
   });
 
   it('says which phase a shape it cannot play is waiting for', () => {
-    expect(whyNotPlayable('sleep')).toBe(NOT_YET.target);
+    // Rows, buffs and cures are all played now; only the dungeon's own
+    // skills wait, because a fight is not where they are used.
+    expect(whyNotPlayable('sleep')).toBe(null);
+    expect(whyNotPlayable('spirit_ward')).toBe(null);
+    expect(whyNotPlayable('cleanse')).toBe(null);
     expect(whyNotPlayable('knock')).toBe(NOT_YET.opens);
-    expect(whyNotPlayable('spirit_ward')).toBe(NOT_YET.buff);
     // A passive has no action at all.
     expect(whyNotPlayable('toughness')).toBe('notAnAction');
     // Every reason has a line for the button that is dimmed with it.

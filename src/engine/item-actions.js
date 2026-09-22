@@ -17,6 +17,7 @@ import { HANDLERS } from './item-hooks.js';
 import { resolveAttack } from './attack.js';
 import { resolveDamage } from './damage.js';
 import { rollSave } from './riders.js';
+import { burn, isFallen } from './defeat.js';
 
 /** How much more a potion or herb heals with the Periapt of Mending on. */
 function healingScale(unit) {
@@ -94,6 +95,7 @@ export function resolveItemAction(combat, unit, action, services = {}) {
   if (use.thrown) {
     return { ...out, ...throwIt(combat, unit, action, services) };
   }
+  if (use.sear) return { ...out, ...sear(combat) };
 
   if (use.heal) {
     out.healed = heal(combat, unit, combat.rng.roll(use.heal) * healingScale(unit));
@@ -246,4 +248,24 @@ export function tickBuffs(unit, steps = 1) {
   unit.buffs = kept;
   if (changed) applySkillSheet(unit);
   return changed;
+}
+
+/**
+ * A lit torch, held to what will not stay dead: a Fallen troll burns, and a
+ * Hydra stump from this round is seared so nothing grows back. It counts as
+ * fire for those two things only (`02` section 2, Torches as Tools).
+ */
+export function sear(combat) {
+  const fallen = combat.units.find((one) => isFallen(one) && !one.untargetable);
+  if (fallen && burn(fallen, ['fire'])) return { seared: fallen.id };
+  const hydra = combat.units.find((one) => (one.stumps ?? 0) > 0);
+  if (hydra) {
+    const stump = combat.units.find(
+      (one) => one.partOf === hydra.type && !one.alive && !one.cauterized,
+    );
+    hydra.stumps -= 1;
+    if (stump) stump.cauterized = true;
+    return { seared: stump?.id ?? hydra.id };
+  }
+  return { nothing: true };
 }

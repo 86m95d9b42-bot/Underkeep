@@ -13,6 +13,62 @@
     "hall": "HALL OF THE DEAD",
     "settings": "SETTINGS"
   },
+  "hall": {
+    "title": "HALL OF THE DEAD",
+    "sub": "Top {n} heroes",
+    "sort": "Sort the records",
+    "sorts": {
+      "score": "SCORE",
+      "recent": "RECENT"
+    },
+    "row": "Lv {level} {origin} · {cause}",
+    "victory": "VICTORY",
+    "floor": "{name}, floor {n}",
+    "empty": "No one has fallen yet.",
+    "emptyHint": "An Ironman's death, and every finished game, is remembered here.",
+    "backToTitle": "BACK TO TITLE",
+    "backToList": "BACK TO THE LIST",
+    "score": "{n} points",
+    "stoneStats": "{steps} steps · {bosses} bosses · {days} days"
+  },
+  "save": {
+    "recovered": "Your last save was damaged. The one before it was loaded."
+  },
+  "death": {
+    "title": "YOU HAVE FALLEN",
+    "hereLies": "HERE LIES",
+    "levelOrigin": "Level {level} {origin}",
+    "floorDay": "Floor {floor} · Day {day}",
+    "score": "SCORE",
+    "steps": "STEPS",
+    "bosses": "BOSSES",
+    "bestItem": "BEST ITEM",
+    "noItem": "None",
+    "hall": "HALL OF THE DEAD",
+    "toTitle": "TITLE",
+    "toTown": "RETURN TO TOWN",
+    "wake": "YOU WAKE IN TOWN",
+    "wakeHint": "Half your hit points, and a day gone.",
+    "graveAt": "Your grave is on floor {n}.",
+    "graveGold": "{n} gp left in the grave",
+    "graveItems": "Left behind: {items}",
+    "graveNothing": "Nothing else was left behind.",
+    "modes": {
+      "ironman": "IRONMAN",
+      "adventurer": "ADVENTURER"
+    },
+    "victorious": "VICTORIOUS",
+    "victory": "Victory over the Ashen Lair",
+    "cause": {
+      "monster": "Slain by {who}",
+      "trap": "Killed by a {name}",
+      "hazard": "Drowned in deep water",
+      "backlash": "Struck down by a ward",
+      "fountain": "Poisoned at a fountain",
+      "condition": "Died of their wounds",
+      "unknown": "Lost in the dark"
+    }
+  },
   "settings": {
     "title": "SETTINGS",
     "sub": "Shared by all save slots",
@@ -540,10 +596,13 @@
       "noSkills": "No skills yet.",
       "noItems": "No items yet.",
       "notAnAction": "That one is always on.",
-      "buffs": "Wards and marks are not built yet.",
-      "conditions": "Curing is not built yet.",
       "exploration": "That one works out in the dungeon.",
-      "rows": "Whole-row skills are not built yet."
+      "notLearned": "You have not learned that.",
+      "needsShield": "You need a shield on your arm.",
+      "usedUp": "Once a fight, and it is spent.",
+      "needsOpening": "Only against a helpless foe, or from hiding.",
+      "nothingToCleanse": "Nothing is ailing you.",
+      "alreadyUp": "It is already up."
     },
     "defend": "You raise your guard.",
     "hiddenEnds": "You step back into the light.",

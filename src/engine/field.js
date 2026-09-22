@@ -79,6 +79,15 @@ export function targetableEnemies(combat) {
   return enemies(combat).filter((unit) => !unit.object);
 }
 
+/**
+ * Everything the hero may aim at: the enemies, and the arena's objects —
+ * the Phylactery and the coolant valves are hit, though they never act and
+ * never keep a fight going (`06` section 13, `02` sections 10 and 12).
+ */
+export function hittableEnemies(combat) {
+  return enemies(combat);
+}
+
 /** True while a unit is still standing on the field. */
 export function onField(unit) {
   return Boolean(unit) && !unit.fled && !unit.removed;

@@ -63,6 +63,13 @@ export const ORDER = /** @type {Record<string, string[]>} */ ({
   combatEnd: ['bloodstone', 'forager', 'xp', 'loot'],
 });
 
+/**
+ * What a limited hook returns when the event was not its business — a
+ * monster's zero HP to the hero's Undying, a hit that Lucky let stand — so
+ * the firing does not spend one of its uses.
+ */
+export const SKIP = Symbol('skip');
+
 /** Where a hook sits in its event's documented order. */
 export function orderOf(event, name) {
   const index = ORDER[event]?.indexOf(name ?? '') ?? -1;
@@ -194,7 +201,7 @@ export function createHooks() {
 
       const result = hook.handler(payload, hook);
       payload.fired.push(hook.name ?? hook.source ?? 'hook');
-      if (hook.limit) hook.limit.used += 1;
+      if (hook.limit && result !== SKIP) hook.limit.used += 1;
       if (hook.once) off(hook);
       // A handler may cancel by returning false, which reads better than
       // calling cancel() from a one-line hook.
@@ -222,6 +229,38 @@ export function createHooks() {
     return reset;
   }
 
+  /**
+   * The uses every limited hook has spent — Lucky's once a combat, Riposte's
+   * once a round — in registration order, so a fight picked up from a save
+   * spends nothing twice (`05` section 11).
+   */
+  function limits() {
+    const out = [];
+    for (const [event, hooks] of registered) {
+      for (const hook of hooks) {
+        if (!hook.limit) continue;
+        out.push({ event, name: hook.name ?? null, owner: hook.owner ?? null, used: hook.limit.used });
+      }
+    }
+    return out;
+  }
+
+  /** Puts spent uses back, matching each hook by its event, name and owner. */
+  function restoreLimits(saved = []) {
+    const pool = [...saved];
+    for (const [event, hooks] of registered) {
+      for (const hook of hooks) {
+        if (!hook.limit) continue;
+        const at = pool.findIndex(
+          (one) => one.event === event && one.name === (hook.name ?? null) && one.owner === (hook.owner ?? null),
+        );
+        if (at === -1) continue;
+        hook.limit.used = pool[at].used;
+        pool.splice(at, 1);
+      }
+    }
+  }
+
   /** How many hooks are registered, all told or on one event. */
   function count(event) {
     if (event) return registered.get(event)?.length ?? 0;
@@ -236,5 +275,5 @@ export function createHooks() {
     nextSeq = 0;
   }
 
-  return { on, off, offAll, fire, list, resetLimits, count, clear };
+  return { on, off, offAll, fire, list, resetLimits, limits, restoreLimits, count, clear };
 }

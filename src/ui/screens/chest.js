@@ -25,6 +25,7 @@ import { disarmBonus, disarmTn } from '../../systems/traps.js';
 import { bashTn, pickBonus, pickTn } from '../../systems/locks.js';
 import { chanceToBeat } from '../../engine/odds.js';
 import { poleable } from '../../data/traps.js';
+import { commitThenShow } from '../commit.js';
 
 /**
  * Where everything sits. Tall placements are the outline's Chest / Door
@@ -179,7 +180,8 @@ export const chestScreen = {
     return true;
   },
 
-  build({ router, run, frame, haptics }) {
+  build(ctx) {
+    const { router, run, frame, haptics, fall } = ctx;
     const floor = run.floor;
     const ex = run.ex;
     const hero = run.hero;
@@ -261,9 +263,13 @@ export const chestScreen = {
     const grid = el('div', { class: 'region actiongrid' });
 
     /** Resolve, then draw: the run has already moved when this repaints. */
-    const press = (action) => {
-      const { events } = run.chestAct(action);
+    const press = (action) => commitThenShow(ctx, () => run.chestAct(action), ({ events }) => {
       if (events.some((event) => event.type === 'trapSprung')) haptics?.buzz?.('hit');
+      // A chest's trap can be the end of the hero.
+      if ((run.hero.hp ?? 1) <= 0 && fall) {
+        fall({ cause: run.causeOfDeath });
+        return;
+      }
       // An opened chest, or a chest that was never one, is done with: the log
       // on the Exploration screen says what came of it.
       if (!run.chestAhead) {
@@ -273,7 +279,7 @@ export const chestScreen = {
       paintCard();
       paintGrid();
       draw();
-    };
+    });
 
     const paintGrid = () => {
       const keys = chest ? keysFor(run) : null;

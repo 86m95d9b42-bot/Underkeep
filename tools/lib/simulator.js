@@ -6,33 +6,58 @@
  * floors `npm run walk` walks — and measures three things the outline asks
  * for: **win rate per boss**, **XP per level**, and **gold per trip**.
  *
- * The hero is flown by the Auto-Fight rules of `06` section 17, plus the two
- * decisions those rules leave to the player and every tactics line in `02`
- * spells out anyway:
+ * "Beatable" means beatable by someone who plays the build the way it is
+ * meant to be played, so the pilot is a careful player rather than Auto-Fight:
+ * the tactics lines of `02` and the skill texts of `01` section 6 are the
+ * whole of its knowledge. In order, each turn:
  *
- *   1. **Defend into a telegraph.** A wind-up halves against a Defending
- *      hero and its saves get advantage (`06` section 4).
- *   2. **Break what is protecting the boss.** The Phylactery keeps the Lich
- *      standing and a coolant valve douses the Colossus; `02` says so in as
- *      many words.
- *
- * Everything else is Auto-Fight: a potion below 30%, the best skill the hero
- * can afford, otherwise a swing at the enemy with the fewest hit points.
+ *   1. drink below 30% HP (Auto-Fight's own rule, `06` section 17);
+ *   2. break out of a web;
+ *   3. Defend into a telegraph that hurts (`06` section 4) — not into a
+ *      shield being raised or a summoning;
+ *   4. break what is protecting the boss — the Phylactery, the valves;
+ *   5. a heal skill when it is needed and no potion is left;
+ *   6. set up: a ward, Blink, Hunter's Mark on the boss, Envenom, Vanish;
+ *   7. Sleep or a Fireball on a row worth it;
+ *   8. the best attacking skill it can pay for — Death Strike on the boss
+ *      from hiding first;
+ *   9. otherwise a swing at the weakest enemy it can reach.
  */
 import { createFight } from '../../src/systems/fight.js';
-import { createRun } from '../../src/systems/run.js';
-import { createSession } from '../../src/systems/session.js';
 import { BOSSES, bossOnFloor } from '../../src/data/bosses.js';
 import { EXPECTED_LEVEL, buildHero, buildIds } from './builds.js';
 import { skill } from '../../src/data/skills.js';
 import { rollEncounter } from '../../src/data/encounters.js';
 import { carriedStreams } from '../../src/engine/rng.js';
+import { abilityOf } from '../../src/engine/ai.js';
+import { buffOf } from '../../src/engine/skill-actions.js';
+import { has } from '../../src/engine/conditions.js';
 
 /** How many rounds a fight may take before it is called a draw. */
 const ROUND_CAP = 80;
 
 /** Below this share of hit points, Auto-Fight drinks (`06` section 17). */
 const DRINK_BELOW = 0.3;
+
+/** Below this share, a hero with no potion left reaches for a heal skill. */
+const HEAL_BELOW = 0.4;
+
+/** Second Wind is a quarter of the hero back, so it waits for a real dent. */
+const SECOND_WIND_BELOW = 0.5;
+
+/**
+ * Where the tactics lines of `02` say to go for the boss rather than what is
+ * around it: the Hydra's body ("go straight for the Body"). Everywhere else
+ * the weakest enemy goes first — measured against the Bone Warden, Grukk and
+ * the Brood Mother, it wins more often than chasing the boss through its
+ * escort.
+ */
+const FOCUS = {
+  hydra: 'boss',
+};
+
+/** Telegraphed abilities that are not blows: nothing to Defend against. */
+const HARMLESS_ROLES = new Set(['defensive', 'summon', 'support', 'buff', 'heal']);
 
 /* -------------------------------------------------------------------------- */
 /* Flying the hero                                                            */
@@ -57,6 +82,11 @@ function targets(fight, action = 'attack', options = {}) {
     .sort((a, b) => (a.hp ?? 0) - (b.hp ?? 0));
 }
 
+/** The boss, while it stands. */
+function bossOf(fight) {
+  return (fight.combat.units ?? []).find((unit) => unit.boss && unit.alive) ?? null;
+}
+
 /**
  * What is holding the boss up: an object whose breaking is the fight's own
  * answer (`02` sections 10 and 12).
@@ -68,33 +98,138 @@ function propOf(fight) {
 }
 
 /**
- * The skills worth trying this turn, dearest first: anything that attacks
- * (it has a `kind`: melee, ranged or spell) and, when the hero is below
- * half, anything that heals. Whether it can actually be used — Death Strike
- * wants a helpless target, a spell wants Focus — is the fight's to say.
+ * Whether now is the time to break this object. The Phylactery, always: it is
+ * the whole fight. A coolant valve is worth more held back, for the Colossus
+ * burning red or a Hammerfall on its way (`02` section 10's tactics line).
  */
-function skillsToTry(fight) {
-  const hero = fight.hero;
-  const hurt = (hero.hp ?? 0) < (hero.maxHp ?? 1) * 0.5;
-  return (hero.skills ?? [])
-    .map((row) => ({ row, entry: skill(row.id) }))
-    .filter(({ entry }) => entry.type === 'active' && (entry.fp ?? 0) <= (hero.fp ?? 0))
-    .filter(({ entry }) => (entry.action?.heal ? hurt : Boolean(entry.action?.kind)))
-    .sort((a, b) => (b.entry.fp ?? 0) - (a.entry.fp ?? 0))
-    .map(({ row }) => row.id);
+function breakNow(fight, prop) {
+  if (prop.type !== 'coolant_valve') return true;
+  const boss = bossOf(fight);
+  return Boolean(boss && (boss.stoked || boss.telegraph));
 }
 
-/** Uses the dearest skill that is legal now, on the weakest thing it reaches. */
-function useBestSkill(fight) {
-  for (const id of skillsToTry(fight)) {
-    const reach = targets(fight, 'skill', { skill: id });
-    // A heal or a whole-row spell may have no single target to pick.
-    const tries = reach.length > 0 ? reach : [null];
-    for (const unit of tries) {
-      const options = { skill: id, ...(unit ? { target: unit.id } : {}) };
-      if (!fight.legality('skill', options).legal) continue;
-      if (fight.act('skill', options).acted) return true;
+/** A torch in the pack, for a stump that must not grow back. */
+function torchInReach(fight) {
+  return fight.items.find((entry) => entry.baseId === 'torch' && !entry.why);
+}
+
+/** True when a wind-up is coming that will actually hurt. */
+function harmfulTelegraph(fight) {
+  return (fight.combat.units ?? []).some((unit) => {
+    if (!unit.alive || !unit.telegraph) return false;
+    const ability = abilityOf(unit, unit.telegraph.ability);
+    return !(ability && (HARMLESS_ROLES.has(ability.role) || ability.action === 'guard'));
+  });
+}
+
+/**
+ * The enemies this action reaches, in the order a careful player would take
+ * them: the boss first when the tactics say so, otherwise the weakest.
+ */
+function ordered(fight, action = 'attack', options = {}) {
+  const reach = targets(fight, action, options);
+  const boss = bossOf(fight);
+  if (!boss || !reach.some((unit) => unit.id === boss.id)) return reach;
+  const focus = FOCUS[boss.type] ?? 'escort';
+  const ranged = (fight.hero.attack?.kind ?? 'melee') !== 'melee' || action === 'skill';
+  const bossFirst = focus === 'boss' || (focus === 'ranged' && ranged);
+  return bossFirst ? [boss, ...reach.filter((unit) => unit.id !== boss.id)] : reach;
+}
+
+/** Whether the hero knows a skill and could use it on this target now. */
+function canUse(fight, id, target) {
+  const known = (fight.hero.skills ?? []).some((row) => row.id === id);
+  if (!known) return false;
+  return fight.legality('skill', { skill: id, ...(target ? { target } : {}) }).legal;
+}
+
+function use(fight, id, target) {
+  return fight.act('skill', { skill: id, ...(target ? { target } : {}) }).acted;
+}
+
+/** Heal skills, when the hero is low and the potions are gone. */
+function healIfNeeded(fight) {
+  const hero = fight.hero;
+  const share = (hero.hp ?? 0) / Math.max(1, hero.maxHp ?? 1);
+  if (share < SECOND_WIND_BELOW && canUse(fight, 'second_wind') && use(fight, 'second_wind')) return true;
+  if (share < HEAL_BELOW && !potionInReach(fight) && canUse(fight, 'mend') && use(fight, 'mend')) return true;
+  return false;
+}
+
+/**
+ * The setting-up a player does when a fight is worth it: a ward against a
+ * boss, Blink before its blows, the Mark on it, poison on the blade, and
+ * Vanish for the Death Strike to follow.
+ */
+function setUp(fight) {
+  const boss = bossOf(fight);
+  const hero = fight.hero;
+  const tough = boss || fight.combat.units.some((unit) => unit.alive && unit.side === 'monsters' && (unit.hd ?? 0) >= (hero.level ?? 1));
+  if (!tough) return false;
+  const combat = fight.combat;
+
+  if (!buffOf(combat, hero, 'spiritWard') && canUse(fight, 'spirit_ward') && use(fight, 'spirit_ward')) return true;
+  if (boss && !buffOf(combat, hero, 'blink') && canUse(fight, 'blink') && use(fight, 'blink')) return true;
+
+  const mark = buffOf(combat, hero, 'huntersMark');
+  const markOn = boss ?? targets(fight)[targets(fight).length - 1];
+  const markedAlive = mark && combat.units.some((unit) => unit.id === mark.target && unit.alive);
+  if (markOn && !markedAlive && canUse(fight, 'ranger', markOn.id) && use(fight, 'ranger', markOn.id)) return true;
+
+  if (canUse(fight, 'envenom') && use(fight, 'envenom')) return true;
+
+  // Vanish is worth a turn only with a Death Strike to follow it.
+  const strikeCost = skill('death_strike').fp ?? 0;
+  const knowsStrike = (hero.skills ?? []).some((row) => row.id === 'death_strike');
+  if (knowsStrike && !has(hero, 'hidden') && (hero.fp ?? 0) >= (skill('vanish').fp ?? 0) + strikeCost) {
+    if (canUse(fight, 'vanish') && use(fight, 'vanish')) return true;
+  }
+  return false;
+}
+
+/** Sleep a row of two or more that can sleep, or Fireball a row of two or more. */
+function rowSpell(fight) {
+  const enemies = (fight.combat.units ?? []).filter((unit) => unit.alive && unit.side === 'monsters' && !unit.object);
+  for (const row of ['front', 'back']) {
+    const here = enemies.filter((unit) => unit.row === row);
+    if (here.length === 0) continue;
+    const aim = here[0].id;
+    const sleepable = here.filter(
+      (unit) => unit.family !== 'undead' && (unit.hd ?? 0) <= (fight.hero.level ?? 1) + 2 && !has(unit, 'asleep') && !unit.boss,
+    );
+    if (sleepable.length >= 2 && canUse(fight, 'sleep', sleepable[0].id) && use(fight, 'sleep', sleepable[0].id)) return true;
+    const worth = here.length >= 2 || here.some((unit) => unit.boss);
+    if (worth && canUse(fight, 'fireball', aim) && use(fight, 'fireball', aim)) return true;
+  }
+  return false;
+}
+
+/**
+ * The best attack skill it can pay for, dearest first. Death Strike and a
+ * sleeping or stunned target come first; the boss is the target of anything
+ * that trebles against it.
+ */
+function attackSkill(fight) {
+  const hero = fight.hero;
+  const boss = bossOf(fight);
+  if (boss && canUse(fight, 'death_strike', boss.id) && use(fight, 'death_strike', boss.id)) return true;
+
+  const ids = (hero.skills ?? [])
+    .map((row) => row.id)
+    .filter((id) => {
+      const act = skill(id).action;
+      return act?.kind && act.target !== 'row' && id !== 'death_strike';
+    })
+    .sort((a, b) => (skill(b).fp ?? 0) - (skill(a).fp ?? 0));
+
+  for (const id of ids) {
+    for (const unit of ordered(fight, 'skill', { skill: id })) {
+      if (canUse(fight, id, unit.id) && use(fight, id, unit.id)) return true;
     }
+  }
+  // A sleeping or stunned enemy is a Death Strike waiting to happen.
+  for (const unit of targets(fight)) {
+    if (canUse(fight, 'death_strike', unit.id) && use(fight, 'death_strike', unit.id)) return true;
   }
   return false;
 }
@@ -116,27 +251,36 @@ export function flyOneTurn(fight) {
   //     Break Free is the action `06` section 4 gives them for it.
   if (fight.legality('breakFree').legal && fight.act('breakFree').acted) return 'breakFree';
 
-  // 3. Defend into a wind-up: half damage, and the save has advantage.
-  const winding = fight.telegraphPending;
-  if (winding && fight.legality('defend').legal && fight.act('defend').acted) return 'defend';
+  // 3. Defend into a wind-up that hurts: half damage, and the save has advantage.
+  if (harmfulTelegraph(fight) && fight.legality('defend').legal && fight.act('defend').acted) return 'defend';
 
-  // 4. Break what is keeping the boss up.
+  // 4. Break what is keeping the boss up, when it is time.
   const prop = propOf(fight);
-  if (prop && fight.legality('attack', { target: prop.id }).legal) {
+  if (prop && breakNow(fight, prop) && fight.legality('attack', { target: prop.id }).legal) {
     if (fight.act('attack', { target: prop.id }).acted) return 'object';
   }
 
-  // 5. The best skill, then a swing at the weakest thing it can reach.
-  if (useBestSkill(fight)) return 'skill';
-  const weakest = targets(fight)[0];
-  if (weakest && fight.act('attack', { target: weakest.id }).acted) return 'attack';
+  // 4b. Sear a Hydra stump before it grows back double (`02` section 8).
+  const stumped = (fight.combat.units ?? []).some((unit) => (unit.stumps ?? 0) > 0);
+  const torch = stumped && torchInReach(fight);
+  if (torch && fight.act('item', { item: torch.id }).acted) return 'torch';
+
+  // 5-8. Heal, set up, a row spell, the best attack skill.
+  if (healIfNeeded(fight)) return 'heal';
+  if (setUp(fight)) return 'setUp';
+  if (rowSpell(fight)) return 'skill';
+  if (attackSkill(fight)) return 'skill';
+
+  // 9. A swing at whoever the tactics say comes first.
+  const first = ordered(fight)[0];
+  if (first && fight.act('attack', { target: first.id }).acted) return 'attack';
   if (fight.act('attack').acted) return 'attack';
   return fight.act('defend').acted ? 'defend' : 'stuck';
 }
 
 /** Plays a fight to its end, and says how it went. */
 export function flyFight(fight) {
-  const did = { potion: 0, defend: 0, skill: 0, attack: 0, object: 0, breakFree: 0 };
+  const did = { potion: 0, defend: 0, heal: 0, setUp: 0, skill: 0, attack: 0, object: 0, torch: 0, breakFree: 0 };
   let guard = 0;
   while (!fight.over && guard < ROUND_CAP * 6) {
     guard += 1;

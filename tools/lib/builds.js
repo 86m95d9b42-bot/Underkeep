@@ -36,6 +36,9 @@ import { item } from '../../src/data/items.js';
 /** 4d6 drop lowest, averaged and rounded: the spread a hero can expect. */
 export const STANDARD_ARRAY = [15, 14, 13, 12, 10, 9];
 
+/** Torches carried down: one stack, five to a slot (`04` section 1). */
+export const TORCHES = 5;
+
 /** The Hero Level column of `02` section 3's progression targets, per floor. */
 export const EXPECTED_LEVEL = { 1: 2, 2: 3, 3: 5, 4: 6, 5: 8, 6: 10, 7: 12, 8: 14, 9: 16, 10: 18 };
 
@@ -312,6 +315,9 @@ function equip(hero, build, floor, potions) {
   const potion = shopTier(floor) >= 2 ? 'greater_healing_potion' : 'healing_potion';
   const { entry } = addItem(hero.pack, potion, { count: potions, identified: true });
   if (entry) pin(hero.pack, entry.instanceId);
+  // And a stack of torches: light for the walk down, and every build's answer
+  // to a Hydra stump or a fallen troll (`02` section 2).
+  addItem(hero.pack, 'torch', { count: TORCHES, identified: true });
   refreshGear(hero);
   return hero;
 }

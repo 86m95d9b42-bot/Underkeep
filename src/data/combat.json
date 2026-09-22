@@ -306,5 +306,9 @@
       "shieldBlock",
       "guardian"
     ]
+  },
+  "_reactions": "06 section 17, Reaction prompts: the Auto setting uses Lucky or Arcane Shield when the hit would take more than 25% of max HP. Until the Phase 8 prompt exists every fight plays Auto; Riposte and Spellblade are spent whenever the hero can pay (docs/DECISIONS.md).",
+  "reactions": {
+    "autoShareOfMaxHp": 0.25
   }
 }

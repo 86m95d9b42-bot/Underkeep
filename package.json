@@ -22,7 +22,8 @@
     "climb": "node tools/climb.js",
     "loot": "node tools/loot.js",
     "loop": "node tools/loop.js",
-    "view-check": "node tools/view-check.js"
+    "view-check": "node tools/view-check.js",
+    "save-check": "node tools/save-check.js"
   },
   "devDependencies": {
     "esbuild": "^0.25.0",

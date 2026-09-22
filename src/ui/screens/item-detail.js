@@ -239,7 +239,7 @@ export const itemDetail = {
               const built = actionForItem(hero, instance.instanceId, { inCombat: false });
               if (!built.action) return;
               const done = resolveItemAction(
-                { rng: run.rng.combat, hooks: null, units: [], floor: run.floor.floor },
+                { rng: run.rng.combat, hooks: null, units: [], floor: run.floor?.floor ?? 1 },
                 hero,
                 built.action,
               );

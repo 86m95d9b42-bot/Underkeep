@@ -16,7 +16,7 @@
  */
 import data from '../data/combat.json' with { type: 'json' };
 import { blocked, blockedBy, has } from './conditions.js';
-import { ROWS, countedEnemies, targetableEnemies, isTargetable } from './field.js';
+import { ROWS, countedEnemies, hittableEnemies, isTargetable } from './field.js';
 
 export const ACTIONS = data.actions;
 export const LEGALITY = data.legality;
@@ -57,7 +57,7 @@ export function targetsFor(combat, unit, action) {
   const tags = tagsOf(action);
   // A part — a Hydra's head — is something to hit even though it is not
   // another enemy (`06` section 13).
-  const enemies = targetableEnemies(combat).filter(isTargetable);
+  const enemies = hittableEnemies(combat).filter(isTargetable);
   if (unit.side === 'monsters') return [combat.hero].filter((hero) => hero?.alive);
   if (!tags.has('attack')) return enemies;
 

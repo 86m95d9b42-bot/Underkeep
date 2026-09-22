@@ -16,6 +16,7 @@ import { bar, chip } from '../parts/parts.js';
 import { t } from '../../data/strings.js';
 import { ACTIONS } from '../../systems/fight.js';
 import { hitChance } from '../../engine/odds.js';
+import { commitThenShow } from '../commit.js';
 
 /**
  * Where everything sits. Tall placements are the outline's Combat table; wide
@@ -102,7 +103,8 @@ export const combat = {
     return true;
   },
 
-  build({ router, fight, haptics, leaveDungeon }) {
+  build(ctx) {
+    const { router, fight, haptics, leaveDungeon, fall, bossBeaten } = ctx;
     const hero = fight.hero;
 
     /* -- the rows ------------------------------------------------------- */
@@ -203,13 +205,10 @@ export const combat = {
         router.openSheet('combatSkills', { mode: id });
         return;
       }
-      const done = fight.act(id);
-      if (!done.acted) haptics?.buzz?.('bump');
-      if (fight.over) {
+      commitThenShow(ctx, () => fight.act(id), (done) => {
+        if (!done.acted) haptics?.buzz?.('bump');
         paint();
-        return;
-      }
-      paint();
+      });
     };
 
     /**
@@ -228,6 +227,12 @@ export const combat = {
         reason: router.has?.(to) ? undefined : t('common.comingSoon'),
         onTap: () => {
           if (left && leaveDungeon) return leaveDungeon({ leaveMark: left.leaveMark });
+          // Falling is resolved and saved before the Death screen shows it.
+          if (to === 'death' && fall) return fall({ cause: fight.causeOfDeath });
+          // A boss that falls stays fallen, and the last one ends the game.
+          if (outcome === 'victory' && fight.combat.boss && bossBeaten) {
+            return bossBeaten(fight.combat.floor).then(() => router.go(to));
+          }
           return router.go(to);
         },
       };

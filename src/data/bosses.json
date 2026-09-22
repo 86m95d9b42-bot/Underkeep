@@ -572,7 +572,7 @@
         { "when": "hero lacks Slowed", "do": "cone_of_cold" },
         { "when": "always", "do": "drain_life" }
       ],
-      "traits": [{ "id": "undying_vessel", "object": "phylactery" }],
+      "traits": [{ "id": "undying_vessel", "object": "phylactery", "gone": 2, "_gone": "Round starts he stays fallen: the one he falls in, and the one after, which is the window 02 section 12 names (docs/DECISIONS.md)." }],
       "weak": ["holy"],
       "immune": ["cold", "poison", "asleep", "feared", "paralyzed"],
       "xp": 1800,
