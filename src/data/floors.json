@@ -40,6 +40,12 @@
       "safeRoom",
       "bossArena"
     ],
+    "camp": {
+      "_source": "01 section 9, Resting: a ration, half the hero's HP and all FP back; on a 1-2 on a d6 a wandering monster interrupts before anything is recovered. 05 section 5: never interrupted in the Safe Room.",
+      "item": "ration",
+      "healShare": 0.5,
+      "interruptUpTo": 2
+    },
     "hollowStalker": {
       "_source": "02, The Hollow Stalker; the threshold is pacing.hollowStalkerSteps.",
       "warnAtSteps": [

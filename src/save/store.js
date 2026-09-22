@@ -243,6 +243,7 @@ export async function openStore({ indexedDB = globalThis.indexedDB, name = DB_NA
 export function summaryOf(save) {
   return {
     name: save.hero?.name ?? '',
+    masterSeed: save.masterSeed ?? null,
     level: save.hero?.level ?? 1,
     mode: save.mode ?? 'adventurer',
     floor: save.location?.floor ?? null,

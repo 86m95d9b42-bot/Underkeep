@@ -24,6 +24,7 @@ import {
   clearHazard,
   openDoor,
   COMMANDS,
+  DELTA,
 } from '../dungeon/movement.js';
 import {
   tick,
@@ -73,7 +74,14 @@ import {
 import { feature as featureSpec, offeringCost } from '../data/hazards.js';
 import { ITEMS } from '../data/items.js';
 import { makeMonster } from '../data/monsters.js';
+import { bossOnFloor } from '../data/bosses.js';
+import { stepClock } from '../data/floors.js';
+import { removeItem } from './inventory.js';
+
+/** Camping's numbers (`01` section 9). */
+const CAMP = stepClock.camp;
 import { nameOf } from './identification.js';
+import { offer as offerTip, tipState } from './tips.js';
 
 /** A tile's key in the floor's side tables. */
 const key = (x, y) => `${x},${y}`;
@@ -110,6 +118,12 @@ export function lineFor(event) {
       return { text: t(`explore.blocked.${event.looksLike}`), tone: 'muted' };
     case 'stairs':
       return { text: t(`explore.log.stairs.${event.direction}`) };
+    case 'arena':
+      return { text: t('explore.log.arena'), tone: 'danger' };
+    case 'camped':
+      return { text: t('explore.log.camped', { hp: event.hp, fp: event.fp }), tone: 'accent' };
+    case 'campInterrupted':
+      return { text: t('explore.log.campInterrupted'), tone: 'danger' };
     case 'waystone':
       return { text: t('explore.log.waystone'), tone: 'accent' };
     case 'grave':
@@ -270,10 +284,20 @@ export function firstReason(door, ex, hero) {
  * @param {ReturnType<typeof carriedStreams>} [options.streams] resumed streams
  * @param {{ at: [number, number], facing?: string }} [options.startAt] a Return
  *   Mark, or anywhere else a trip begins that is not the arrival room
+ * @param {'down'} [options.arriveOn] arrive on the down stairs, having come
+ *   up from the floor below (`05` section 1)
  * @param {object} [options.town] what the trip attunes and comes home to
  * @param {(options?: object) => void} [options.leaveDungeon] the way up, which
  *   the session owns: a Waystone offers it, `travel.js` does it
  */
+/** Which room a tile is in, if any; a corridor is in none. */
+function roomAt(floor, [x, y]) {
+  return floor?.rooms?.find((room) => {
+    const [rx, ry, rw, rh] = room.rect;
+    return x >= rx && x < rx + rw && y >= ry && y < ry + rh;
+  }) ?? null;
+}
+
 /**
  * What an event says about who hurt the hero: a trap that went off, deep water,
  * a ward's backlash, a foul fountain. Null for everything else.
@@ -374,6 +398,7 @@ export function createRun({
   hero = { ...PLACEHOLDER_HERO },
   streams,
   startAt,
+  arriveOn,
   town,
   leaveDungeon,
   restore,
@@ -411,6 +436,14 @@ export function createRun({
     ex.pos = [...startAt.at];
     if (startAt.facing) ex.facing = startAt.facing;
   }
+  // Up from the floor below: on this floor's down stairs, facing out of the
+  // alcove toward the arena.
+  if (arriveOn === 'down' && floor.stairs?.down) {
+    const [sx, sy] = floor.stairs.down;
+    ex.pos = [sx, sy];
+    const open = DELTA.findIndex(([dx, dy]) => isWalkable(floor.map[sy + dy]?.[sx + dx]));
+    if (open >= 0) ex.facing = open;
+  }
   // A saved run stands where it was saved, with its clock where it was.
   if (restore?.ex) Object.assign(ex, restore.ex, { pos: [...restore.ex.pos] });
   let wasSafe = inSafeZone(floor, ex.pos);
@@ -420,6 +453,13 @@ export function createRun({
 
   /** What last hurt the hero out here, for the Death screen (`05` section 12). */
   let lastHurt = restore?.lastHurt ?? null;
+
+  /**
+   * Floor 1's tips: which room last taught something, so each room teaches
+   * one system; what has been taught at all is the town's (`systems/tips.js`).
+   */
+  const tipRoom = restore?.tipRoom ? { ...restore.tipRoom } : { current: null, tipped: false };
+  const tips = tipState(town ?? {});
 
   /** @param {object[]} events */
   function record(events) {
@@ -537,6 +577,15 @@ export function createRun({
     return hero.bashBonus ?? (hero.mods?.might ?? 0) + (hero.explore?.bash ?? 0);
   }
 
+  /** True inside the boss arena's walls, door included (`05` section 5). */
+  function inArena(where, [x, y]) {
+    const arena = where.arena;
+    if (!arena) return false;
+    if (arena.door && x === arena.door[0] && y === arena.door[1]) return true;
+    const [ax, ay, w, h] = arena.rect;
+    return x >= ax && x < ax + w && y >= ay && y < ay + h;
+  }
+
   /** Winds the clock by what an action cost, from where the hero now stands. */
   function spend(steps, cause) {
     // A Beacon curse widens the wandering check (`04` section 6).
@@ -547,8 +596,9 @@ export function createRun({
   // The hero is standing on the up stairs and its waystone, so the log opens
   // with what is underfoot — the same events as walking onto the tile. A
   // saved run has already arrived, and its log says so.
+  let arriving = [];
   if (!restore) {
-    const arriving = arrivalEvents(floor, ex.pos, ex);
+    arriving = arrivalEvents(floor, ex.pos, ex);
     // Arriving on the stone is standing on it (`05` section 9).
     if (town && arriving.some((event) => event.type === 'waystone')) attune(town, floor.floor);
     record(arriving);
@@ -592,6 +642,7 @@ export function createRun({
       return {
         floor: floor.floor,
         lastHurt,
+        tipRoom: { ...tipRoom },
         ex: structuredClone({ ...clock, pos: [...ex.pos] }),
         log: log.slice(-LOG_KEPT),
         changes: changesFrom(baseline, floor),
@@ -632,6 +683,11 @@ export function createRun({
         ...safeRoomEvents(),
         ...spend(outcome.cost, 'steps'),
       ];
+      // Through the arena door with the floor's boss still standing: the
+      // fight that guards the stairs (`05` section 1, Boss gates).
+      if (outcome.moved && inArena(floor, ex.pos) && bossOnFloor(floor.floor) && !town?.bosses?.includes(floor.floor)) {
+        events.push({ type: 'arena', floor: floor.floor });
+      }
       // The Hollow Stalker arrives with the fight it is (`02` section 14),
       // so whoever starts fights has one to start.
       for (const event of events) {
@@ -663,6 +719,41 @@ export function createRun({
     },
 
     /**
+     * Camping (`01` section 9, Resting): a ration for half the hero's HP and
+     * all their FP — unless, on a 1-2, a wandering monster finds them first,
+     * which the session turns into a fight. The Safe Room is never
+     * interrupted (`05` section 5). The roll is on the encounter stream, so it
+     * is committed before it is shown.
+     * @returns {{ events: object[], why?: string }}
+     */
+    camp() {
+      const why = run.campReason;
+      if (why) return { events: [], why };
+      const ration = hero.pack.items.find((entry) => entry.baseId === CAMP.item);
+      removeItem(hero.pack, ration.instanceId, 1);
+      const events = [];
+      const safe = inSafeZone(floor, ex.pos);
+      if (!safe && rng.encounter.die(stepClock.die) <= CAMP.interruptUpTo) {
+        events.push({ type: 'campInterrupted' });
+        events.push({ type: 'wanderingCheck', encounter: true, cause: 'camp', surprise: false });
+      } else {
+        const hp = Math.min(hero.maxHp - hero.hp, Math.floor(hero.maxHp * CAMP.healShare));
+        const fp = Math.max(0, (hero.maxFp ?? 0) - (hero.fp ?? 0));
+        hero.hp += hp;
+        hero.fp = hero.maxFp ?? hero.fp;
+        events.push({ type: 'camped', hp, fp });
+      }
+      record(events);
+      return { events };
+    },
+
+    /** Why the hero cannot camp here, or null (`01` section 9). */
+    get campReason() {
+      if (!hero.pack?.items?.some((entry) => entry.baseId === CAMP.item)) return 'noRation';
+      return null;
+    },
+
+    /**
      * The context key.
      *
      * Two of its six actions work today, and both are what `05` section 4's
@@ -671,7 +762,7 @@ export function createRun({
      * bashing it or turning its key (`03` section 6). Searching, waystones and
      * fountains arrive with Phase 6 and Phase 7.
      */
-    act({ careful = false, method } = {}) {
+    act({ careful = false, method, search = false } = {}) {
       const ahead = run.ahead;
       const at = ahead.at;
 
@@ -688,7 +779,9 @@ export function createRun({
       // SEARCH (`03` section 3): the hero's own tile, the one ahead, and the
       // door or chest in front of them. One Search and one Careful Search
       // each, and what is found is marked on the floor.
-      if (run.context === 'search') {
+      // Landscape has a SEARCH key of its own, which searches whatever is in
+      // front of the hero (docs/DECISIONS.md, the tablet pass).
+      if (run.context === 'search' || search) {
         const events = [];
         const targets = [
           floor.traps?.[key(...ex.pos)],
@@ -1134,6 +1227,35 @@ export function createRun({
       if (log.length > LOG_KEPT) log.shift();
     },
   };
+
+
+  /**
+   * One tip, if this moment on floor 1 has one to give and this room has not
+   * taught anything yet. It goes in the log like anything else the hero learns.
+   */
+  function giveTip(events) {
+    const tip = offerTip({
+      state: tips,
+      room: tipRoom,
+      floor: floor.floor,
+      roomId: roomAt(floor, ex.pos)?.id ?? null,
+      events,
+      here: { context: run.context, chestAhead: Boolean(run.chestAhead), doorAhead: run.doorAhead, hero },
+    });
+    if (!tip) return null;
+    log.push({ text: t(`tips.${tip}`), tone: 'tip' });
+    if (log.length > LOG_KEPT) log.splice(0, log.length - LOG_KEPT);
+    return tip;
+  }
+  for (const name of ['press', 'act', 'chestAct']) {
+    const resolve = run[name];
+    run[name] = (...args) => {
+      const out = resolve(...args);
+      giveTip(out?.events ?? []);
+      return out;
+    };
+  }
+  if (!restore) giveTip([{ type: 'arrived' }, ...arriving]);
 
   return run;
 }

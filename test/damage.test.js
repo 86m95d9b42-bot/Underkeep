@@ -137,10 +137,12 @@ describe('step 4: the attacker\u2019s own modifier', () => {
     expect(weaponMod(combat.hero, { kind: 'melee' })).toBe(modFor(16));
   });
 
-  it('adds AGI to a thrown weapon and nothing to a bow or a spell', () => {
+  it('adds AGI to a thrown weapon and a bow, and nothing to a spell', () => {
+    // 01 section 8 gave bows nothing; the balance pass gives them AGI, as
+    // thrown weapons have (docs/DECISIONS.md).
     const who = { attributes: { might: 16, agility: 14, intellect: 8 } };
     expect(weaponMod(who, { kind: 'thrown' })).toBe(modFor(14));
-    expect(weaponMod(who, { kind: 'ranged' })).toBe(0);
+    expect(weaponMod(who, { kind: 'ranged' })).toBe(modFor(14));
     expect(weaponMod(who, { kind: 'spell' })).toBe(0);
   });
 

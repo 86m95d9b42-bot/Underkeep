@@ -766,7 +766,7 @@
       "immune": ["poison", "asleep", "paralyzed"],
       "xp": 90,
       "gold": "0",
-      "drops": [{ "item": "gemstone", "chance": 0.1 }],
+      "drops": [{ "item": "pearl", "chance": 0.1, "_item": "02: \"10% gemstone (worth 50 gp)\", which is the Pearl of 04 section 12." }],
       "floors": [6]
     },
 

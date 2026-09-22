@@ -164,6 +164,7 @@ export const BOSS_TRAITS = {
             return;
           }
           unit.stumps = (unit.stumps ?? 0) + 1;
+          unit.freshStumps = (unit.freshStumps ?? 0) + 1;
         },
         { name: 'rowMovement', owner: unit.id, source: 'boss' },
       ),
@@ -171,9 +172,14 @@ export const BOSS_TRAITS = {
         'roundEnd',
         (payload) => {
           const combat = payload.combat;
-          const stumps = unit.stumps ?? 0;
-          unit.stumps = 0;
-          if (!unit.alive || stumps === 0) return;
+          // A stump grows back at the end of the round after the head fell:
+          // that round is the turn a lone hero has to sear it, which is the
+          // answer `02` section 2 gives every build (docs/DECISIONS.md).
+          const fresh = Math.min(unit.freshStumps ?? 0, unit.stumps ?? 0);
+          const stumps = (unit.stumps ?? 0) - fresh;
+          unit.stumps = fresh;
+          unit.freshStumps = 0;
+          if (!unit.alive || stumps <= 0) return;
 
           for (let i = 0; i < stumps; i += 1) {
             const living = kindOf(combat, kind).length;

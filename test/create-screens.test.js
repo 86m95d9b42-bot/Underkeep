@@ -84,10 +84,13 @@ describe('where the three screens put things', () => {
     }
   });
 
-  it('puts the mode cards and the three settings on opposite sides when wide', () => {
-    // 00: "Mode cards left; difficulty, roll style, seed, and BEGIN right."
+  it('puts the mode cards left and the choices and BEGIN right when wide', () => {
+    // 00: "Mode cards left; difficulty, roll style, seed, and BEGIN right" —
+    // with the seed nudged under the mode cards, since eleven rows of
+    // controls do not fit in nine (docs/DECISIONS.md, the tablet pass).
     expect(NEW_GAME_REGIONS.mode.wide[1]).toBeLessThanOrEqual(9);
-    for (const name of ['difficulty', 'rolls', 'seed']) {
+    expect(NEW_GAME_REGIONS.seed.wide[1]).toBeLessThanOrEqual(9);
+    for (const name of ['difficulty', 'rolls', 'begin']) {
       expect([name, NEW_GAME_REGIONS[name].wide[0]]).toEqual([name, 10]);
     }
   });

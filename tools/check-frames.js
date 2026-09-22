@@ -49,6 +49,7 @@ const SCREENS = [
   'itemDetail',
   'combat',
   'combatSkills',
+  'reaction',
   'loot',
   'levelUp',
   'death',

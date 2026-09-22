@@ -25,7 +25,7 @@ export const settings = {
     import: { tall: [5, 9, 17, 18], wide: [10, 18, 8, 9], tap: true },
   },
 
-  build({ router, settings: store, frame, save }) {
+  build({ router, settings: store, frame, save, params = {}, transfer, exportSave, importSave }) {
     const rows = SETTINGS.map((spec) =>
       field({
         label: spec.label,
@@ -56,17 +56,26 @@ export const settings = {
     return {
       top: topBar({
         title: t('settings.title'),
-        sub: t('settings.sub'),
+        // What EXPORT or IMPORT just did, until the screen is left.
+        sub: params.notice ?? t('settings.sub'),
         onBack: () => router.back(),
       }),
       list,
+      // `05` section 11: a slot out as a file and a copyable line, and back in
+      // again. Adventurer only; an Ironman save is never exported.
       export: button({
         label: t('settings.export'),
-        reason: save?.hasGame ? undefined : t('settings.exportDisabled'),
+        hint: transfer?.exportWhy ? undefined : t('settings.exportHint'),
+        reason: transfer ? transfer.exportWhy ?? undefined : save?.hasGame ? undefined : t('settings.exportDisabled'),
+        onTap: () =>
+          exportSave?.().then((notice) => notice && router.replace('settings', { notice })),
       }),
       import: button({
         label: t('settings.import'),
-        reason: t('settings.importDisabled'),
+        hint: transfer?.importWhy ? undefined : t('settings.importHint'),
+        reason: transfer ? transfer.importWhy ?? undefined : t('settings.importDisabled'),
+        onTap: () =>
+          importSave?.().then((notice) => notice && router.replace('settings', { notice })),
       }),
     };
   },

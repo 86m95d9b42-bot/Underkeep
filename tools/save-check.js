@@ -9,7 +9,9 @@
  * with the same steps and log. Then it closes the page in the middle of a
  * fight: Continue must open that fight, at the same round, showing its last
  * three lines (`05` section 13). Then it corrupts the main save: the backup
- * must load, and the log must say so. Last, an Ironman falls in a fight: the
+ * must load, and the log must say so. Then a game is exported from Settings,
+ * its save deleted, and the file imported: the hero must be back where they
+ * stood. Last, an Ironman falls in a fight: the
  * Death screen shows their tombstone, the save is gone, the Hall has their
  * record, and the Title screen no longer offers Continue.
  *
@@ -194,9 +196,54 @@ try {
   const continueOff = await chrome.evaluate(`[...document.querySelectorAll('button')].find((b) => b.textContent.includes('CONTINUE'))?.disabled ?? null`);
   if (continueOff !== true) problems.push('Continue is still offered after an Ironman fell');
 
+  /* -- export, lose the save, import it back ----------------------------- */
+
+  await chrome.open(PAGE, 800);
+  await chrome.evaluate(`underkeep.newGame({ seed: 6001 })`);
+  await wait(300);
+  for (const label of MOVES.slice(0, 8)) {
+    await tap(label);
+    await wait(40);
+  }
+  const exported = JSON.parse(await chrome.evaluate(`JSON.stringify({ pos: underkeep.run.ex.pos, slot: underkeep.saves.slot })`));
+  // Catch the file EXPORT hands the browser, and the picker IMPORT opens.
+  await chrome.evaluate(`(() => {
+    const make = URL.createObjectURL.bind(URL);
+    URL.createObjectURL = (blob) => { window.__exported = blob; return make(blob); };
+    const create = document.createElement.bind(document);
+    document.createElement = (tag, ...rest) => {
+      const node = create(tag, ...rest);
+      if (tag === 'input') window.__picker = node;
+      if (tag === 'a') node.click = () => {};
+      return node;
+    };
+  })()`);
+  {
+    await chrome.evaluate(`underkeep.router.go('settings')`);
+    await wait(200);
+    if (!(await tap('EXPORT'))) problems.push('EXPORT could not be tapped');
+    await wait(400);
+  }
+  const text = await chrome.evaluate(`window.__exported ? window.__exported.text() : null`);
+  if (!text?.startsWith('UNDERKEEP:1:')) problems.push('EXPORT gave no save file');
+  // Lose the save outright, then bring it back from the file.
+  await chrome.evaluate(`underkeep.saves.store.remove(${JSON.stringify(exported.slot)})`);
+  if (!(await tap('IMPORT'))) problems.push('IMPORT could not be tapped');
+  await wait(200);
+  await chrome.evaluate(`(() => {
+    const data = new DataTransfer();
+    data.items.add(new File([${JSON.stringify(text ?? '')}], 'save.txt', { type: 'text/plain' }));
+    window.__picker.files = data.files;
+    window.__picker.dispatchEvent(new Event('change'));
+  })()`);
+  await wait(800);
+  const imported = JSON.parse(await chrome.evaluate(`JSON.stringify({ screen: underkeep.router.current.id, pos: underkeep.run?.ex?.pos ?? null })`));
+  if (imported.pos?.join() !== exported.pos.join()) problems.push(`the imported game stood at ${imported.pos}, not ${exported.pos}`);
+
   console.log(`\n  played ${MOVES.length} moves, closed the page, and continued: ${after.pos} facing ${after.facing}, ${after.steps} steps`);
   console.log(`  closed the page mid-fight on round ${inFight.round}: Continue opened ${resumed.screen}, showing "${resumed.shown.at(-1) ?? ''}" and two lines before it`);
   console.log(`  corrupted the main save: the backup loaded, and the log says "${recovered.log.at(-1)}"`);
+  console.log(`  exported a game, deleted its save, imported the file: back on ${imported.screen} at ${imported.pos}`);
   console.log(`  an Ironman fell: the Death screen showed their stone, the save is gone, the Hall holds ${grave.hall} and lists them\n`);
 } finally {
   await chrome.close();

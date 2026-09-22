@@ -20,6 +20,7 @@ import { createView, createAnimator, poseFor, doorOffsets } from '../../dungeon/
 import { inDarkness } from '../../dungeon/step-clock.js';
 import { onSwipe, SWIPE_COMMANDS } from '../../shell/swipe.js';
 import { commitThenShow } from '../commit.js';
+import { cuesOf, playCues } from '../../shell/cues.js';
 
 /**
  * Where everything sits, right-handed. Tall placements come from the screen
@@ -226,11 +227,26 @@ export const explore = {
       return true;
     };
 
-    const press = (command) => commitThenShow(ctx, () => run.press(command), ({ outcome }) => {
+    /**
+     * What a step or a use leads to — a fight, another floor, the town — is
+     * resolved with it, so it is saved with it (`05` section 11); the screen
+     * only goes where it says.
+     */
+    const withFollow = (result) => ({ ...result, next: ctx.follow?.(result)?.next ?? null });
+    const went = (next) => {
+      if (next === 'combat') router.go('combat');
+      else if (next === 'floor') router.replace('explore');
+      // 'town': leaving the dungeon has already taken the player there.
+      return Boolean(next);
+    };
+
+    const press = (command) => commitThenShow(ctx, () => withFollow(run.press(command)), ({ outcome, events = [], next }) => {
+      playCues(haptics, cuesOf(events));
       if (fell()) return;
+      if (went(next)) return;
       paintLog();
       paintChips();
-      if (outcome.blocked) haptics?.buzz?.('bump');
+      if (outcome.blocked && !events.some((event) => event.type === 'blocked')) haptics?.buzz?.('bump');
       // The context key and the light can both have changed with the step.
       paintContext();
       if (!view) return;
@@ -238,8 +254,10 @@ export const explore = {
       animator.moveTo(poseFor(ex.pos, ex.facing));
     });
 
-    const act = () => commitThenShow(ctx, () => run.act(), (acted) => {
+    const act = (options) => commitThenShow(ctx, () => withFollow(run.act(options)), (acted) => {
+      playCues(haptics, cuesOf(acted.events ?? []));
       if (fell()) return;
+      if (went(acted.next)) return;
       // A chest has a screen of its own (`03` section 7): the run says so
       // rather than resolving anything itself.
       if (acted.openChest) {
@@ -268,7 +286,7 @@ export const explore = {
           // Amber whenever there is something to act on (`00`, Exploration).
           kind: action === 'search' ? 'secondary' : 'primary',
           reason: run.actReason,
-          onTap: act,
+          onTap: () => act(),
         }),
       );
     };
@@ -345,8 +363,9 @@ export const explore = {
         frame === 'wide'
           ? button({
               label: t('explore.context.search'),
-              hint: t('common.comingSoon'),
-              reason: t('common.comingSoon'),
+              hint: t('explore.hint.search'),
+              reason: inDarkness(floor, ex.pos) ? t('explore.reason.tooDark') : undefined,
+              onTap: () => act({ search: true }),
             })
           : null,
 

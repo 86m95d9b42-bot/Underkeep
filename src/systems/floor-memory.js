@@ -22,6 +22,7 @@
  */
 import { restock as RESTOCK } from '../data/floors.js';
 import { restockStream } from '../engine/rng.js';
+import { byText } from '../dungeon/floor-builder.js';
 
 /** A floor's record, made the first time the hero goes there. */
 export function memoryFor(town, floor) {
@@ -88,6 +89,30 @@ export function applyMemory(floor, memory) {
     floor.chests[`${chest.pos[0]},${chest.pos[1]}`] = { ...chest };
   }
   return floor;
+}
+
+/**
+ * Writes what the hero did to a floor into its memory: the chests they opened,
+ * the traps they disarmed or set off, the lairs they cleared. Exploration
+ * already writes the map and the doors as it goes; these live on the floor
+ * itself, so they are copied across before the floor is let go — on the way
+ * back to town, and whenever the game is saved (`05` sections 8 and 11).
+ *
+ * @param {object} floor the live floor
+ * @param {object} memory its record in the town
+ */
+export function recordFloor(floor, memory) {
+  if (!floor || !memory) return memory;
+  for (const [at, chest] of Object.entries(floor.chests ?? {})) {
+    if (chest.opened) memory.chestsOpened.add(at);
+  }
+  for (const [at, trap] of Object.entries(floor.traps ?? {})) {
+    if (trap.disarmed || trap.sprung) memory.trapsGone.add(at);
+  }
+  for (const [id, lair] of Object.entries(floor.lairs ?? {})) {
+    if (lair.cleared) memory.lairsCleared.add(id);
+  }
+  return memory;
 }
 
 /** The dead ends a restocked chest could appear in (`05` section 8). */
@@ -160,7 +185,9 @@ function restockOneDay({ floor, memory, day, masterSeed, isWalkable }) {
 
   // Lairs: 1-2 of the defeated ones refill.
   const [low, high] = RESTOCK.lairs.refill;
-  const cleared = [...memory.lairsCleared];
+  // Sorted first: a Set remembers the order things were added in, which
+  // depends on when the game happened to save, and the draw must not.
+  const cleared = [...memory.lairsCleared].sort(byText);
   const refilling = rng.shuffle(cleared).slice(0, rng.range(low, high));
   for (const id of refilling) memory.lairsCleared.delete(id);
 
@@ -191,7 +218,7 @@ function restockOneDay({ floor, memory, day, masterSeed, isWalkable }) {
   }
 
   // Traps: 1d3 of the ones that are gone come back.
-  const gone = [...memory.trapsGone];
+  const gone = [...memory.trapsGone].sort(byText);
   const rearming = rng.shuffle(gone).slice(0, rng.roll(RESTOCK.traps.rearm));
   for (const at of rearming) memory.trapsGone.delete(at);
 

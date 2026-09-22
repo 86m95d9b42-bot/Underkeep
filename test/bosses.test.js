@@ -11,10 +11,12 @@ import { createStream } from '../src/engine/rng.js';
 import { createHooks } from '../src/engine/hooks.js';
 import { createCombat } from '../src/engine/field.js';
 import { registerRules } from '../src/engine/rules.js';
-import { BOSSES, bossIds, bossOnFloor, bossParty, makeBoss, rewardOf } from '../src/data/bosses.js';
+import { BOSSES, BOSS_TUNING, bossIds, bossOnFloor, bossParty, bossTuning, makeBoss, rewardOf } from '../src/data/bosses.js';
+import { createFight, standInHero } from '../src/systems/fight.js';
 import { answerOffer, applyQueuedPhases, phaseFor, queuePhase, stateAction, summon, turnThePage } from '../src/engine/boss.js';
 import { BOSS_TRAITS } from '../src/engine/boss-traits.js';
 import { zeroHp } from '../src/engine/defeat.js';
+import { evaluate, spend } from '../src/engine/ai.js';
 import { has } from '../src/engine/conditions.js';
 import { item } from '../src/data/items.js';
 import { playBoss } from '../tools/lib/bosser.js';
@@ -283,6 +285,10 @@ describe('what each boss is built around', () => {
     head.alive = false;
     head.lastDamageTypes = ['slash'];
     combat.hooks.fire('kill', { combat, target: head, unit: head, say: () => {} });
+    // The round it fell in, nothing grows: that is the hero's turn to sear it.
+    combat.hooks.fire('roundEnd', { combat, say: () => {} });
+    expect(living(combat, 'hydra_head').length).toBe(2);
+    // The round after, two come back.
     combat.hooks.fire('roundEnd', { combat, say: () => {} });
     expect(living(combat, 'hydra_head').length).toBe(4);
 
@@ -294,6 +300,19 @@ describe('what each boss is built around', () => {
     const before = living(combat, 'hydra_head').length;
     combat.hooks.fire('roundEnd', { combat, say: () => {} });
     expect(living(combat, 'hydra_head').length).toBe(before);
+  });
+
+  it('lets a torch sear a stump in the round after the head fell', async () => {
+    const { sear } = await import('../src/engine/item-actions.js');
+    const combat = arena('hydra');
+    const head = living(combat, 'hydra_head')[0];
+    head.alive = false;
+    head.lastDamageTypes = ['slash'];
+    combat.hooks.fire('kill', { combat, target: head, unit: head, say: () => {} });
+    combat.hooks.fire('roundEnd', { combat, say: () => {} });
+    expect(sear(combat).seared).toBeTruthy();
+    combat.hooks.fire('roundEnd', { combat, say: () => {} });
+    expect(living(combat, 'hydra_head').length).toBe(2);
   });
 
   it('kills every head with the body', () => {
@@ -381,6 +400,15 @@ describe('what each boss is built around', () => {
     expect(zeroHp(other, second, { cause: 'test' })).toMatchObject({ died: true });
   });
 
+  it('rests the Gaze two rounds after it is used (06 section 12)', () => {
+    const combat = arena('malgorath');
+    const lich = find(combat, 'malgorath');
+    const ready = (round) => evaluate('ready(paralyzing_gaze)', { combat: { ...combat, round }, unit: lich });
+    expect(ready(1)).toBe(true);
+    spend(lich, 'paralyzing_gaze', 1);
+    expect([ready(2), ready(3), ready(4)]).toEqual([false, false, true]);
+  });
+
   it('halves what the Phylactery takes while the Lich stands', () => {
     const combat = arena('malgorath');
     const vessel = combat.units.find((one) => one.type === 'phylactery');
@@ -405,5 +433,26 @@ describe('every boss fights to the end', () => {
       expect(played.summary.xp).toBeGreaterThanOrEqual(BOSSES[id].xp);
       expect(played.summary.loot.some((drop) => drop.baseId === rewardOf(id).item)).toBe(true);
     }
+  });
+});
+
+describe('the balance pass (docs/DECISIONS.md)', () => {
+  it('lays each boss’s own scales over the shared ones', () => {
+    for (const id of bossIds()) {
+      expect(bossTuning(id)).toEqual({ ...BOSS_TUNING, ...(BOSSES[id].tuning ?? {}) });
+    }
+  });
+
+  it('scales the boss’s side, its arena objects, and what it deals — never the hero', () => {
+    const hero = () => standInHero({ name: 'Harrow', hp: 200, maxHp: 200, level: 16 });
+    const scaled = createFight({ hero: hero(), boss: 'malgorath', masterSeed: 3, surprise: false });
+    const plain = createFight({ hero: hero(), boss: 'malgorath', masterSeed: 3, surprise: false, bossTuning: { hpScale: 1, objectHpScale: 1, damageScale: 1 } });
+    const { hpScale, objectHpScale } = bossTuning('malgorath');
+    const lich = (fight) => fight.combat.units.find((unit) => unit.type === 'malgorath');
+    const vessel = (fight) => fight.combat.units.find((unit) => unit.type === 'phylactery');
+    expect(lich(plain).maxHp).toBe(180);
+    expect(lich(scaled).maxHp).toBe(Math.round(180 * hpScale));
+    expect(vessel(scaled).maxHp).toBe(Math.round(60 * objectHpScale));
+    expect(scaled.combat.units.find((unit) => unit.side === 'hero').maxHp).toBe(200);
   });
 });

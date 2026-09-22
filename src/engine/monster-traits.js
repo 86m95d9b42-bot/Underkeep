@@ -11,7 +11,7 @@
  * and the Giant Rat's Filthy Bite are `onHit` data on the attack, and
  * `riders.js` is the one hook that applies them all.
  *
- * Two traits wait for the systems they need, and say so in `PENDING`.
+ * The traits still waiting for the systems they need say so in `PENDING`.
  */
 import { applyCondition, has } from './conditions.js';
 import { parsePart, resolveDamage } from './damage.js';
@@ -28,8 +28,6 @@ export const PENDING = {
   snuff: 'The hero has no torch to put out until items arrive (04, Phase 5).',
   greedy:
     "Throwing 50 gp at an ogre is an Item action the hero does not have: `04` has no \"throw gold\", and the Combat screen's Item list is built from the pack.",
-  disguise:
-    'A Mimic is a chest until it is opened (`03` section 7). The chest sequence already reports one and rolls its surprise; what is missing is the exploration loop starting a fight, which is where a wandering monster is missing too.',
 };
 
 /** How the trait list is written: a bare id, or an id with its numbers. */
@@ -60,6 +58,16 @@ function damageOfType(damage, type) {
  * @type {Record<string, (hooks: any, unit: object, trait: object) => (() => void)[]>}
  */
 export const TRAITS = {
+  /**
+   * A Mimic is a chest until it is opened (`03` section 7). All of it happens
+   * before the fight: the chest sequence finds or misses it and rolls its
+   * surprise, and `session.follow` starts the fight as an ambush. Nothing is
+   * left for the fight itself to do.
+   */
+  disguise() {
+    return [];
+  },
+
   /** Kobold: +1 ATK for each other kobold still standing (max +2). */
   pack_tactics(hooks, unit, trait) {
     return [

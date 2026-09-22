@@ -23,11 +23,15 @@ import { DIFFICULTIES, MODES, ROLL_MODES, newSeed, seedFrom } from '../../system
  */
 export const REGIONS = {
   topBar: { tall: [1, 9, 1, 2], wide: [1, 9, 1, 2] },
-  mode: { tall: [1, 9, 3, 7], wide: [1, 9, 3, 7], tap: true },
+  // Wide ("fold + nudge"): the outline puts difficulty, roll style, seed and
+  // BEGIN on the right, which is eleven rows of controls for nine. The seed
+  // is nudged under the mode cards instead, so BEGIN stays on the right under
+  // the thumb and nothing drops below two rows (docs/DECISIONS.md).
+  mode: { tall: [1, 9, 3, 7], wide: [1, 9, 3, 6], tap: true },
   difficulty: { tall: [1, 9, 8, 10], wide: [10, 18, 1, 3], tap: true },
   rolls: { tall: [1, 9, 11, 13], wide: [10, 18, 4, 6], tap: true },
-  seed: { tall: [1, 9, 14, 16], wide: [10, 18, 7, 9], tap: true },
-  begin: { tall: [1, 9, 17, 18], wide: [1, 9, 8, 9], tap: true },
+  seed: { tall: [1, 9, 14, 16], wide: [1, 9, 7, 9], tap: true },
+  begin: { tall: [1, 9, 17, 18], wide: [10, 18, 7, 9], tap: true },
 };
 
 /** A labelled block: the outline's label row and its controls, together. */

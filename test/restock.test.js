@@ -55,6 +55,25 @@ function visited(floorNumber = 1, town = createTown()) {
 const restockOn = ({ floor, memory, town }) =>
   restockFloor({ floor, memory, town, masterSeed: SEED, isWalkable });
 
+describe('a restock is the same however often the game saved', () => {
+  it('draws the same traps and lairs whatever order they were recorded in', () => {
+    const drawn = (reverse) => {
+      const town = createTown();
+      const where = visited(1, town);
+      const traps = Object.keys(where.floor.traps);
+      const lairs = Object.keys(where.floor.lairs);
+      // A save records what is gone as it happens; leaving records it all at
+      // once in the floor's own order. The Sets end up in different orders.
+      for (const at of reverse ? [...traps].reverse() : traps) where.memory.trapsGone.add(at);
+      for (const id of reverse ? [...lairs].reverse() : lairs) where.memory.lairsCleared.add(id);
+      arrive(town);
+      const out = restockOn(where);
+      return { traps: [...out.traps].sort(), lairs: [...out.lairs].sort() };
+    };
+    expect(drawn(true)).toEqual(drawn(false));
+  });
+});
+
 describe("what 05 section 8 says comes back", () => {
   it('has the table as data', () => {
     expect(RESTOCK.lairs.refill).toEqual([1, 2]);

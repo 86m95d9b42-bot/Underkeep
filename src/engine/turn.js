@@ -344,7 +344,7 @@ function perform(combat, unit, action, record, services) {
   // is used, which is what the recharge rolls at step 6 are for.
   if (action.fp) unit.fp = (unit.fp ?? 0) - action.fp;
   if (action.free) unit.turn.freeUsed += 1;
-  if (action.ability) spend(unit, action.ability);
+  if (action.ability) spend(unit, action.ability, combat.round);
 
   const result = builtIn(combat, unit, action, record)
     ?? services.resolveAction?.(combat, unit, { ...action, targets: legality.targets });

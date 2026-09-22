@@ -38,6 +38,7 @@ function mount(screen, { frame = 'tall', run, params = {}, leaveDungeon } = {}) 
     back: vi.fn(),
     openSheet: vi.fn(),
     closeSheet: vi.fn(),
+    replace: vi.fn(),
   };
   const built = screen.build({ router, params, frame, run, leaveDungeon, settings: { all: {} } });
   return { built, router, placed: placeRegions(screen, frame) };
@@ -84,11 +85,32 @@ describe('where the Pack puts things', () => {
     const run = { hero: makeHero() };
     expect(validateScreen(packScreen, 'tall')).toEqual([]);
     expect(validateScreen(packScreen, 'wide')).toEqual([]);
+    // Everything but the wide frame's detail panel, which is what tall shows
+    // as the Item Detail sheet instead (`00`, Hero: Pack).
     const text = (frame) =>
-      Object.values(mount(packScreen, { frame, run }).built)
-        .map((node) => node.textContent)
+      Object.entries(mount(packScreen, { frame, run }).built)
+        .filter(([name]) => name !== 'detail')
+        .map(([, node]) => node.textContent)
         .join(' ');
     expect(text('wide')).toBe(text('tall'));
+  });
+
+  it('shows the chosen item beside the list when wide, not in a sheet', () => {
+    const run = { hero: makeHero() };
+    const { built, router } = mount(packScreen, { frame: 'wide', run });
+    expect(built.detail.textContent).toMatch(/Pick an item/);
+    [...built.list.querySelectorAll('.listrow')][0].click();
+    expect(router.openSheet).not.toHaveBeenCalled();
+    const [, chosenParams] = router.replace.mock.calls[0];
+    expect(chosenParams.selected).toEqual(expect.any(String));
+
+    const chosen = mount(packScreen, { frame: 'wide', run, params: { selected: chosenParams.selected } });
+    expect(chosen.built.detail.textContent).toMatch(/DROP/);
+    // Tall still opens the sheet.
+    const tall = mount(packScreen, { frame: 'tall', run });
+    expect(tall.built.detail).toBeUndefined();
+    [...tall.built.list.querySelectorAll('.listrow')][0].click();
+    expect(tall.router.openSheet).toHaveBeenCalledWith('itemDetail', expect.objectContaining({ item: chosenParams.selected }));
   });
 
   it('lets only the item list scroll', () => {

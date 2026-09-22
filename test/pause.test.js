@@ -52,4 +52,26 @@ describe('the Pause Menu', () => {
     settings.click();
     expect(router.go).toHaveBeenCalledWith('settings');
   });
+
+  it('camps from the menu, and says why it cannot', () => {
+    const camp = (built) => [...built.sheet.querySelectorAll('.btn')].find((b) => b.textContent.startsWith(t('pause.camp')));
+
+    const inTown = pause.build({ router: { has: () => false, go: vi.fn(), closeSheet: vi.fn() } });
+    expect(camp(inTown).hasAttribute('disabled')).toBe(true);
+    expect(camp(inTown).textContent).toContain(t('pause.why.inTown'));
+
+    const noRation = pause.build({ router: { has: () => false }, run: { campReason: 'noRation' }, camp: vi.fn() });
+    expect(camp(noRation).textContent).toContain(t('pause.why.noRation'));
+
+    const router = { has: () => false, go: vi.fn(), replace: vi.fn(), closeSheet: vi.fn() };
+    const rest = vi.fn(() => ({ events: [], next: null }));
+    camp(pause.build({ router, run: { campReason: null }, camp: rest })).click();
+    expect(rest).toHaveBeenCalled();
+    expect(router.closeSheet).toHaveBeenCalled();
+    expect(router.replace).toHaveBeenCalledWith('explore');
+
+    const fightRouter = { has: () => false, go: vi.fn(), replace: vi.fn(), closeSheet: vi.fn() };
+    camp(pause.build({ router: fightRouter, run: { campReason: null }, camp: () => ({ events: [], next: 'combat' }) })).click();
+    expect(fightRouter.go).toHaveBeenCalledWith('combat');
+  });
 });

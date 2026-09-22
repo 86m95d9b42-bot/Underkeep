@@ -85,11 +85,11 @@ describe('every trait is answered', () => {
     }
   });
 
-  it('says what the two waiting ones are waiting for', () => {
-    // An ogre's bribe is an Item action the hero has no item for, and a Mimic
-    // is a chest until the exploration loop can start a fight.
+  it('says what the waiting ones are waiting for', () => {
+    // An ogre's bribe is an Item action the hero has no item for. A Mimic's
+    // disguise no longer waits: the exploration loop starts its fight.
     expect(PENDING.greedy).toMatch(/Item action/);
-    expect(PENDING.disguise).toMatch(/chest/);
+    expect(PENDING.disguise).toBeUndefined();
   });
 });
 

@@ -17,6 +17,7 @@ import { t } from '../../data/strings.js';
 import { ACTIONS } from '../../systems/fight.js';
 import { hitChance } from '../../engine/odds.js';
 import { commitThenShow } from '../commit.js';
+import { playCues } from '../../shell/cues.js';
 
 /**
  * Where everything sits. Tall placements are the outline's Combat table; wide
@@ -99,12 +100,12 @@ export const combat = {
   /** The back gesture opens the Pause Menu, as it does while exploring. */
   onBack({ router }) {
     if (router.currentSheet) return false;
-    router.openSheet('pause');
+    router.openSheet('pause', { from: 'combat' });
     return true;
   },
 
   build(ctx) {
-    const { router, fight, haptics, leaveDungeon, fall, bossBeaten } = ctx;
+    const { router, fight, haptics, leaveDungeon, fall, bossBeaten, endFight } = ctx;
     const hero = fight.hero;
 
     /* -- the rows ------------------------------------------------------- */
@@ -208,6 +209,9 @@ export const combat = {
       commitThenShow(ctx, () => fight.act(id), (done) => {
         if (!done.acted) haptics?.buzz?.('bump');
         paint();
+        playCues(haptics, fight.drainCues?.() ?? []);
+        // A hit the hero can react to stops the fight and asks (`06` section 17).
+        if (fight.reaction) router.openSheet('reaction');
       });
     };
 
@@ -233,6 +237,8 @@ export const combat = {
           if (outcome === 'victory' && fight.combat.boss && bossBeaten) {
             return bossBeaten(fight.combat.floor).then(() => router.go(to));
           }
+          // A flight is the end of the fight: the corridor again.
+          if (to === 'explore') endFight?.();
           return router.go(to);
         },
       };
@@ -290,7 +296,7 @@ export const combat = {
         button({
           icon: ICONS.menu,
           ariaLabel: t('explore.side.menu'),
-          onTap: () => router.openSheet('pause'),
+          onTap: () => router.openSheet('pause', { from: 'combat' }),
         }),
         chip(t('combat.round', { n: fight.round ?? 0 }), { tone: 'accent' }),
       );
@@ -307,6 +313,20 @@ export const combat = {
       paintActions();
     }
     paint();
+
+    // What happened since this screen was last drawn — a skill from the sheet,
+    // a reaction answered, Auto-Fight — is felt once it is on the page.
+    const heard = fight?.drainCues?.() ?? [];
+    if (heard.length) queueMicrotask(() => playCues(haptics, heard));
+
+    // A hit still waiting on the player — a skill used from the sheet, a
+    // resumed save, a prompt closed unanswered — opens the prompt again once
+    // this screen is on the page. It is modal (`06` section 17).
+    if (fight?.reaction && !router.currentSheet) {
+      queueMicrotask(() => {
+        if (fight.reaction && !router.currentSheet) router.openSheet('reaction');
+      });
+    }
 
     return {
       bars: barsBox,

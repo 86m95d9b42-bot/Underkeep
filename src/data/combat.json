@@ -1,5 +1,7 @@
 {
   "_source": "06 sections 2 (Combat Setup) and 3 (Round Order), with the row capacity of section 13 and the surprise die of 01 section 12. Later sections of 06 add their own tables to this file.",
+  "eventsKept": 200,
+  "_eventsKept": "How many structured combat events a fight keeps. The log is built from them as they happen, and nothing reads the old ones, but the fight is saved whole: kept forever, a long fight's save grew without bound (docs/DECISIONS.md).",
   "field": {
     "_source": "06 section 2 step 1 and section 13.",
     "rows": [
@@ -78,10 +80,11 @@
       "damageReduction"
     ],
     "_weaponAttribute": "06 section 7 step 4 and 01 section 8: weapon damage adds the attacker's own modifier — MIG for melee, AGI for a thrown weapon, nothing for a bow or a spell. A monster states its flat in its damage line, so only a unit with attributes adds one.",
+    "_weaponAttribute": "01 section 8 gave bows no attribute; the balance pass gives them Agility, as thrown weapons have (docs/DECISIONS.md).",
     "weaponAttribute": {
       "melee": "might",
       "thrown": "agility",
-      "ranged": null,
+      "ranged": "agility",
       "spell": null
     }
   },
@@ -310,5 +313,10 @@
   "_reactions": "06 section 17, Reaction prompts: the Auto setting uses Lucky or Arcane Shield when the hit would take more than 25% of max HP. Until the Phase 8 prompt exists every fight plays Auto; Riposte and Spellblade are spent whenever the hero can pay (docs/DECISIONS.md).",
   "reactions": {
     "autoShareOfMaxHp": 0.25
+  },
+  "_autoFight": "06 section 17, Auto-Fight: drink below 30% HP; stop on a telegraph, a new condition, an elite or boss, or low HP with no potion. maxTurns is only a guard against a fight that cannot end.",
+  "autoFight": {
+    "drinkBelow": 0.3,
+    "maxTurns": 200
   }
 }

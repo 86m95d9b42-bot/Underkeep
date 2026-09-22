@@ -153,6 +153,7 @@ export function playFight({
   hp = 12,
   hero = null,
   watch = null,
+  bossTuning = null,
 } = {}) {
   const streams = carriedStreams(seed);
   // A boss fight builds its own cast — the boss, its escort and its arena
@@ -173,6 +174,7 @@ export function playFight({
     streams,
     difficulty,
     surprise: true,
+    bossTuning,
     // The screen keeps the last forty lines; an audit of the log against the
     // rules has to see every one of them.
     logKept: Number.POSITIVE_INFINITY,

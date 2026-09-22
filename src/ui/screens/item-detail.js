@@ -140,162 +140,187 @@ export const itemDetail = {
   regions: REGIONS,
 
   build({ router, run, params = {}, leaveDungeon }) {
-    const hero = run.hero;
-    const held = hero.pack;
-    const instance = held ? entryOf(held, params.item) : null;
     const close = () => router.closeSheet();
-
-    if (!instance) {
-      return {
-        sheet: sheet({
-          title: t('pack.detail.title'),
-          onClose: close,
-          children: [el('p', { class: 'sheet__empty', text: t('pack.why.notCarried') })],
-        }),
-      };
-    }
-
-    const card = describe(instance, hero.identification);
-    const known = card.identified;
-    const worn = isEquipped(held, instance.instanceId);
-    const slot = equipSlotFor(instance.baseId);
-    const against = slot && !worn ? equippedItem(held, slot) : null;
-
-    /* -- rows 8-12: the compare table ---------------------------------- */
-
-    const rows = statsFor(instance.baseId).map((key) =>
-      el('div', { class: 'statline' }, [
-        el('span', { class: 'statline__label', text: t(`pack.detail.stats.${key}`) }),
-        el('span', {
-          class: 'statline__value',
-          text: against ? statOf(against, key) : '',
-        }),
-        el('span', {
-          class: 'statline__value',
-          text: known ? statOf(instance, key, { known }) : t('pack.detail.unknownValue'),
-        }),
-      ]),
-    );
-
-    const compare = el('div', { class: 'block' }, [
-      el('div', { class: 'statline statline--head' }, [
-        el('span', { class: 'statline__label', text: t('pack.detail.compare') }),
-        el('span', { class: 'statline__value', text: against ? t('pack.detail.equipped') : '' }),
-        el('span', { class: 'statline__value', text: t('pack.detail.thisItem') }),
-      ]),
-      ...rows,
-    ]);
-
-    /* -- rows 13-15: the notes ----------------------------------------- */
-
-    const notes = notesFor(hero, instance);
-    const noteBox = el('div', { class: 'block' }, [
-      el('span', { class: 'block__label', text: t('pack.detail.notes') }),
-      ...(notes.length
-        ? notes.map((line) => el('p', { class: 'hint', text: line }))
-        : [el('p', { class: 'hint', text: t('pack.detail.note.equipped') })]),
-    ]);
-
-    /* -- rows 16-18: what can be done with it -------------------------- */
-
-    const refresh = () => {
-      close();
-      router.go('pack', { filter: params.filter });
-    };
-
-    const pinned = held.quick.includes(instance.instanceId);
-    const pinWhy = whyNotPin(held, instance.instanceId);
-    const useWhy = whyNotUse(hero, instance, { inCombat: false });
-    const equipWhy = worn ? null : whyNotEquip(held, instance.instanceId);
-
-    const actions = el('div', { class: 'sheet__footer' }, [
-      button({
-        label: t('pack.detail.drop'),
-        kind: 'risky',
-        reason: instance.bound ? t('pack.why.cursedInPlace') : undefined,
-        onTap: () => {
-          removeItem(held, instance.instanceId, 1);
-          refresh();
-        },
-      }),
-      isConsumable(instance.baseId)
-        ? button({
-            label: pinned ? t('pack.detail.unpin') : t('pack.detail.quick'),
-            reason: pinned || !pinWhy ? undefined : t(`pack.why.${pinWhy}`),
-            onTap: () => {
-              if (pinned) unpin(held, held.quick.indexOf(instance.instanceId));
-              else pin(held, instance.instanceId);
-              refresh();
-            },
-          })
-        : null,
-      // A consumable is used; anything that can be worn is worn or taken off.
-      isConsumable(instance.baseId)
-        ? button({
-            label: t('pack.detail.use'),
-            kind: 'primary',
-            reason: useWhy ? t(`combat.illegal.${useWhy}`) : undefined,
-            onTap: () => {
-              const built = actionForItem(hero, instance.instanceId, { inCombat: false });
-              if (!built.action) return;
-              const done = resolveItemAction(
-                { rng: run.rng.combat, hooks: null, units: [], floor: run.floor?.floor ?? 1 },
-                hero,
-                built.action,
-              );
-              consumeItem(hero, instance.instanceId);
-              // A Scroll of Return ends the trip where it is read
-              // (`04` section 9, `05` section 9).
-              if (done?.returnToTown && leaveDungeon) {
-                close();
-                leaveDungeon({ leaveMark: done.leavesMark });
-                return;
-              }
-              refresh();
-            },
-          })
-        : button({
-            label: worn ? t('pack.detail.takeOff') : t('pack.detail.equip'),
-            kind: 'primary',
-            reason: worn
-              ? instance.bound
-                ? t('pack.why.cursedInPlace')
-                : undefined
-              : equipWhy
-                ? t(`pack.why.${equipWhy}`)
-                : undefined,
-            onTap: () => {
-              if (worn) takeOff(hero, slotOf(held, instance.instanceId));
-              else wear(hero, instance.instanceId);
-              refresh();
-            },
-          }),
-    ]);
-
-    const body = el(
-      'div',
-      { class: 'sheet__body', style: { gridColumn: '1 / -1', gridRow: '2' } },
-      [
-        el('div', { class: 'scroll' }, [
-          el('p', { class: 'itemname', text: card.name, style: { color: rarityColor(card.rarity) } }),
-          el('p', { class: 'hint', text: typeLine(instance) }),
-          compare,
-          noteBox,
-        ]),
-        actions,
-      ],
-    );
-
+    const shown = itemDetailBody({
+      router,
+      run,
+      instanceId: params.item,
+      leaveDungeon,
+      done: () => {
+        close();
+        router.go('pack', { filter: params.filter });
+      },
+      leave: close,
+    });
     return {
       sheet: sheet({
         title: t('pack.detail.title'),
-        sideNote: card.badge ?? undefined,
+        sideNote: shown.badge,
         onClose: close,
-        children: [body],
+        children: [shown.body],
       }),
     };
   },
 };
+
+/**
+ * What an item is and what can be done with it: the name and type line, the
+ * compare table, the notes, and DROP / QUICK SLOT / EQUIP or USE (`00`, Item
+ * Detail). The sheet shows it over the pack; the wide Pack screen shows it as
+ * its own panel, cols 13–18 (`00`, "item detail cols 13–18 as a panel, not a
+ * sheet").
+ *
+ * @param {object} options
+ * @param {object} options.router
+ * @param {object} options.run
+ * @param {string | null} options.instanceId
+ * @param {Function} [options.leaveDungeon]
+ * @param {() => void} options.done after an action changed the pack
+ * @param {() => void} [options.leave] before a scroll takes the hero home
+ * @returns {{ body: HTMLElement, badge?: string }}
+ */
+export function itemDetailBody({ router, run, instanceId, leaveDungeon, done, leave = () => {} }) {
+  const hero = run.hero;
+  const held = hero.pack;
+  const instance = held ? entryOf(held, instanceId) : null;
+
+  if (!instance) {
+    return {
+      body: el('div', { class: 'sheet__body', style: { gridColumn: '1 / -1', gridRow: '2' } }, [
+        el('p', { class: 'sheet__empty', text: t('pack.why.notCarried') }),
+      ]),
+    };
+  }
+  const card = describe(instance, hero.identification);
+  const known = card.identified;
+  const worn = isEquipped(held, instance.instanceId);
+  const slot = equipSlotFor(instance.baseId);
+  const against = slot && !worn ? equippedItem(held, slot) : null;
+
+  /* -- rows 8-12: the compare table ---------------------------------- */
+
+  const rows = statsFor(instance.baseId).map((key) =>
+    el('div', { class: 'statline' }, [
+      el('span', { class: 'statline__label', text: t(`pack.detail.stats.${key}`) }),
+      el('span', {
+        class: 'statline__value',
+        text: against ? statOf(against, key) : '',
+      }),
+      el('span', {
+        class: 'statline__value',
+        text: known ? statOf(instance, key, { known }) : t('pack.detail.unknownValue'),
+      }),
+    ]),
+  );
+
+  const compare = el('div', { class: 'block' }, [
+    el('div', { class: 'statline statline--head' }, [
+      el('span', { class: 'statline__label', text: t('pack.detail.compare') }),
+      el('span', { class: 'statline__value', text: against ? t('pack.detail.equipped') : '' }),
+      el('span', { class: 'statline__value', text: t('pack.detail.thisItem') }),
+    ]),
+    ...rows,
+  ]);
+
+  /* -- rows 13-15: the notes ----------------------------------------- */
+
+  const notes = notesFor(hero, instance);
+  const noteBox = el('div', { class: 'block' }, [
+    el('span', { class: 'block__label', text: t('pack.detail.notes') }),
+    ...(notes.length
+      ? notes.map((line) => el('p', { class: 'hint', text: line }))
+      : [el('p', { class: 'hint', text: t(worn ? 'pack.detail.note.equipped' : 'pack.detail.note.none') })]),
+  ]);
+
+  /* -- rows 16-18: what can be done with it -------------------------- */
+
+  const refresh = () => done();
+
+  const pinned = held.quick.includes(instance.instanceId);
+  const pinWhy = whyNotPin(held, instance.instanceId);
+  const useWhy = whyNotUse(hero, instance, { inCombat: false });
+  const equipWhy = worn ? null : whyNotEquip(held, instance.instanceId);
+
+  const actions = el('div', { class: 'sheet__footer' }, [
+    button({
+      label: t('pack.detail.drop'),
+      kind: 'risky',
+      reason: instance.bound ? t('pack.why.cursedInPlace') : undefined,
+      onTap: () => {
+        removeItem(held, instance.instanceId, 1);
+        refresh();
+      },
+    }),
+    isConsumable(instance.baseId)
+      ? button({
+          label: pinned ? t('pack.detail.unpin') : t('pack.detail.quick'),
+          reason: pinned || !pinWhy ? undefined : t(`pack.why.${pinWhy}`),
+          onTap: () => {
+            if (pinned) unpin(held, held.quick.indexOf(instance.instanceId));
+            else pin(held, instance.instanceId);
+            refresh();
+          },
+        })
+      : null,
+    // A consumable is used; anything that can be worn is worn or taken off.
+    isConsumable(instance.baseId)
+      ? button({
+          label: t('pack.detail.use'),
+          kind: 'primary',
+          reason: useWhy ? t(`combat.illegal.${useWhy}`) : undefined,
+          onTap: () => {
+            const built = actionForItem(hero, instance.instanceId, { inCombat: false });
+            if (!built.action) return;
+            const used = resolveItemAction(
+              { rng: run.rng.combat, hooks: null, units: [], floor: run.floor?.floor ?? 1 },
+              hero,
+              built.action,
+            );
+            consumeItem(hero, instance.instanceId);
+            // A Scroll of Return ends the trip where it is read
+            // (`04` section 9, `05` section 9).
+            if (used?.returnToTown && leaveDungeon) {
+              leave();
+              leaveDungeon({ leaveMark: used.leavesMark });
+              return;
+            }
+            refresh();
+          },
+        })
+      : button({
+          label: worn ? t('pack.detail.takeOff') : t('pack.detail.equip'),
+          kind: 'primary',
+          reason: worn
+            ? instance.bound
+              ? t('pack.why.cursedInPlace')
+              : undefined
+            : equipWhy
+              ? t(`pack.why.${equipWhy}`)
+              : undefined,
+          onTap: () => {
+            if (worn) takeOff(hero, slotOf(held, instance.instanceId));
+            else wear(hero, instance.instanceId);
+            refresh();
+          },
+        }),
+  ]);
+
+  const body = el(
+    'div',
+    { class: 'sheet__body', style: { gridColumn: '1 / -1', gridRow: '2' } },
+    [
+      el('div', { class: 'scroll' }, [
+        el('p', { class: 'itemname', text: card.name, style: { color: rarityColor(card.rarity) } }),
+        el('p', { class: 'hint', text: typeLine(instance) }),
+        compare,
+        noteBox,
+      ]),
+      actions,
+    ],
+  );
+
+  return { body, badge: card.badge ?? undefined };
+}
 
 /** "Weapon · Blade · 1 slot", the line under the name. */
 function typeLine(instance) {

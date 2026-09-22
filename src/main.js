@@ -5,9 +5,12 @@
  * calls is either a shell module or a screen.
  */
 import { watchFrame } from './shell/frame.js';
+import { resumeScreen } from './save/resume.js';
 import { createRouter } from './shell/router.js';
 import { createSettings } from './shell/settings.js';
 import { createHaptics } from './shell/haptics.js';
+import { createSound } from './shell/sound.js';
+import { createCues } from './shell/cues.js';
 import { title } from './ui/screens/title.js';
 import { settings as settingsScreen } from './ui/screens/settings.js';
 import { explore } from './ui/screens/explore.js';
@@ -33,6 +36,7 @@ import { loot } from './ui/screens/loot.js';
 import { levelUp } from './ui/screens/levelup.js';
 import { death } from './ui/screens/death.js';
 import { hall } from './ui/screens/hall.js';
+import { reaction } from './ui/screens/reaction.js';
 import { isWalkable } from './dungeon/floor-builder.js';
 import { createSession } from './systems/session.js';
 import { standInHero } from './systems/fight.js';
@@ -43,6 +47,7 @@ import { openStore, summaryOf } from './save/store.js';
 import { createSaver } from './save/saver.js';
 import { restoreSession, slotFor, takeSnapshot } from './save/snapshot.js';
 import { serializeStreams } from './engine/rng.js';
+import { exportName, exportText, importSlot, importText, whyNotExport } from './save/transfer.js';
 import { t } from './data/strings.js';
 import saving from './data/saving.json' with { type: 'json' };
 
@@ -50,7 +55,10 @@ const app = /** @type {HTMLElement} */ (document.getElementById('app'));
 const isBuild = document.documentElement.dataset.build === '1';
 
 const settings = createSettings();
-const haptics = createHaptics(settings);
+const motor = createHaptics(settings);
+const sound = createSound(settings);
+/** A buzz and a sound for each cue, each under its own setting (`00`, Feedback). */
+const haptics = createCues(motor, sound);
 
 /** Settings that change how the frame looks are applied to <html>. */
 function applySettings(values) {
@@ -91,6 +99,8 @@ let slot = null;
 let realGame = false;
 /** What the Title screen shows of the last game, read at launch. */
 let lastSummary = null;
+/** The slot that summary is of. */
+let lastSlotId = null;
 /** True while a random outcome is being written, before it may be shown. */
 let holding = false;
 /** The Hall of the Dead as last read, for the screen to draw (`05` section 12). */
@@ -136,6 +146,69 @@ async function claimSlot(hero) {
   await commit();
 }
 
+/* -- export and import (`05` section 11, Adventurer only) ------------------ */
+
+/** The slot EXPORT would write out: the game in play, or the last one saved. */
+function exportSlot() {
+  return slot ?? lastSlotId;
+}
+
+/**
+ * EXPORT: the slot's saved game as one line of text, downloaded as a file and
+ * copied, so it can be kept or sent to another phone.
+ * @returns {Promise<string>} what to tell the player
+ */
+async function exportSave() {
+  const which = exportSlot();
+  if (!store || !which) return t('settings.exportDisabled');
+  await saver.flush().catch(() => null);
+  const { save } = await store.read(which);
+  const why = whyNotExport(save);
+  if (why) return t(why === 'ironman' ? 'settings.exportIronman' : 'settings.exportDisabled');
+  const text = await exportText(save);
+  const file = exportName(save);
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
+  link.download = file;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(link.href), 10_000);
+  const copied = await navigator.clipboard?.writeText(text).then(() => true, () => false);
+  return t(copied ? 'settings.exported' : 'settings.exportedFile', { file });
+}
+
+/**
+ * IMPORT: a file the player picks, checked the way a slot is checked, into
+ * the slot that already holds that game or the first free one — then played.
+ * @returns {Promise<string | null>} what to tell the player, or null when it
+ *   went straight into the game
+ */
+function importSave() {
+  return new Promise((resolve) => {
+    if (!store) {
+      resolve(t('settings.noStorage'));
+      return;
+    }
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.txt,text/plain';
+    input.addEventListener('change', async () => {
+      const file = input.files?.[0];
+      if (!file) return resolve(null);
+      const read = await importText(await file.text());
+      if (!read.save) return resolve(t(`settings.importFailed.${read.why}`));
+      const where = importSlot(read.save, await store.list(), saving.slots.adventurer);
+      if (!where) return resolve(t('settings.importFailed.full'));
+      await saver.flush().catch(() => null);
+      await store.write(where, read.save);
+      lastSummary = summaryOf(read.save);
+      lastSlotId = where;
+      await continueGame();
+      resolve(null);
+    });
+    input.click();
+  });
+}
+
 /** True while a fall is being written, so a second tap cannot fall twice. */
 let falling = false;
 
@@ -161,6 +234,7 @@ async function fall({ cause = null } = {}) {
     }
     // Replaced, not pushed: there is no going back into the fight that ended.
     router.replace('death', { record: fell.record, grave: fell.grave, mode: fell.mode });
+    haptics.buzz('death');
   } finally {
     falling = false;
   }
@@ -179,7 +253,10 @@ async function continueGame() {
     router.render();
     return;
   }
-  session = restoreSession(save, { go: (to, params) => router.go(to, params) });
+  session = restoreSession(save, {
+    go: (to, params) => router.go(to, params),
+    reactions: () => settings.all.reactions,
+  });
   slot = last;
   realGame = true;
   lastTick = Date.now();
@@ -188,12 +265,15 @@ async function continueGame() {
   if (notice && underground) session.run.log.push({ text: notice, tone: 'danger' });
   // Mid-fight, the fight: its last three lines are already in its log
   // (`05` section 13).
+  const reopen = resumeScreen(session, save.location?.screen ?? null);
   if (session.fight) {
     if (notice) session.fight.log.push({ round: session.fight.round, text: notice, tone: 'danger' });
-    router.go('combat');
+    router.go(reopen);
+    // Saved while a hit waited on the player: the same question again.
+    if (reopen === 'combat' && session.fight.reaction) router.openSheet('reaction');
     return;
   }
-  router.go(underground ? 'explore' : 'town', notice && !underground ? { notice } : {});
+  router.go(reopen, notice && reopen === 'town' ? { notice } : {});
 }
 
 /**
@@ -210,6 +290,7 @@ function startRun(newHero) {
       seed: DEMO_SEED,
       difficulty: newHero?.difficulty ?? settings.all.difficulty ?? 'normal',
       go: (to, params) => router.go(to, params),
+      reactions: () => settings.all.reactions,
     });
     slot = null;
     realGame = Boolean(newHero);
@@ -287,6 +368,7 @@ const screens = {
   levelUp,
   death,
   hall,
+  reaction,
 };
 
 /**
@@ -361,6 +443,18 @@ const ctx = {
   descend(options) {
     return game().descend(options);
   },
+  /** Camping, from the Pause Menu (`01` section 9). */
+  camp() {
+    return game().camp();
+  },
+  /** The fight is done with: the hero is back in the corridor. */
+  endFight() {
+    game().endFight();
+  },
+  /** What a step on the map leads to: a fight, another floor, the town. */
+  follow(result) {
+    return game().follow(result);
+  },
   leaveDungeon(options) {
     return game().leaveDungeon(options);
   },
@@ -372,6 +466,22 @@ const ctx = {
    * @param {{ cause?: object }} [options]
    */
   fall,
+  exportSave,
+  importSave,
+  /** Why EXPORT and IMPORT are dimmed, if they are (`05` section 11). */
+  get transfer() {
+    const mode = slot && session ? session.hero.mode : lastSummary?.mode;
+    return {
+      exportWhy: !store
+        ? t('settings.noStorage')
+        : !exportSlot()
+          ? t('settings.exportDisabled')
+          : mode === 'ironman'
+            ? t('settings.exportIronman')
+            : null,
+      importWhy: store ? null : t('settings.noStorage'),
+    };
+  },
   /** The Hall of the Dead, best first (`05` section 12). */
   get hall() {
     return hallRecords;
@@ -406,6 +516,8 @@ for (const name of ['go', 'replace', 'openSheet', 'closeSheet']) {
 // A settings change repaints whatever screen is open.
 settings.subscribe((values) => {
   applySettings(values);
+  // A fight in progress follows the Reaction prompt setting from its next hit.
+  if (session?.fight) session.fight.reactions = values.reactions;
   router.render();
 });
 
@@ -436,6 +548,8 @@ globalThis.underkeep = {
     router.go('explore');
     return saver.flush();
   },
+  /** The carried streams' state, for `npm run force-close`: a roll made twice would show here. */
+  luck: () => (session ? JSON.stringify(serializeStreams(session.rng)) : ''),
   /** The save layer, for the tools that check it. */
   saves: {
     get slot() {
@@ -532,6 +646,7 @@ async function openSaves() {
     const last = await store.lastSlot();
     const { save } = last ? await store.read(last) : { save: null };
     lastSummary = save ? summaryOf(save) : null;
+    lastSlotId = save ? last : null;
     await refreshHall();
   } catch (error) {
     store = null;
@@ -574,7 +689,10 @@ app.addEventListener('pointerdown', (event) => {
   target.classList.remove('flash');
   void target.offsetWidth; // restart the animation
   target.classList.add('flash');
-  haptics.buzz('tap');
+  // Taps are felt, not heard; the first one is also what lets the page play
+  // sound at all.
+  sound.unlock();
+  motor.buzz('tap');
 });
 
 // In a normal browser tab the first tap asks for fullscreen, where the browser
@@ -594,9 +712,13 @@ app.addEventListener(
 document.addEventListener('gesturestart', (event) => event.preventDefault());
 
 if (isBuild && 'serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
+  const register = () =>
     navigator.serviceWorker.register('./sw.js').catch(() => {
       // Offline play is a bonus; a failed registration must never stop a game.
     });
-  });
+  // The saves are opened before this line runs, so the page may well have
+  // finished loading already — and a `load` listener added after that never
+  // fires, which left the game with no offline copy at all.
+  if (document.readyState === 'complete') register();
+  else window.addEventListener('load', register, { once: true });
 }

@@ -218,9 +218,10 @@ export function actionForSkill(unit, id, { target, combat, choose, fromItem = fa
 
   const weapon = weaponOf(unit);
   const attack = {
-    // A melee skill is the hero's own weapon, swung differently; a spell
-    // brings its own dice.
-    ...(act.kind === 'melee' ? { name: weapon.name, damage: weapon.damage } : {}),
+    // A melee or ranged skill is the hero's own weapon, swung or loosed
+    // differently — Twin Shot is two arrows from the bow; a spell brings its
+    // own dice.
+    ...(act.kind === 'melee' || act.kind === 'ranged' ? { name: weapon.name, damage: weapon.damage } : {}),
     ...(act.damage ? { damage: act.damage } : {}),
     kind: act.kind ?? 'melee',
     atkMod: act.toHit ?? 0,

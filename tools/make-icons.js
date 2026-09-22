@@ -1,7 +1,7 @@
 /**
  * Draws the Underkeep app icons as PNGs with no image library: a keep
  * silhouette in amber on the ground colour, in the shapes the launch
- * checklist asks for (192, 512, maskable 512, apple-touch 180).
+ * checklist asks for (192, 512, maskable 192 and 512, apple-touch 180).
  *
  * Run with `npm run icons`. Output is committed; the build only copies it.
  */
@@ -110,7 +110,8 @@ await mkdir(OUT, { recursive: true });
 const jobs = [
   ['icon-192.png', 192, 0.08],
   ['icon-512.png', 512, 0.08],
-  ['icon-maskable-512.png', 512, 0.22], // art inside the 80% safe zone
+  ['icon-maskable-192.png', 192, 0.22], // art inside the 80% safe zone
+  ['icon-maskable-512.png', 512, 0.22],
   ['apple-touch-icon.png', 180, 0.08],
 ];
 for (const [name, size, inset] of jobs) {

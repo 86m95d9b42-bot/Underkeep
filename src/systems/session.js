@@ -12,12 +12,15 @@
 import { createRun } from './run.js';
 import { createTown, descend as countTrip } from './town.js';
 import { openShop } from './shop.js';
-import { returnToTown, useMark } from './travel.js';
+import { FLOORS, returnToTown, useMark } from './travel.js';
 import { createFight } from './fight.js';
 import { BOSSES, bossOnFloor } from '../data/bosses.js';
 import { heroFell as fell } from './graves.js';
 import { carriedStreams } from '../engine/rng.js';
 import { recordOf } from './death.js';
+import { tipState } from './tips.js';
+import { makeMonster } from '../data/monsters.js';
+import { rollEncounter } from '../data/encounters.js';
 
 /**
  * @param {object} options
@@ -28,8 +31,10 @@ import { recordOf } from './death.js';
  *   change goes; the tools do not need one
  * @param {object} [options.restore] a save file's state to pick up from
  *   (`src/save/snapshot.js` builds it)
+ * @param {() => string} [options.reactions] the Reaction prompt setting, read
+ *   when each fight begins (`06` section 17); the tools fly Auto
  */
-export function createSession({ hero, seed, difficulty = 'normal', go, restore } = {}) {
+export function createSession({ hero, seed, difficulty = 'normal', go, restore, reactions = () => 'auto' } = {}) {
   const masterSeed = hero?.seed ?? seed ?? 1;
   const town = restore?.town ?? createTown();
 
@@ -171,8 +176,77 @@ export function createSession({ hero, seed, difficulty = 'normal', go, restore }
       return { mode, grave, record };
     },
 
+    /**
+     * What a step or a use on the map leads to, resolved at once so it is
+     * saved with the step (`05` section 11). A fight comes first, in the
+     * order the hero meets it: a Mimic or a waking Sarcophagus, the Hollow
+     * Stalker, the boss arena, then a wandering monster the clock or a noise
+     * called up. With no fight, stairs underfoot are taken: down once the
+     * floor's boss is beaten, up to the floor above's down stairs, or out of
+     * floor 1 to town (`05` section 1).
+     *
+     * @param {{ events?: object[], mimic?: boolean, fight?: string[] | null, outcome?: object }} result
+     *   what `run.press`, `run.act` or `run.chestAct` handed back
+     * @returns {{ next: 'combat' | 'floor' | 'town' | null }} where the screen goes
+     */
+    follow(result = {}) {
+      // A fight that is over and was never put away is done with.
+      if (fight?.over) fight = null;
+      if (!run || fight) return { next: fight ? 'combat' : null };
+      const events = result.events ?? [];
+      const on = run.floor.floor;
+
+      if (result.mimic) {
+        session.startFight({ monsters: [makeMonster('mimic', { floor: on })], ambush: Boolean(result.outcome?.surprise) });
+        return { next: 'combat' };
+      }
+      if (Array.isArray(result.fight) && result.fight.length) {
+        session.startFight({ monsters: result.fight.map((id) => makeMonster(id, { floor: on })) });
+        return { next: 'combat' };
+      }
+      const stalker = events.find((event) => event.type === 'stalker' && event.monsters?.length);
+      if (stalker) {
+        session.startFight({ monsters: stalker.monsters });
+        return { next: 'combat' };
+      }
+      if (events.some((event) => event.type === 'arena') && session.startBoss({ floor: on })) {
+        return { next: 'combat' };
+      }
+      const called = events.find((event) => (event.type === 'wanderingCheck' || event.type === 'noiseCheck') && event.encounter);
+      if (called) {
+        session.startFight({ monsters: rollEncounter(on, rng.encounter).monsters, ambush: Boolean(called.surprise) });
+        return { next: 'combat' };
+      }
+
+      const stairs = events.find((event) => event.type === 'stairs');
+      if (stairs?.direction === 'down' && on < FLOORS.length && town.bosses.includes(on)) {
+        takeStairs(on + 1, null);
+        return { next: 'floor' };
+      }
+      if (stairs?.direction === 'up') {
+        if (on === 1) {
+          session.leaveDungeon({ leaveMark: false });
+          return { next: 'town' };
+        }
+        takeStairs(on - 1, 'down');
+        return { next: 'floor' };
+      }
+      return { next: null };
+    },
+
+    /**
+     * Camping, from the Pause Menu (`01` section 9): the rest itself, or the
+     * wandering monster that interrupts it.
+     * @returns {{ events: object[], why?: string, next: 'combat' | null }}
+     */
+    camp() {
+      if (!run || fight) return { events: [], why: fight ? 'inFight' : 'inTown', next: null };
+      const result = run.camp();
+      return { ...result, next: result.why ? null : session.follow(result).next };
+    },
+
     /** The fight in front of the hero, started if there is not one. */
-    startFight({ monsters, seed: fightSeed } = {}) {
+    startFight({ monsters, seed: fightSeed, ambush = false } = {}) {
       const where = run ?? session.descend({ floor: 1 });
       fight = createFight({
         hero,
@@ -182,9 +256,12 @@ export function createSession({ hero, seed, difficulty = 'normal', go, restore }
         // draws on the carried streams.
         ...(fightSeed !== undefined ? { masterSeed: fightSeed } : { streams: rng }),
         difficulty,
+        reactions: reactions(),
+        tips: tipState(town),
         // Where the hero is standing decides whether magic works at all
         // (`03` section 8, Anti-Magic Field).
         antiMagic: where.antiMagic ?? false,
+        ambush,
       });
       return fight;
     },
@@ -208,6 +285,8 @@ export function createSession({ hero, seed, difficulty = 'normal', go, restore }
         floor: floorNumber,
         ...(fightSeed !== undefined ? { masterSeed: fightSeed } : { streams: rng }),
         difficulty,
+        reactions: reactions(),
+        tips: tipState(town),
       });
       return fight;
     },
@@ -241,6 +320,28 @@ export function createSession({ hero, seed, difficulty = 'normal', go, restore }
     },
   };
 
+  /**
+   * Stairs between floors: the same trip goes on, so no trip is counted and
+   * the day does not turn. The floor left behind is remembered, and the hero
+   * arrives on the up stairs going down, or on the down stairs going up
+   * (`05` section 1).
+   * @param {number} to
+   * @param {'down' | null} arriveOn which stairs of the new floor to stand on
+   */
+  function takeStairs(to, arriveOn) {
+    run.remember();
+    countSteps();
+    run = createRun({
+      masterSeed,
+      floor: to,
+      hero,
+      streams: rng,
+      town,
+      leaveDungeon: (options) => session.leaveDungeon(options),
+      ...(arriveOn ? { arriveOn } : {}),
+    });
+  }
+
   /** Adds this trip's steps to the town's tally, for the Hall (`05` section 12). */
   function countSteps() {
     if (run) town.steps = (town.steps ?? 0) + (run.ex.steps ?? 0);
@@ -268,6 +369,8 @@ export function createSession({ hero, seed, difficulty = 'normal', go, restore }
       antiMagic: origin.antiMagic ?? false,
       streams: rng,
       difficulty,
+      reactions: reactions(),
+      tips: tipState(town),
       resume: restore.fight,
     });
   }

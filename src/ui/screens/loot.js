@@ -51,7 +51,7 @@ export const loot = {
   pattern: 'list-detail',
   regions: REGIONS,
 
-  build({ router, run, fight }) {
+  build({ router, run, fight, endFight }) {
     const who = run.hero;
     const reward = rewardOf(fight);
     const climb = progress(who);
@@ -164,7 +164,12 @@ export const loot = {
         label: t('loot.continue'),
         hint: earned ? t('loot.toLevel') : undefined,
         kind: 'primary',
-        onTap: () => (earned ? router.go('levelUp', { levels: reward.levels }) : router.go('explore')),
+        onTap: () => {
+          // The fight is over and paid: the game is back in the corridor, and
+          // a save made from here on says so.
+          endFight?.();
+          return earned ? router.go('levelUp', { levels: reward.levels }) : router.go('explore');
+        },
       }),
     ]);
 

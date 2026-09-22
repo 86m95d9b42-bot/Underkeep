@@ -456,7 +456,7 @@ function checkAi(json) {
  * scripts go through the AI reader, and every trait has to be implemented or
  * listed as waiting on another phase.
  */
-function checkMonsters(json, ai, combat) {
+function checkMonsters(json, ai, combat, items) {
   const ids = Object.keys(json.monsters ?? {}).filter((id) => !id.startsWith('_'));
   if (ids.length === 0) {
     problems.push('monsters.json has no monsters');
@@ -518,6 +518,13 @@ function checkMonsters(json, ai, combat) {
       for (const type of block[list] ?? []) {
         if (!damageTypes.includes(type)) problems.push(`${where} is ${list} to "${type}", which is not a damage type`);
       }
+    }
+
+    // A drop names a loot table, a pool, or one item that must exist: a
+    // missing one only shows up when the monster dies, as a crash.
+    for (const line of block.drops ?? []) {
+      if (line.pool || ['common', 'uncommon', 'rare'].includes(line.item)) continue;
+      if (items && !items.items?.[line.item]) problems.push(`${where} drops "${line.item}", which items.json has no entry for`);
     }
   }
 }
@@ -1201,7 +1208,7 @@ const CHECKS = {
       loaded['items.json'],
       loaded['skills.json'],
     ),
-  'monsters.json': (json) => checkMonsters(json, loaded['ai.json'], loaded['combat.json']),
+  'monsters.json': (json) => checkMonsters(json, loaded['ai.json'], loaded['combat.json'], loaded['items.json']),
   'encounters.json': (json) => checkEncounters(json, loaded['monsters.json']),
   'floors.json': checkFloors,
   // Checked against half the database: floors, items, traps, loot, monsters.

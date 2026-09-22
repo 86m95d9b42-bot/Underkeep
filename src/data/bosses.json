@@ -1,10 +1,13 @@
 {
+  "_tuning": "The balance pass (Phase 7's done when; docs/DECISIONS.md, an open question): every boss fight, its summons and its arena objects are scaled from 02's numbers. hpScale is the boss's side's hit points, objectHpScale an arena object's, damageScale the damage the boss's side deals. 1 is 02 as written. This is the shared default; a boss's own `tuning` goes over it, set by `npm run sim` to the mildest scale at which every example build wins at least 70% (the target is 60%, with room for seed luck).",
+  "tuning": { "hpScale": 1, "objectHpScale": 1, "damageScale": 1 },
   "_source": "02 sections 4 to 13's boss blocks, with 06 section 12's scripts and section 13's rules for summons, rows and anchored units. The summons and the arena objects each boss brings are in `units`; everything else it fields comes from monsters.json.",
 
   "bosses": {
     "rat_king": {
       "name": "The Rat King",
       "floor": 1,
+      "tuning": { "hpScale": 0.9, "objectHpScale": 0.9, "damageScale": 0.8 },
       "hd": 3,
       "hp": 30,
       "atk": 4,
@@ -48,6 +51,7 @@
     "bone_warden": {
       "name": "The Bone Warden",
       "floor": 2,
+      "tuning": { "hpScale": 0.6, "objectHpScale": 0.6, "damageScale": 0.6 },
       "hd": 5,
       "hp": 50,
       "atk": 6,
@@ -106,6 +110,7 @@
     "grukk": {
       "name": "Grukk, the Goblin King",
       "floor": 3,
+      "tuning": { "hpScale": 0.35, "objectHpScale": 0.35, "damageScale": 0.35 },
       "hd": 6,
       "hp": 70,
       "atk": 7,
@@ -154,6 +159,7 @@
     "brood_mother": {
       "name": "The Brood Mother",
       "floor": 4,
+      "tuning": { "hpScale": 0.35, "objectHpScale": 0.35, "damageScale": 0.3 },
       "hd": 8,
       "hp": 110,
       "atk": 9,
@@ -223,6 +229,7 @@
     "hydra": {
       "name": "The Hydra",
       "floor": 5,
+      "tuning": { "hpScale": 0.9, "objectHpScale": 0.9, "damageScale": 0.45 },
       "hd": 10,
       "hp": 60,
       "atk": 0,
@@ -250,6 +257,7 @@
     "veyra": {
       "name": "High Priestess Veyra",
       "floor": 6,
+      "tuning": { "hpScale": 0.35, "objectHpScale": 0.35, "damageScale": 0.35 },
       "hd": 11,
       "hp": 150,
       "atk": 10,
@@ -344,6 +352,7 @@
     "forge_colossus": {
       "name": "The Forge Colossus",
       "floor": 7,
+      "tuning": { "hpScale": 0.2, "objectHpScale": 0.2, "damageScale": 0.25 },
       "hd": 13,
       "hp": 220,
       "atk": 12,
@@ -388,6 +397,7 @@
     "bound_grimoire": {
       "name": "The Bound Grimoire",
       "floor": 8,
+      "tuning": { "hpScale": 0.25, "objectHpScale": 0.25, "damageScale": 0.25 },
       "hd": 14,
       "hp": 200,
       "atk": 11,
@@ -490,6 +500,7 @@
     "malgorath": {
       "name": "Malgorath the Lich",
       "floor": 9,
+      "tuning": { "hpScale": 0.3, "objectHpScale": 0.3, "damageScale": 0.2 },
       "hd": 16,
       "hp": 180,
       "atk": 12,
@@ -550,7 +561,8 @@
           "autoHit": true,
           "magic": true,
           "control": "paralyzed",
-          "everyOtherRound": 2,
+          "restRounds": 2,
+          "_restRounds": "06 section 12: not used in the last 2 rounds.",
           "save": { "type": "mind", "dc": 16 },
           "onHit": { "_trait": "Paralyzing Gaze", "useAttackSave": true, "condition": "paralyzed" },
           "power": 8
@@ -583,6 +595,7 @@
     "vyrmathrax": {
       "name": "Vyrmathrax the Ashen",
       "floor": 10,
+      "tuning": { "hpScale": 0.9, "objectHpScale": 0.9, "damageScale": 0.2 },
       "hd": 15,
       "hp": 330,
       "atk": 15,

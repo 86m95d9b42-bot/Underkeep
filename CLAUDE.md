@@ -93,10 +93,13 @@ npm run loot       # roll, carry and use a game's worth of items; audit against 
 npm run loop       # play whole games: descend, fight, return, shop, descend again
 npm run view-check # render the dungeon view in a browser and check what came out
 npm run save-check # play, close the page, continue; corrupt the save and load the backup
+npm run install-check # installability, offline, rotation and no-scroll checks on the built page
+npm run force-close # crash the page mid-game again and again; Continue must come back exactly
+npm run playthrough # play both modes to the dragon, force-closing after every action
 npm run sim        # balance simulator (Phase 7+)
 ```
 
-`check`, `shots` and `save-check` need the built page (`npm run build` first) and headless Chrome;
+`check`, `shots`, `save-check`, `install-check` and `force-close` need the built page (`npm run build` first) and headless Chrome;
 set `CHROME` if it isn't at the usual macOS path. Add each new screen's router id to
 the `SCREENS` list in `tools/check-frames.js` and `tools/shots.js` as it's built.
 

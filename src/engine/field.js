@@ -164,8 +164,26 @@ export function place(combat, unit, { overflow = false } = {}) {
   unit.slot = slot;
   unit.seq = combat.nextSeq++;
   prepare(unit);
+  tune(combat, unit);
   combat.units.push(unit);
   return { placed: true, unit };
+}
+
+/**
+ * A boss fight's scale (`BOSS_TUNING`): whatever takes the field on the boss's
+ * side — the boss, its escort, a summon, an arena object — has its hit points
+ * scaled once, as it arrives. Nothing else is touched.
+ * @param {object} combat
+ * @param {object} unit
+ */
+export function tune(combat, unit) {
+  const tuning = combat.bossTuning;
+  if (!tuning || unit.side !== 'monsters' || unit.tuned) return unit;
+  const scale = unit.object ? tuning.objectHpScale ?? 1 : tuning.hpScale ?? 1;
+  unit.maxHp = Math.max(1, Math.round((unit.maxHp ?? unit.hp ?? 1) * scale));
+  unit.hp = Math.max(1, Math.round((unit.hp ?? unit.maxHp) * scale));
+  unit.tuned = true;
+  return unit;
 }
 
 /**
@@ -304,8 +322,10 @@ export function clearSurprise(combat) {
  * @param {ReturnType<import('./hooks.js').createHooks>} [options.hooks]
  * @param {boolean} [options.surprise] false skips the surprise roll entirely
  * @param {object} [options.encounter] what this fight is, for the log and for loot
+ * @param {boolean} [options.ambush] the monsters surprise on any roll: a trap's
+ *   noise, a gas cloud, a Mimic (`03` sections 4, 5 and 7)
  */
-export function createCombat({ hero, monsters = [], rng, hooks, surprise = true, encounter }) {
+export function createCombat({ hero, monsters = [], rng, hooks, surprise = true, encounter, ambush = false }) {
   const combat = {
     round: null,
     units: [],
@@ -340,6 +360,9 @@ export function createCombat({ hero, monsters = [], rng, hooks, surprise = true,
 
   // Step 4: the starting group size, for morale, not counting objects.
   combat.startingGroupSize = countedEnemies(combat).length;
+  // An ambush still rolls both dice, so the stream moves as it always does;
+  // the hero's own senses (Keen Senses 2) can still refuse it.
+  if (ambush) combat.monsterSurpriseOn = SURPRISE.die;
 
   combat.surprise = surprise
     ? rollSurprise(combat)

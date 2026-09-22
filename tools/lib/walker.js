@@ -65,7 +65,8 @@ export function routeTo(run, target, bashBonus = 0) {
 function openable(run, stop, bashBonus) {
   if (stop.reason === 'web') return true; // a lit torch, no roll (03 section 8)
   if (!stop.door) return false;
-  if (stop.door.kind === 'keyed') return run.ex.keysTaken.has(stop.door.keyId);
+  // A floor key and a rune key both open their own door (`03` section 6).
+  if (stop.door.kind === 'keyed' || stop.door.kind === 'sealed') return run.ex.keysTaken.has(stop.door.keyId);
   if (!['stuck', 'locked'].includes(stop.door.kind)) return false;
   return bashTn(stop.door, run.floor.floor) - bashBonus <= 20;
 }
@@ -172,7 +173,7 @@ export function walkFloor(
 }
 
 /** The nearest key the hero has not taken and can reach. */
-function nearestKey(run, bashBonus = 0) {
+export function nearestKey(run, bashBonus = 0) {
   const { floor, ex } = run;
   // A key entry is stored under its tile, and names the door it fits.
   const loose = Object.entries(floor.keys)

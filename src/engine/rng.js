@@ -180,6 +180,17 @@ export function createStream(seed, name = 'rng') {
   stream.state = () => /** @type {[number, number, number, number]} */ ([...words]);
 
   /**
+   * Puts the stream back to a state it had, in place, so everything holding
+   * it sees the change. A fight replaying a turn after a Reaction prompt uses
+   * it: the same draws, in the same order, come out again.
+   * @param {[number, number, number, number]} state
+   */
+  stream.restore = (state) => {
+    if (!isStreamState(state)) throw new TypeError(`${name}.restore needs a saved state`);
+    for (let i = 0; i < 4; i += 1) words[i] = state[i] >>> 0;
+  };
+
+  /**
    * A whole number from 0 to n − 1.
    * @param {number} n
    */

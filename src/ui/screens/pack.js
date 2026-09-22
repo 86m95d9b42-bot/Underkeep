@@ -9,6 +9,7 @@
  * equipment rules, `identification.js` owns what an item is called, and this
  * draws the answers.
  */
+import { itemDetailBody } from './item-detail.js';
 import { el } from '../parts/el.js';
 import { button, segmented } from '../parts/button.js';
 import { chip, listRow, scrollPanel } from '../parts/parts.js';
@@ -18,6 +19,7 @@ import { item, slotsFor } from '../../data/items.js';
 import { describe } from '../../systems/identification.js';
 import {
   EQUIP_SLOTS,
+  entryOf,
   equippedItem,
   isConsumable,
   isEquipped,
@@ -30,10 +32,15 @@ import {
 export const REGIONS = {
   ...heroHeaderRegions([1, 12]),
   equipped: { tall: [1, 9, 5, 6], wide: [1, 12, 3, 4] },
-  filters: { tall: [1, 9, 7, 8], wide: [1, 12, 5, 6], tap: true },
+  // Wide: the filters share their row with SORT and QUICK SLOTS, so the
+  // detail panel can have the whole right side under the tabs.
+  filters: { tall: [1, 9, 7, 8], wide: [1, 8, 5, 6], tap: true },
   list: { tall: [1, 9, 9, 16], wide: [1, 12, 7, 9] },
-  sort: { tall: [1, 4, 17, 18], wide: [13, 15, 8, 9], tap: true },
-  quick: { tall: [5, 9, 17, 18], wide: [16, 18, 8, 9], tap: true },
+  // Wide only: the selected item's detail as a panel beside the list, not a
+  // sheet over it (`00`, Hero: Pack). In tall the Item Detail sheet does this.
+  detail: { tall: [1, 9, 9, 16], wide: [13, 18, 3, 9] },
+  sort: { tall: [1, 4, 17, 18], wide: [9, 10, 5, 6], tap: true },
+  quick: { tall: [5, 9, 17, 18], wide: [11, 12, 5, 6], tap: true },
 };
 
 /** The four filters of the outline's table, and what each keeps. */
@@ -82,14 +89,20 @@ export const pack = {
   pattern: 'list-detail',
   regions: REGIONS,
 
-  build({ router, run, params = {} }) {
+  build({ router, run, params = {}, frame, leaveDungeon }) {
     const hero = run.hero;
     const held = hero.pack;
     let filter = FILTERS.includes(params.filter) ? params.filter : 'all';
     let pinning = false;
+    const wide = frame === 'wide';
 
+    // Tall opens the Item Detail sheet; wide selects the item and shows it in
+    // the panel beside the list, keeping the choice in the params so turning
+    // the device keeps it.
     const openDetail = (instanceId) =>
-      router.openSheet('itemDetail', { item: instanceId, from: 'pack', filter });
+      wide
+        ? router.replace('pack', { filter, selected: instanceId })
+        : router.openSheet('itemDetail', { item: instanceId, from: 'pack', filter });
 
     /* -- rows 5-6: what is worn ---------------------------------------- */
 
@@ -212,12 +225,27 @@ export const pack = {
     }
     paint();
 
+    const detail = wide
+      ? el('div', { class: 'region panel packdetail' }, [
+          params.selected && held && entryOf(held, params.selected)
+            ? itemDetailBody({
+                router,
+                run,
+                instanceId: params.selected,
+                leaveDungeon,
+                done: () => router.replace('pack', { filter, selected: held && entryOf(held, params.selected) ? params.selected : null }),
+              }).body
+            : el('p', { class: 'hint packdetail__empty', text: t('pack.detail.pick') }),
+        ])
+      : null;
+
     return {
       topBar: heroTopBar({ hero, router }),
       tabs: heroTabs({ router, current: 'pack' }),
       equipped,
       filters,
       list,
+      ...(detail ? { detail } : {}),
       sort,
       quick,
     };

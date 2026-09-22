@@ -55,6 +55,15 @@ body { position: fixed; inset: 0; }
   );
 }
 
+/* The frame is sized to fit inside the safe area, so it is centred inside it
+   too. Centred on the whole screen, a notch taller than the home indicator
+   pushed the top of the frame under the notch (00 Launch checklist, "safe-area
+   insets checked on notched phones"; docs/DECISIONS.md). */
+#app {
+  left: calc(50% + (env(safe-area-inset-left) - env(safe-area-inset-right)) / 2);
+  top: calc(50% + (env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 2);
+}
+
 /* Sizes derived from --u. Declared on #app so var(--u) resolves. */
 #app {
   --line: calc(var(--u) * 0.07); /* 3 px outlines */

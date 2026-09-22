@@ -264,6 +264,8 @@ export function sear(combat) {
       (one) => one.partOf === hydra.type && !one.alive && !one.cauterized,
     );
     hydra.stumps -= 1;
+    // The oldest stump is the one that would grow first.
+    if ((hydra.freshStumps ?? 0) > hydra.stumps) hydra.freshStumps = hydra.stumps;
     if (stump) stump.cauterized = true;
     return { seared: stump?.id ?? hydra.id };
   }

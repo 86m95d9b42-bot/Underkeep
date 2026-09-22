@@ -13,6 +13,23 @@
     "hall": "HALL OF THE DEAD",
     "settings": "SETTINGS"
   },
+  "tips": {
+    "move": "Tip: Swipe or use the pad to move. Every step and turn counts.",
+    "waystone": "Tip: Stand on a Waystone to attune it. Touch it later to go home.",
+    "search": "Tip: SEARCH looks for traps and hidden doors nearby. It takes 5 steps.",
+    "door": "Tip: A stuck door can be bashed. A lock wants lockpicks, a key or Knock.",
+    "chest": "Tip: Search a chest before you open it. Its trap is real.",
+    "trap": "Tip: A trap you have found can be disarmed, or set off from afar with a pole.",
+    "hazard": "Tip: Some tiles act on you. Look before you step.",
+    "safeRoom": "Tip: Nothing wanders into a Safe Room. The boss waits past it.",
+    "stairs": "Tip: The way down lies behind this floor's boss.",
+    "wandering": "Tip: Every ten steps, something may come looking for you.",
+    "hurt": "Tip: Drink a potion from a quick slot, or go home and rest at the Inn.",
+    "fight": "Tip: Tap an enemy to target it, then pick an action. The front row guards the back.",
+    "telegraph": "Tip: A wind-up lands on its next turn. DEFEND halves it.",
+    "slime": "Tip: A blade splits a slime in two. Crush it, or use fire or frost.",
+    "flee": "Tip: FLEE gets you out of most fights. Never a boss fight."
+  },
   "hall": {
     "title": "HALL OF THE DEAD",
     "sub": "Top {n} heroes",
@@ -77,7 +94,21 @@
     "export": "EXPORT",
     "import": "IMPORT",
     "exportDisabled": "Needs a saved game",
-    "importDisabled": "Adventurer mode only"
+    "importDisabled": "Adventurer mode only",
+    "exportIronman": "Adventurer mode only",
+    "exportHint": "File, and copied",
+    "importHint": "From a file",
+    "noStorage": "Saving is off in this browser",
+    "exported": "Saved as {file}, and copied. Keep it somewhere safe.",
+    "exportedFile": "Saved as {file}.",
+    "imported": "{name} is back. Continue from the Title screen.",
+    "importFailed": {
+      "notASave": "That file is not an Underkeep save.",
+      "damaged": "That save is damaged and cannot be read.",
+      "newer": "That save is from a newer version of the game.",
+      "ironman": "Ironman saves cannot be imported.",
+      "full": "All three slots hold other games."
+    }
   },
   "explore": {
     "blocked": {
@@ -112,6 +143,9 @@
         "down": "Stairs lead down into the dark.",
         "up": "Stairs lead back up."
       },
+      "arena": "Something waits for you here.",
+      "camped": "You rest. {hp} HP and {fp} FP come back.",
+      "campInterrupted": "Something finds you before you can rest.",
       "waystone": "A waystone hums under your feet.",
       "pit": "An open pit gapes here.",
       "burned": "Your torch takes the webbing away.",
@@ -266,12 +300,16 @@
   },
   "pause": {
     "title": "PAUSED",
-    "sub": "Nothing is saved yet",
+    "sub": "Your game is saved automatically",
     "resume": "RESUME",
     "hero": "HERO",
     "map": "MAP",
     "camp": "CAMP",
     "campHint": "1 ration",
+    "why": {
+      "noRation": "No ration left",
+      "inTown": "Only in the dungeon"
+    },
     "settings": "SETTINGS",
     "hall": "HALL OF THE DEAD",
     "quit": "QUIT TO TITLE",
@@ -708,6 +746,47 @@
       "victory": "Nothing else is standing.",
       "defeat": "You fall.",
       "fled": "You get away."
+    },
+    "auto": {
+      "label": "AUTO-FIGHT",
+      "hint": "Routine fights only",
+      "stopped": "Auto-Fight stops: {why}",
+      "why": {
+        "over": "the fight is over.",
+        "reaction": "a hit is waiting on you.",
+        "boss": "not against a boss or an elite.",
+        "telegraph": "something is winding up.",
+        "condition": "you have been hit with something.",
+        "lowHp": "you are hurt, and out of potions.",
+        "stuck": "there is nothing it can do.",
+        "turns": "it has gone on too long.",
+        "noFight": "there is no fight."
+      },
+      "notNow": {
+        "over": "The fight is over",
+        "reaction": "A hit is waiting on you",
+        "boss": "Not against a boss or elite",
+        "telegraph": "Something is winding up",
+        "lowHp": "Hurt, and no potion to drink",
+        "noFight": "No fight"
+      }
+    },
+    "reaction": {
+      "paused": "COMBAT PAUSED",
+      "hit": "HIT!",
+      "strikes": "{who} strikes for {n}.",
+      "roll": "Attack {total} vs your DEF {def}",
+      "react": "REACT?",
+      "arcaneShieldHint": "{n} FP · +4 DEF turns this into a miss",
+      "luckyHint": "Force a reroll · once per combat",
+      "take": "TAKE THE HIT",
+      "takeHint": "{n} damage",
+      "setting": "PROMPT SETTINGS",
+      "policies": {
+        "ask": "ASK",
+        "auto": "AUTO",
+        "never": "NEVER"
+      }
     },
     "after": {
       "victory": "CONTINUE",
@@ -1359,6 +1438,7 @@
     "slotCount": "{n} slot",
     "slotCountMany": "{n} slots",
     "detail": {
+        "pick": "Pick an item to see it here.",
       "title": "ITEM",
       "equipped": "Equipped",
       "thisItem": "This",
@@ -1388,6 +1468,7 @@
         "bound": "Bound to you until the curse is lifted.",
         "property": "{property}: {effect}",
         "equipped": "Worn now.",
+          "none": "Nothing more to know about it.",
         "requires": "Needs {attribute} {score}.",
         "twoHanded": "Two-handed: no shield with it.",
         "school": "{school} scroll. {attribute} 11 to read."

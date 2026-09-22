@@ -39,6 +39,98 @@ import { buffOf, whyNotPlayable } from './skill-actions.js';
 export const REACTIONS = combatData.reactions;
 
 /**
+ * The Reaction prompt setting (`06` section 17): **ask** pauses the fight and
+ * asks, **auto** uses a reaction on a hit worth more than a quarter of the
+ * hero, **never** lets every hit land. A fight with no setting plays Auto,
+ * which is what the tools and the simulator fly.
+ */
+export const REACTION_POLICIES = ['ask', 'auto', 'never'];
+
+/**
+ * The prompt-worthy reactions this hit could be met with, each only if it
+ * could be used right now: Lucky once a combat, Arcane Shield once a round,
+ * for 2 FP, and only when +4 DEF would turn the hit into a miss.
+ * @returns {string[]}
+ */
+export function reactionsFor(payload, unit) {
+  const combat = payload.combat;
+  const state = combat.skillState?.[unit.id];
+  const knows = (id) => skillsOf(unit).some((row) => row.id === id);
+  const out = [];
+  const shieldCost = skill('arcane_shield').fp ?? 0;
+  const shieldDef = hookEffects('arcane_shield', 1)[0]?.def ?? 4;
+  if (
+    knows('arcane_shield') &&
+    state?.shieldRound !== combat.round &&
+    (unit.fp ?? 0) >= shieldCost &&
+    payload.roll !== 20 &&
+    payload.total < payload.def + shieldDef &&
+    !isHelpless(unit)
+  ) {
+    out.push('arcaneShield');
+  }
+  if (knows('lucky') && !state?.uses?.lucky) out.push('lucky');
+  return out;
+}
+
+/**
+ * What the player chose for this hit, when the setting is Ask: the recorded
+ * answer, or — the first time the hit is met — nothing, with a draft of the
+ * prompt left on the combat for the fight to finish and show. One key per
+ * judged hit, shared by both reactions' hooks, counted on the combat so a
+ * replayed turn asks about the same hit under the same key.
+ * @returns {string | null}
+ */
+function answerFor(payload, unit) {
+  const combat = payload.combat;
+  if (payload.reactionKey === undefined) {
+    const options = reactionsFor(payload, unit);
+    if (options.length === 0) {
+      payload.reactionKey = null;
+      return null;
+    }
+    combat.reactionSeq = (combat.reactionSeq ?? 0) + 1;
+    payload.reactionKey = `r${combat.reactionSeq}`;
+    payload.reactionOptions = options;
+  }
+  if (payload.reactionKey === null) return null;
+  const answer = combat.reactionAnswers?.[payload.reactionKey];
+  if (answer !== undefined) return answer;
+  combat.reactionDraft ??= {
+    key: payload.reactionKey,
+    attacker: payload.attacker?.id ?? null,
+    attackerName: payload.attacker?.name ?? payload.attacker?.type ?? '',
+    boss: Boolean(payload.attacker?.boss),
+    ability: payload.attack?.name ?? null,
+    roll: payload.roll,
+    total: payload.total,
+    def: payload.def,
+    options: payload.reactionOptions,
+  };
+  return null;
+}
+
+/**
+ * The policy for this moment. Ask only holds while the fight can pause —
+ * during a monster's turn, which it has saved a copy of — and anything that
+ * lands at another moment (a boss's phase ability set off by the hero's own
+ * blow) is played Auto rather than lost.
+ */
+function policyNow(combat) {
+  const policy = combat.reactionPolicy ?? 'auto';
+  return policy === 'ask' && !combat.reactionAsking ? 'auto' : policy;
+}
+
+/** Marks a reaction spent in the fight's own record, whatever decided it. */
+function spend(combat, unit, id) {
+  combat.skillState ??= {};
+  combat.skillState[unit.id] ??= { uses: {}, buffs: {} };
+  const state = combat.skillState[unit.id];
+  if (id === 'lucky') state.uses.lucky = (state.uses.lucky ?? 0) + 1;
+  if (id === 'arcaneShield') state.shieldRound = combat.round;
+}
+
+/**
  * Handlers whose systems have not been built yet. Each says what it is waiting
  * for, the way the monster traits and the lock methods do.
  */
@@ -543,7 +635,14 @@ export const HANDLERS = {
         'attackRoll',
         (payload) => {
           if (payload.phase !== 'judge' || payload.target !== unit || !payload.hit) return SKIP;
-          if (!worthAReaction(unit, payload.attack, payload.crit)) return SKIP;
+          const policy = policyNow(payload.combat);
+          if (policy === 'never') return SKIP;
+          if (policy === 'ask') {
+            if (answerFor(payload, unit) !== 'lucky') return SKIP;
+          } else if (!worthAReaction(unit, payload.attack, payload.crit)) {
+            return SKIP;
+          }
+          spend(payload.combat, unit, 'lucky');
           payload.reroll = true;
           return undefined;
         },
@@ -560,10 +659,17 @@ export const HANDLERS = {
         'attackRoll',
         (payload) => {
           if (payload.phase !== 'judge' || payload.target !== unit || !payload.hit) return SKIP;
-          // A natural 20 hits whatever the DEF, so the shield would be wasted.
-          if (payload.roll === 20 || (unit.fp ?? 0) < cost || isHelpless(unit)) return SKIP;
-          if (payload.total >= payload.def + (effect.def ?? 4)) return SKIP;
-          if (!worthAReaction(unit, payload.attack, payload.crit)) return SKIP;
+          const policy = policyNow(payload.combat);
+          if (policy === 'never') return SKIP;
+          if (policy === 'ask') {
+            if (answerFor(payload, unit) !== 'arcaneShield') return SKIP;
+          } else {
+            // A natural 20 hits whatever the DEF, so the shield would be wasted.
+            if (payload.roll === 20 || (unit.fp ?? 0) < cost || isHelpless(unit)) return SKIP;
+            if (payload.total >= payload.def + (effect.def ?? 4)) return SKIP;
+            if (!worthAReaction(unit, payload.attack, payload.crit)) return SKIP;
+          }
+          spend(payload.combat, unit, 'arcaneShield');
           unit.fp -= cost;
           payload.bonusDef = (payload.bonusDef ?? 0) + (effect.def ?? 4);
           return undefined;

@@ -109,7 +109,7 @@ function atom(text, context) {
   let match;
 
   if ((match = /^ready\(\s*(.+?)\s*\)$/i.exec(term))) {
-    return isReady(abilityOf(unit, match[1]));
+    return isReady(abilityOf(unit, match[1]), combat?.round);
   }
   if ((match = /^unused\(\s*(.+?)\s*\)$/i.exec(term))) {
     const ability = abilityOf(unit, match[1]);
@@ -197,11 +197,16 @@ export function abilityOf(unit, name) {
   );
 }
 
-/** Ready means it exists, is not spent, and is not waiting on a recharge. */
-function isReady(ability) {
+/**
+ * Ready means it exists, is not spent, is not waiting on a recharge, and has
+ * rested as long as its `restRounds` asks (the Lich's Gaze, `06` section 12:
+ * "not used in the last 2 rounds").
+ */
+function isReady(ability, round) {
   if (!ability) return false;
   if (ability.ready === false) return false;
   if (ability.oncePerCombat && ability.used) return false;
+  if (ability.restRounds && ability.usedRound != null && round != null && round - ability.usedRound <= ability.restRounds) return false;
   return true;
 }
 
@@ -389,10 +394,11 @@ function buildAction(combat, unit, rule, context) {
  * Marks an ability spent: a recharge ability goes back on its cooldown and a
  * once-per-combat one is used up (`06` section 5 step 6).
  */
-export function spend(unit, id) {
+export function spend(unit, id, round) {
   const ability = abilityOf(unit, id);
   if (!ability) return null;
   ability.used = true;
+  if (round != null) ability.usedRound = round;
   if (ability.recharges) ability.ready = false;
   return ability;
 }

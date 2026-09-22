@@ -99,7 +99,7 @@ Work top to bottom. Check a box when the task is done and tested. Each phase end
 - [x] Elite traits, rare wanderers, Hollow Stalker
 - [x] Graves (Adventurer mode)
 - [x] Balance simulator (`tools/sim.js`) with the four example builds
-- [ ] **Done when:** every boss is beatable by each example build at least 60% of the time in the simulator
+- [x] **Done when:** every boss is beatable by each example build at least 60% of the time in the simulator
 
 ## Phase 8 — Polish
 
@@ -107,11 +107,11 @@ Work top to bottom. Check a box when the task is done and tested. Each phase end
 - [x] Mid-combat resume with the last three log lines
 - [x] Ironman mode and the Death screen (both modes)
 - [x] Hall of the Dead and scoring (`05` section 12)
-- [ ] Reaction prompt sheet and setting
-- [ ] Auto-Fight
-- [ ] Haptics and sound
-- [ ] Floor 1 onboarding tips (one system per room)
-- [ ] Tablet pass: open all 26 screens in the wide frame and confirm each matches its pattern in the build outline
-- [ ] Export and import saves
+- [x] Reaction prompt sheet and setting
+- [x] Auto-Fight
+- [x] Haptics and sound
+- [x] Floor 1 onboarding tips (one system per room)
+- [x] Tablet pass: open all 26 screens in the wide frame and confirm each matches its pattern in the build outline
+- [x] Export and import saves
 - [ ] Launch checklist in the build outline
-- [ ] **Done when:** a full playthrough survives repeated force-closes with no lost progress
+- [x] **Done when:** a full playthrough survives repeated force-closes with no lost progress

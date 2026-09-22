@@ -26,6 +26,7 @@ import { bashTn, pickBonus, pickTn } from '../../systems/locks.js';
 import { chanceToBeat } from '../../engine/odds.js';
 import { poleable } from '../../data/traps.js';
 import { commitThenShow } from '../commit.js';
+import { cuesOf, playCues } from '../../shell/cues.js';
 
 /**
  * Where everything sits. Tall placements are the outline's Chest / Door
@@ -263,11 +264,19 @@ export const chestScreen = {
     const grid = el('div', { class: 'region actiongrid' });
 
     /** Resolve, then draw: the run has already moved when this repaints. */
-    const press = (action) => commitThenShow(ctx, () => run.chestAct(action), ({ events }) => {
-      if (events.some((event) => event.type === 'trapSprung')) haptics?.buzz?.('hit');
+    const press = (action) => commitThenShow(ctx, () => {
+      const result = run.chestAct(action);
+      // A Mimic is a fight, started and saved with the lid that woke it.
+      return { ...result, next: ctx.follow?.(result)?.next ?? null };
+    }, ({ events, next }) => {
+      playCues(haptics, cuesOf(events));
       // A chest's trap can be the end of the hero.
       if ((run.hero.hp ?? 1) <= 0 && fall) {
         fall({ cause: run.causeOfDeath });
+        return;
+      }
+      if (next === 'combat') {
+        router.go('combat');
         return;
       }
       // An opened chest, or a chest that was never one, is done with: the log

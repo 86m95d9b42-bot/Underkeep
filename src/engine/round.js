@@ -235,9 +235,13 @@ export function resetReactions(combat) {
   }
 }
 
+/** How many structured events a fight keeps; it is saved whole. */
+const EVENTS_KEPT = data.eventsKept;
+
 /** Adds a structured event; the run turns these into log lines. */
 function record(combat, event) {
   combat.events ??= [];
   combat.events.push(event);
+  if (combat.events.length > EVENTS_KEPT) combat.events.splice(0, combat.events.length - EVENTS_KEPT);
   return event;
 }

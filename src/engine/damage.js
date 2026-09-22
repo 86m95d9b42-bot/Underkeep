@@ -199,6 +199,15 @@ export function weaponVsBonus(attacker, target, attack = {}) {
   return table[target.family] ?? 0;
 }
 
+/**
+ * The balance pass's damage scale for a boss fight: what the boss's side
+ * deals, from `02`'s numbers (docs/DECISIONS.md).
+ */
+function bossSideScale(combat, attacker) {
+  const scale = combat?.bossTuning?.damageScale;
+  return scale !== undefined && attacker?.side === 'monsters' ? scale : 1;
+}
+
 export function calcDamage(combat, { attacker, target, attack = {}, result = {} }, options = {}) {
   const rng = combat.rng;
   const overTime = Boolean(options.overTime || attack.overTime);
@@ -258,7 +267,10 @@ export function calcDamage(combat, { attacker, target, attack = {}, result = {} 
     // Death Strike's triple against a boss and Smite's double against the
     // undead ride on the attack itself.
     part.multiplier =
-      typeMultiplier(target, part, attack) * (payload.allPartsMultiplier ?? 1) * (attack.damageMultiplier ?? 1);
+      typeMultiplier(target, part, attack) *
+      (payload.allPartsMultiplier ?? 1) *
+      (attack.damageMultiplier ?? 1) *
+      bossSideScale(combat, attacker);
     amount = Math.floor(amount * part.multiplier);
 
     // 7. TELEGRAPH: a wind-up landing on a hero who is Defending.

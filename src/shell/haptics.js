@@ -5,13 +5,16 @@
  */
 
 /** Patterns in milliseconds, one per kind of event. */
-const PATTERNS = {
+export const PATTERNS = {
   tap: 8,
+  bump: 12,
   hit: 18,
   crit: [22, 40, 22],
   trap: [30, 60, 30],
   levelUp: [14, 50, 14, 50, 30],
   warn: [10, 40, 10],
+  victory: [14, 40, 24],
+  death: [60, 80, 120],
 };
 
 /** @param {import('./settings.js').SettingsStore} settings */

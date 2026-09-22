@@ -11,7 +11,7 @@
  * monster turn after it, up to the hero's next — before the screen is told
  * anything (CLAUDE.md; `06` section 1).
  */
-import { createCombat, countedEnemies, isTargetable, onField, place, toUnit } from '../engine/field.js';
+import { createCombat, countedEnemies, isTargetable, onField, place, toUnit, tune } from '../engine/field.js';
 import { createHooks } from '../engine/hooks.js';
 import { actionForSkill, resolveSkillAction } from '../engine/skill-actions.js';
 import { clearCombatBuffs, resolveItemAction } from '../engine/item-actions.js';
@@ -24,7 +24,7 @@ import { coverPenalty, resolveAction, reachableTargets } from '../engine/attack.
 import { actionFor, chooseAction } from '../engine/ai.js';
 import { resolveSupport } from '../engine/support.js';
 import { answerOffer, resolveBossAction, stateAction, turnThePage } from '../engine/boss.js';
-import { bossParty, rewardOf } from '../data/bosses.js';
+import { bossParty, bossTuning, rewardOf } from '../data/bosses.js';
 import { registerFor } from '../engine/monster-traits.js';
 import { legalityOf } from '../engine/actions.js';
 import { endCombat, heroFlees, outcomeOf } from '../engine/ending.js';
@@ -37,6 +37,8 @@ import { carriedStreams } from '../engine/rng.js';
 import { awardXp } from './levelling.js';
 import { t } from '../data/strings.js';
 import saving from '../data/saving.json' with { type: 'json' };
+import { REACTION_POLICIES, skillsOf } from '../engine/skill-hooks.js';
+import { fightTip } from './tips.js';
 
 /** How many log lines are kept, as on the Exploration screen. */
 export const LOG_KEPT = 40;
@@ -83,7 +85,8 @@ export function logName(unit, { start = false } = {}) {
   // A proper name is used as written, article and all.
   // A boss's own article is part of its name: "The Rat King", and "the Rat
   // King" in the middle of a sentence.
-  if (unit?.boss || unit?.proper) {
+  // A name that already carries its article — "The Phylactery" — is one too.
+  if (unit?.boss || unit?.proper || /^The\s/.test(name)) {
     return start ? name : name.replace(/^The\s+/, 'the ');
   }
   return `${start ? 'The' : 'the'} ${name}`;
@@ -309,6 +312,17 @@ function lineForOne(step, unit, who, mine) {
 /* A fight written down                                                       */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Thrown from inside a monster's turn when a hit is waiting on the player's
+ * answer; the fight catches it, puts itself back and asks (`06` section 17).
+ */
+export class ReactionPrompt extends Error {
+  constructor(prompt) {
+    super('a reaction is waiting on the player');
+    this.prompt = prompt;
+  }
+}
+
 /** Combat fields that are rebuilt rather than saved: the units, the streams, the hooks. */
 const SKIPPED_FIELDS = new Set(['units', 'hero', 'rng', 'hooks']);
 
@@ -386,6 +400,13 @@ function overlay(unit, data) {
  *   the rules asks for all of them
  * @param {object} [options.resume] a fight as `toSave` wrote it: the same
  *   fight, picked up at the hero's turn it was saved on (`05` section 14)
+ * @param {'ask' | 'auto' | 'never'} [options.reactions] the Reaction prompt
+ *   setting (`06` section 17); the tools fly Auto
+ * @param {{ seen: string[] } | null} [options.tips] floor 1's tip record, from
+ *   the town; a fight with none teaches nothing
+ * @param {boolean} [options.ambush] the monsters surprise on any roll
+ * @param {object | null} [options.bossTuning] a boss fight's scales in place of
+ *   `bosses.json`'s, for a harness that audits `02` as written
  */
 export function createFight({
   hero,
@@ -400,6 +421,10 @@ export function createFight({
   watch,
   logKept = LOG_KEPT,
   resume,
+  reactions = 'auto',
+  tips = null,
+  bossTuning: tuningOverride = null,
+  ambush = false,
 }) {
   const rng = streams ?? carriedStreams(masterSeed);
   // A boss fight is the boss, what it brought, and what stands in its arena
@@ -425,6 +450,7 @@ export function createFight({
     hooks: createHooks(),
     // A resumed fight already had its surprise roll, and must not roll again.
     surprise: resume ? false : surprise,
+    ambush,
   });
   combat.difficulty = difficulty;
   combat.floor = floor;
@@ -433,6 +459,10 @@ export function createFight({
   if (party) {
     combat.boss = bossId;
     combat.bossUnit = combat.units.find((unit) => unit.type === bossId) ?? null;
+    // The balance pass's scale for a boss fight: every unit on the boss's
+    // side now, and every one that arrives later (docs/DECISIONS.md).
+    combat.bossTuning = tuningOverride ?? bossTuning(bossId);
+    if (!resume) for (const unit of combat.units) tune(combat, unit);
   }
 
   // The Bound Grimoire turns a page at the start of every round, and its own
@@ -479,7 +509,25 @@ export function createFight({
   // A fight inside an Anti-Magic Field is fought without Arcana, Spirit or
   // scrolls (`03` section 8); `engine/actions.js` is what refuses them.
   combat.antiMagic = antiMagic;
+  combat.reactionPolicy = REACTION_POLICIES.includes(reactions) ? reactions : 'auto';
   registerRules(combat);
+  // The Reaction prompt (`06` section 17): a hit a reaction could meet leaves
+  // a draft behind it; once the blow's damage is known the turn is stopped,
+  // and the fight puts itself back to where the turn began and asks.
+  const stopForPrompt = (payload, amount) => {
+    const draft = combat.reactionDraft;
+    if (!draft || payload.target !== combat.hero) return;
+    throw new ReactionPrompt({ ...draft, damage: amount });
+  };
+  combat.hooks.on('damageTaken', (payload) => stopForPrompt(payload, payload.amount ?? 0), { name: 'reactionPrompt', source: 'fight', order: -1 });
+  combat.hooks.on('hit', (payload) => stopForPrompt(payload, payload.damage?.total ?? 0), { name: 'reactionPrompt', source: 'fight' });
+  combat.hooks.on(
+    'miss',
+    (payload) => {
+      if (payload.target === combat.hero) delete combat.reactionDraft;
+    },
+    { name: 'reactionPrompt', source: 'fight' },
+  );
   // What last hurt the hero, for the Death screen: a monster by its kind or
   // its name, or a condition burning or poisoning them (`05` section 12). It
   // lives on the combat, so a resumed fight still knows.
@@ -494,6 +542,28 @@ export function createFight({
     },
     { name: 'causeOfDeath', source: 'fight' },
   );
+
+  // What the player should feel of each action (00, "Feedback"): the hero
+  // hurt, a critical either way, a fight won. Collected as things happen and
+  // handed to the screen once the result is on it.
+  /** @type {string[]} */
+  const cues = [];
+  combat.hooks.on(
+    'damageTaken',
+    (payload) => {
+      if (payload.target === combat.hero && (payload.amount ?? 0) > 0) cues.push('hit');
+    },
+    { name: 'cues', source: 'fight' },
+  );
+  for (const event of ['hit', 'kill']) {
+    combat.hooks.on(
+      event,
+      (payload) => {
+        if (payload.result?.crit) cues.push('crit');
+      },
+      { name: 'cues', source: 'fight' },
+    );
+  }
   watch?.(combat);
 
   /** @type {{ text: string, tone?: string }[]} oldest first */
@@ -535,11 +605,14 @@ export function createFight({
       // The log wants a name, and the engine deals in ids. A multi-attack
       // action hands back one result per blow, and each of them is a blow
       // the player saw (`06` section 6, Multiple Attacks).
-      for (const one of Array.isArray(result) ? result : [result]) {
-        if (!one?.target) continue;
+      const name = (one) => {
+        if (!one?.target) return;
         one.targetName = logName(unitById(one.target)) || one.target;
         one.targetIsHero = one.target === combat.hero.id;
-      }
+        // Cleave and Riposte hang their own blows on the one that set them off.
+        for (const follow of one.followUps ?? []) name(follow.result);
+      };
+      for (const one of Array.isArray(result) ? result : [result]) name(one);
       return result;
     },
   };
@@ -564,16 +637,89 @@ export function createFight({
         startRound(combat, {});
         continue;
       }
-      if (next.unit === combat.hero) return 'hero';
+      if (next.unit === combat.hero) {
+        teach('turn');
+        return 'hero';
+      }
 
-      const step = takeNextTurn(combat, {
-        takeTurn: (fight, unit) => takeTurn(fight, unit, services),
-      });
+      // With the prompt on and a reaction to offer, the turn is taken from a
+      // copy it can be put back to (`06` section 17).
+      const asking = combat.reactionPolicy === 'ask' && hasReaction();
+      const before = asking ? snapshot() : null;
+      let step;
+      try {
+        combat.reactionAsking = asking;
+        step = takeNextTurn(combat, {
+          takeTurn: (fight, unit) => takeTurn(fight, unit, services),
+        });
+      } catch (error) {
+        if (!(error instanceof ReactionPrompt) || !before) throw error;
+        putBack(before);
+        combat.reactionPrompt = error.prompt;
+        return 'reaction';
+      } finally {
+        combat.reactionAsking = false;
+      }
+      delete combat.reactionDraft;
       record(step.result);
       pickTargetIfGone();
     }
     /* c8 ignore next 2 -- a fight that never ends is a bug, not a state */
     return 'stuck';
+  }
+
+  /** The fight as the save file carries it; `toSave` below, and every replay's starting point. */
+  function saveFight() {
+    const units = new Set(combat.units);
+    const fields = {};
+    for (const [key, value] of Object.entries(combat)) {
+      if (SKIPPED_FIELDS.has(key) || typeof value === 'function') continue;
+      fields[key] = freeze(value, units);
+    }
+    return {
+      origin: structuredClone(origin),
+      phase,
+      target,
+      log: log.slice(-saving.resumeLogLines),
+      summary: summary ? structuredClone(summary) : null,
+      units: combat.units.map((unit) => freezeUnit(unit, units)),
+      combat: fields,
+      limits: combat.hooks.limits(),
+    };
+  }
+
+  /** True when the hero knows a reaction the prompt could offer. */
+  function hasReaction() {
+    return skillsOf(combat.hero).some((row) => row.id === 'lucky' || row.id === 'arcane_shield');
+  }
+
+  /** The whole fight, and every stream, as it stands: what a replay starts from. */
+  function snapshot() {
+    return {
+      saved: { ...saveFight(), log: log.slice() },
+      streams: Object.fromEntries(Object.entries(rng).map(([name, stream]) => [name, stream.state()])),
+      cues: cues.length,
+    };
+  }
+
+  /**
+   * Puts the fight back exactly as `snapshot` found it, in place: units made
+   * during the thrown-away turn go, with their hooks; fields it added go; the
+   * streams rewind, so the replay draws the same numbers.
+   */
+  function putBack({ saved, streams, cues: heard = cues.length }) {
+    // The thrown-away turn is not felt: its hit is felt when it lands for
+    // real, after the answer — and not at all if the answer turns it aside.
+    cues.length = heard;
+    const keep = new Set(saved.units.map((unit) => unit.id));
+    for (const unit of combat.units) if (!keep.has(unit.id)) combat.hooks.offAll({ owner: unit.id });
+    for (const key of Object.keys(combat)) {
+      if (SKIPPED_FIELDS.has(key) || typeof combat[key] === 'function') continue;
+      if (!(key in saved.combat)) delete combat[key];
+    }
+    log.length = 0;
+    restore(saved);
+    for (const [name, state] of Object.entries(streams)) rng[name].restore(state);
   }
 
   function finish() {
@@ -619,6 +765,8 @@ export function createFight({
       }
 
       say({ text: t(`combat.end.${summary.outcome}`), tone: summary.outcome === 'victory' ? 'accent' : 'danger' });
+      if (summary.outcome === 'victory') cues.push('victory');
+      if (summary.levels?.length) cues.push('levelUp');
     }
     return 'over';
   }
@@ -658,6 +806,12 @@ export function createFight({
     return saved.phase ?? 'hero';
   }
 
+  /** Floor 1's one tip a fight may give, into the log (`systems/tips.js`). */
+  function teach(moment) {
+    const tip = fightTip({ state: tips, combat, moment });
+    if (tip) say({ text: t(`tips.${tip}`), tone: 'tip' });
+  }
+
   let phase;
   if (resume) {
     phase = restore(resume);
@@ -666,6 +820,7 @@ export function createFight({
     beginCombat(combat, {});
     startRound(combat, { surprise: Boolean(combat.surprise?.side) });
     pickTargetIfGone();
+    teach('start');
     phase = advance();
   }
 
@@ -675,9 +830,44 @@ export function createFight({
     get combat() {
       return combat;
     },
+    /** The cues since the screen last asked, oldest first; asking empties them. */
+    drainCues() {
+      return cues.splice(0, cues.length);
+    },
     /** What last hurt the hero in this fight, for the Death screen. */
     get causeOfDeath() {
       return combat.lastHurtBy ?? null;
+    },
+
+    /**
+     * The hit waiting on the player (`06` section 17), or null: who struck,
+     * with what, the roll against DEF, the damage it will do, and which of
+     * Arcane Shield and Lucky can meet it.
+     */
+    get reaction() {
+      return phase === 'reaction' ? combat.reactionPrompt ?? null : null;
+    },
+
+    /** The Reaction prompt setting, which the player may change mid-fight. */
+    get reactions() {
+      return combat.reactionPolicy;
+    },
+    set reactions(value) {
+      if (REACTION_POLICIES.includes(value)) combat.reactionPolicy = value;
+    },
+
+    /**
+     * Answers the prompt — `arcaneShield`, `lucky` or `take` — and plays the
+     * turn out again with it, up to the hero's next turn or the next prompt.
+     */
+    react(choice) {
+      const prompt = fight.reaction;
+      if (!prompt) return { acted: false, why: 'notYourTurn' };
+      if (choice !== 'take' && !prompt.options.includes(choice)) return { acted: false, why: 'notReady' };
+      combat.reactionAnswers = { ...(combat.reactionAnswers ?? {}), [prompt.key]: choice };
+      combat.reactionPrompt = null;
+      phase = advance();
+      return { acted: true, choice };
     },
 
     /**
@@ -686,22 +876,7 @@ export function createFight({
      * whose turn, any telegraph waiting to fire, and the last three lines.
      */
     toSave() {
-      const units = new Set(combat.units);
-      const fields = {};
-      for (const [key, value] of Object.entries(combat)) {
-        if (SKIPPED_FIELDS.has(key) || typeof value === 'function') continue;
-        fields[key] = freeze(value, units);
-      }
-      return {
-        origin: structuredClone(origin),
-        phase,
-        target,
-        log: log.slice(-saving.resumeLogLines),
-        summary: summary ? structuredClone(summary) : null,
-        units: combat.units.map((unit) => freezeUnit(unit, units)),
-        combat: fields,
-        limits: combat.hooks.limits(),
-      };
+      return saveFight();
     },
     get hero() {
       return combat.hero;

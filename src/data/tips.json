@@ -1,0 +1,7 @@
+{
+  "_source": "00 Build phases (onboarding tips on floor 1), docs/TASKS.md (one system per room), docs/DECISIONS.md (one short sentence per first-time event). The words are in strings.json under tips.",
+  "floors": [1],
+  "hurtBelow": 0.5,
+  "_hurtBelow": "Below half their hit points, a hero is told about potions (exploring) or fleeing (in a fight).",
+  "slimeTypes": ["green_slime"]
+}

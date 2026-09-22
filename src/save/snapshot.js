@@ -27,6 +27,10 @@ import { createSession } from '../systems/session.js';
 export function takeSnapshot(session, { now = new Date(), screen = null } = {}) {
   const hero = session.hero;
   const run = session.run;
+  // The trip's floor changes go into the town's floor memory first, so the
+  // town written below already holds them. Copied before, a sprung trap was
+  // missing from this save and only appeared in the next one.
+  run?.remember();
   return {
     version: SAVE_VERSION,
     savedAt: now.toISOString(),
@@ -59,13 +63,14 @@ export function takeSnapshot(session, { now = new Date(), screen = null } = {}) 
  * @param {object} save
  * @param {{ go?: (to: string, params?: object) => void }} [options]
  */
-export function restoreSession(save, { go } = {}) {
+export function restoreSession(save, { go, reactions } = {}) {
   const hero = structuredClone(save.hero);
   return createSession({
     hero,
     seed: save.masterSeed,
     difficulty: save.difficulty ?? 'normal',
     go,
+    ...(reactions ? { reactions } : {}),
     restore: {
       town: structuredClone(save.town),
       sold: save.sold ?? [],

@@ -15,7 +15,10 @@
  *   2. break out of a web;
  *   3. Defend into a telegraph that hurts (`06` section 4) — not into a
  *      shield being raised or a summoning;
- *   4. break what is protecting the boss — the Phylactery, the valves;
+ *   4. break what is protecting the boss — the Phylactery, the valves —
+ *      with its best attack skill, else a swing; but a row spell worth
+ *      casting comes first, since the Revenants are what kill a hero the
+ *      Finger of Death left at 1 HP;
  *   5. a heal skill when it is needed and no potion is left;
  *   6. set up: a ward, Blink, Hunter's Mark on the boss, Envenom, Vanish;
  *   7. Sleep or a Fireball on a row worth it;
@@ -136,6 +139,25 @@ function ordered(fight, action = 'attack', options = {}) {
   return bossFirst ? [boss, ...reach.filter((unit) => unit.id !== boss.id)] : reach;
 }
 
+/**
+ * The damage type a skill deals: its own dice's type, a row spell's, or the
+ * weapon's for a swing. Used to spare Focus on a foe immune to it.
+ */
+function typeOf(fight, id) {
+  const act = skill(id).action ?? {};
+  const text = typeof act.damage === 'string' ? act.damage : '';
+  const own = text.split(' ')[1] ?? act.damage?.type;
+  if (own) return own;
+  if (act.kind === 'melee' || act.kind === 'ranged') return String(fight.hero.attack?.damage ?? '').split(' ')[1] ?? null;
+  return null;
+}
+
+/** False for a skill that would do nothing to this unit: it is immune. */
+function hurts(fight, id, unit) {
+  const type = typeOf(fight, id);
+  return !type || !(unit?.immune ?? []).includes(type);
+}
+
 /** Whether the hero knows a skill and could use it on this target now. */
 function canUse(fight, id, target) {
   const known = (fight.hero.skills ?? []).some((row) => row.id === id);
@@ -198,10 +220,22 @@ function rowSpell(fight) {
       (unit) => unit.family !== 'undead' && (unit.hd ?? 0) <= (fight.hero.level ?? 1) + 2 && !has(unit, 'asleep') && !unit.boss,
     );
     if (sleepable.length >= 2 && canUse(fight, 'sleep', sleepable[0].id) && use(fight, 'sleep', sleepable[0].id)) return true;
-    const worth = here.length >= 2 || here.some((unit) => unit.boss);
+    const burnable = here.filter((unit) => hurts(fight, 'fireball', unit));
+    const worth = burnable.length >= 2 || burnable.some((unit) => unit.boss);
     if (worth && canUse(fight, 'fireball', aim) && use(fight, 'fireball', aim)) return true;
   }
   return false;
+}
+
+/** The hero's single-target attack skills, dearest first. */
+function attackSkillsOf(fight) {
+  return (fight.hero.skills ?? [])
+    .map((row) => row.id)
+    .filter((id) => {
+      const act = skill(id).action;
+      return act?.kind && act.target !== 'row' && id !== 'death_strike';
+    })
+    .sort((a, b) => (skill(b).fp ?? 0) - (skill(a).fp ?? 0));
 }
 
 /**
@@ -214,16 +248,11 @@ function attackSkill(fight) {
   const boss = bossOf(fight);
   if (boss && canUse(fight, 'death_strike', boss.id) && use(fight, 'death_strike', boss.id)) return true;
 
-  const ids = (hero.skills ?? [])
-    .map((row) => row.id)
-    .filter((id) => {
-      const act = skill(id).action;
-      return act?.kind && act.target !== 'row' && id !== 'death_strike';
-    })
-    .sort((a, b) => (skill(b).fp ?? 0) - (skill(a).fp ?? 0));
+  const ids = attackSkillsOf(fight);
 
   for (const id of ids) {
     for (const unit of ordered(fight, 'skill', { skill: id })) {
+      if (!hurts(fight, id, unit)) continue;
       if (canUse(fight, id, unit.id) && use(fight, id, unit.id)) return true;
     }
   }
@@ -251,17 +280,34 @@ export function flyOneTurn(fight) {
   //     Break Free is the action `06` section 4 gives them for it.
   if (fight.legality('breakFree').legal && fight.act('breakFree').acted) return 'breakFree';
 
-  // 3. Defend into a wind-up that hurts: half damage, and the save has advantage.
-  if (harmfulTelegraph(fight) && fight.legality('defend').legal && fight.act('defend').acted) return 'defend';
-
-  // 4. Break what is keeping the boss up, when it is time.
+  // 3. Break what is keeping the boss up, when it is time — before a
+  //    wind-up is braced for, since a valve broken now stuns the Colossus
+  //    and the Hammerfall never lands (`02` section 10's tactics line).
+  // A row spell that takes two enemies at once goes first even here: the
+  // Revenants in front of the Lich are what finish a hero his Finger of
+  // Death left at 1 HP.
   const prop = propOf(fight);
-  if (prop && breakNow(fight, prop) && fight.legality('attack', { target: prop.id }).legal) {
-    if (fight.act('attack', { target: prop.id }).acted) return 'object';
+  if (prop && rowSpell(fight)) return 'skill';
+  if (prop && breakNow(fight, prop)) {
+    // The best blow the hero has, dearest first: the Phylactery is the whole
+    // fight, and a spell or a shot reaches a valve behind the Colossus.
+    for (const id of attackSkillsOf(fight)) {
+      if (hurts(fight, id, prop) && canUse(fight, id, prop.id) && use(fight, id, prop.id)) return 'object';
+    }
+    if (fight.legality('attack', { target: prop.id }).legal && fight.act('attack', { target: prop.id }).acted) {
+      return 'object';
+    }
   }
 
-  // 4b. Sear a Hydra stump before it grows back double (`02` section 8).
-  const stumped = (fight.combat.units ?? []).some((unit) => (unit.stumps ?? 0) > 0);
+  // 4. Defend into a wind-up that hurts: half damage, and the save has advantage.
+  if (harmfulTelegraph(fight) && fight.legality('defend').legal && fight.act('defend').acted) return 'defend';
+
+  // 4b. Sear a Hydra stump before it grows back double (`02` section 8), and
+  //     burn a fallen troll before it gets up again (`06` section 9) — the
+  //     fight does not end while one lies there unburned.
+  const stumped = (fight.combat.units ?? []).some(
+    (unit) => (unit.stumps ?? 0) > 0 || (unit.fallen && !unit.burned && !unit.fallen.untargetable && !unit.untargetable),
+  );
   const torch = stumped && torchInReach(fight);
   if (torch && fight.act('item', { item: torch.id }).acted) return 'torch';
 

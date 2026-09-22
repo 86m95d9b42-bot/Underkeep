@@ -28,7 +28,7 @@ import { learn, whyNot } from '../../src/systems/skill-tree.js';
 import { awardXp, rebuildSheet, spendAttributePoint, xpNeeded } from '../../src/systems/levelling.js';
 import { addItem, equipNew, pin } from '../../src/systems/inventory.js';
 import { refreshGear } from '../../src/systems/kit.js';
-import { createIdentification } from '../../src/systems/identification.js';
+import { createIdentification, identify } from '../../src/systems/identification.js';
 import { createStream } from '../../src/engine/rng.js';
 import { BOSSES, bossOnFloor } from '../../src/data/bosses.js';
 import { item } from '../../src/data/items.js';
@@ -91,7 +91,9 @@ export const BUILDS = {
       'magic_missile', 'arcane_well', 'arcane_well',
       'frost_shard', 'arcane_shield', 'fireball',
       'arcane_well', 'mana_siphon', 'blink',
-      'archmage', 'sleep',
+      // Magic Missile is the Apprentice's free rank and counts for no tier:
+      // Sleep is the tenth Arcana point Archmage waits for.
+      'sleep', 'archmage',
       'weapon_training', 'toughness', 'weapon_training', 'toughness',
       'spellblade',
       'power_strike', 'brute_force', 'lore', 'knock', 'dispel_ward',
@@ -136,13 +138,17 @@ export const BUILDS = {
     _source: '01 section 6: Shadow 8 + Spirit 8 + Ranger + 4 spare.',
     attributes: ['agility', 'wits', 'vigor', 'luck', 'might', 'intellect'],
     spend: [
-      'marksman', 'sneak', 'evasion',
-      'mend', 'keen_senses', 'resilience',
-      'marksman', 'evasion', 'cleanse',
-      'resilience', 'regeneration', 'smite',
+      // Mend comes free with the Pilgrim and counts for no tier, so the
+      // order fills each gate on purpose: Shadow and Spirit to 4 each for
+      // Ranger by the ninth point, Spirit to 6 for Smite and Regeneration.
+      'marksman', 'marksman', 'sneak',
+      'keen_senses', 'keen_senses', 'forager',
+      'evasion', 'resilience',
       'ranger',
-      'marksman', 'keen_senses', 'lucky',
-      'forager', 'trapfinding', 'lockpicking', 'spirit_ward', 'turn_undead',
+      'resilience', 'cleanse',
+      'smite', 'regeneration',
+      'marksman', 'evasion', 'lucky',
+      'twin_shot', 'spirit_ward', 'trapfinding', 'lockpicking', 'turn_undead',
     ],
     weapons: ['longbow', 'sling', 'shortbow'],
     gear: {
@@ -275,6 +281,8 @@ export function weaponFor(build, hero, floor) {
   const guard = id ? BOSSES[id] : null;
   const resisted = new Set(guard?.resist ?? []);
   const weak = new Set(guard?.weak ?? []);
+  // Crush gets through the Colossus's DR where nothing else does (`02` section 10).
+  if (guard?.crushIgnoresDr) weak.add('crush');
   const usable = (baseId) => {
     const needs = item(baseId).requires ?? {};
     return Object.entries(needs).every(([attribute, score]) => (hero.attributes[attribute] ?? 0) >= score);
@@ -307,7 +315,10 @@ function equip(hero, build, floor, potions) {
     if (!baseId) continue;
     // A two-handed weapon leaves no hand for a shield (`04` section 2).
     if (slot === 'offHand' && (item(weapon).properties ?? []).includes('twoHanded')) continue;
-    equipNew(hero.pack, baseId, { identified: true, ...(bonus ? { bonus } : {}) });
+    const worn = equipNew(hero.pack, baseId, { identified: true, ...(bonus ? { bonus } : {}) });
+    // Bought, so known: the Shop identifies what it sells, bonus and all
+    // (`shop.js`). Unknown, an Adventurer's death took the kit to the Grave.
+    identify(hero.identification, worn);
   }
 
   // Potions in the quick slots, which is what Auto-Fight reaches for

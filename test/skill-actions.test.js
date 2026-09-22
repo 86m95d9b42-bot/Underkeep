@@ -60,6 +60,13 @@ describe('turning a skill into an action', () => {
     expect(action.attack.extraDice).toEqual(['1d8 slash']);
   });
 
+  it('looses the bow the hero is holding: Twin Shot is two of its arrows', () => {
+    const made = hero();
+    const archer = { ...made, skills: [...made.skills, { id: 'twin_shot', rank: 1 }], attack: { name: 'Shortbow', kind: 'ranged', damage: '1d6 pierce' } };
+    const { action } = actionForSkill(archer, 'twin_shot');
+    expect(action.attack).toMatchObject({ kind: 'ranged', damage: '1d6 pierce', attacks: 2, atkMod: -2 });
+  });
+
   it('brings its own dice when the skill is a spell', () => {
     const { action } = actionForSkill(hero({ origin: 'apprentice' }), 'magic_missile');
     expect(action.kind).toBe('spell');

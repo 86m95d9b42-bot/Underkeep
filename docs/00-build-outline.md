@@ -569,13 +569,13 @@ Test the rules without a screen, and test the screens on real phones. Seeded ran
 
 ## Launch checklist
 
-- [ ] Manifest: name, short name, portrait orientation, `display: fullscreen`, dark theme and background colors, 192 px and 512 px maskable icons
-- [ ] Service worker caches the single HTML file and fonts; the game runs fully offline
-- [ ] Fonts self-hosted inside the build (no network needed after install)
+- [x] Manifest: name, short name, portrait orientation (now `any`, see `DECISIONS.md` 2026-09-21), `display: fullscreen`, dark theme and background colors, 192 px and 512 px maskable icons
+- [x] Service worker caches the single HTML file and fonts; the game runs fully offline
+- [x] Fonts self-hosted inside the build (no network needed after install)
 - [ ] iOS: `apple-mobile-web-app-capable`, black status bar style, home-screen icon, safe-area insets checked on notched phones
 - [ ] Android: installs from the browser prompt and opens without the address bar
 - [ ] Landscape and tablet layouts checked on a real tablet in both orientations
-- [ ] Save version 1 locked, with an empty migration chain ready for version 2
+- [x] Save version 1 locked, with an empty migration chain ready for version 2
 - [ ] Export and import tested between two different phones
 - [ ] Full playthrough completed in both Adventurer and Ironman modes
-- [ ] Balance simulator targets met for all ten bosses
+- [x] Balance simulator targets met for all ten bosses

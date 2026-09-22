@@ -11,9 +11,25 @@
  * here rolls: the numbers are the document's.
  */
 import data from './bosses.json' with { type: 'json' };
+
+/**
+ * How far a boss fight is scaled from `02`'s numbers (the balance pass,
+ * docs/DECISIONS.md): hit points for the boss's side and its arena objects,
+ * and the damage the boss's side deals.
+ */
+export const BOSS_TUNING = data.tuning ?? { hpScale: 1, objectHpScale: 1, damageScale: 1 };
 import { buildUnit, makeMonster } from './monsters.js';
 
 export const BOSSES = data.bosses;
+
+/**
+ * One boss fight's scales: the shared ones, with the boss's own `tuning`
+ * over them, so each fight can be tuned alone (docs/DECISIONS.md).
+ * @param {string} id
+ */
+export function bossTuning(id) {
+  return { ...BOSS_TUNING, ...(BOSSES[id]?.tuning ?? {}) };
+}
 export const BOSS_UNITS = data.units;
 
 /** Every boss id, floor 1 first. */

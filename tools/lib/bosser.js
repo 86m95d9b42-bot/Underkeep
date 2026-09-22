@@ -81,6 +81,9 @@ function watchBoss(combat, id, seen) {
   }, { name: 'audit', order: 99, source: 'audit' });
 }
 
+/** No balance-pass scaling: the boss as `02` wrote it. */
+const AS_WRITTEN = { hpScale: 1, objectHpScale: 1, damageScale: 1 };
+
 /** One boss, played to the end. */
 export function playBoss(id, { seed = 4242, hero = null, difficulty = 'normal' } = {}) {
   const block = BOSSES[id];
@@ -91,6 +94,9 @@ export function playBoss(id, { seed = 4242, hero = null, difficulty = 'normal' }
     floor: block.floor,
     difficulty,
     hero: hero ?? bossHero(block.floor),
+    // Every mechanic of `02` as written: the balance pass's scales would end
+    // some fights before a summon or a phase ever came round.
+    bossTuning: AS_WRITTEN,
     watch: (combat) => watchBoss(combat, id, seen),
   });
   return { ...out, id, saw: [...seen] };
