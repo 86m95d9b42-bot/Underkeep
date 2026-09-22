@@ -22,6 +22,7 @@ import { derivedFor } from './derived.js';
 import { grantFree } from './skill-tree.js';
 import { rebuildSheet } from './levelling.js';
 import { createIdentification, identify } from './identification.js';
+import { NAME_LIMIT, nameFor } from './names.js';
 import { LEVELING } from '../data/attributes.js';
 
 /** The two modes, and the one the New Game screen starts on. */
@@ -34,8 +35,12 @@ export const MODES = /** @type {const} */ (['adventurer', 'ironman']);
 /** The three difficulty settings (`06` section 11), chosen once per run. */
 export const DIFFICULTIES = /** @type {const} */ (['easy', 'normal', 'hard']);
 
-/** How long a name may be, so it fits the sheet and the Hall of the Dead. */
-export const NAME_LIMIT = 16;
+/**
+ * How long a name may be, so it fits the sheet and the Hall of the Dead. It
+ * belongs to the name roller, which has to know what fits, and is re-exported
+ * here because creation is where the screens look for it.
+ */
+export { NAME_LIMIT } from './names.js';
 
 /**
  * A fresh master seed.
@@ -118,6 +123,7 @@ export function rollSet(masterSeed, mode = DEFAULT_ROLL_MODE, attempt = 0) {
  * @property {object[]} rolls
  * @property {string | null} origin
  * @property {string} name
+ * @property {number} nameDraw how many names the dice have rolled
  */
 
 /**
@@ -146,6 +152,7 @@ export function createDraft({
     rolls,
     origin: null,
     name: '',
+    nameDraw: 0,
   };
 }
 
@@ -186,6 +193,18 @@ export function chooseOrigin(draft, id) {
 /** Sets the name, trimmed to what the sheet can show. */
 export function setName(draft, name) {
   return { ...draft, name: String(name ?? '').slice(0, NAME_LIMIT) };
+}
+
+/**
+ * Rolls a name from the parts in `names.json`.
+ *
+ * The draw number goes up with every tap, so the third name a seed rolls is
+ * its third name for ever, the same way a reroll's attempt number works.
+ * @param {Draft} draft
+ */
+export function rollHeroName(draft) {
+  const nameDraw = (draft.nameDraw ?? 0) + 1;
+  return { ...draft, nameDraw, name: nameFor(draft.seed, nameDraw) };
 }
 
 /**

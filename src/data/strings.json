@@ -888,6 +888,7 @@
     "originTitle": "ORIGIN",
     "name": "NAME",
     "namePlaceholder": "Name your hero",
+    "nameRandom": "New name",
     "chooseOne": "CHOOSE ONE",
     "freeSkill": "Free skill: {skill}",
     "kit": "KIT",

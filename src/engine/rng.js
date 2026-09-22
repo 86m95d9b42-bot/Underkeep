@@ -44,6 +44,7 @@ export const DERIVED_STREAMS = /** @type {const} */ ([
   'restock',
   'creation',
   'appearance',
+  'name',
 ]);
 
 /** 2^32, the divisor that turns a 32-bit word into a float in [0, 1). */
@@ -335,6 +336,17 @@ export function appearanceStream(masterSeed) {
  */
 export function creationStream(masterSeed, attempt = 0) {
   return createStream(seedState(masterSeed, 'creation', attempt), `creation:${attempt}`);
+}
+
+/**
+ * The stream one roll of a hero's name comes from. Derived, never saved: the
+ * name itself is what the draft keeps, and the same seed and draw number
+ * always roll it again.
+ * @param {number} masterSeed
+ * @param {number} draw how many names the player has rolled
+ */
+export function nameStream(masterSeed, draw = 0) {
+  return createStream(seedState(masterSeed, 'name', draw), `name:${draw}`);
 }
 
 /**

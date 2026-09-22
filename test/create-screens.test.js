@@ -14,6 +14,7 @@ import { createStats, REGIONS as STATS_REGIONS } from '../src/ui/screens/create-
 import { createOrigin, REGIONS as ORIGIN_REGIONS } from '../src/ui/screens/create-origin.js';
 import { placeRegions, validateScreen } from '../src/shell/layout.js';
 import { chooseOrigin, createDraft, setName } from '../src/systems/creation.js';
+import { NAME_LIMIT, nameFor } from '../src/systems/names.js';
 import { ATTRIBUTE_ORDER } from '../src/data/attributes.js';
 import { t } from '../src/data/strings.js';
 
@@ -252,6 +253,24 @@ describe('Create: Origin', () => {
     input.value = 'Brannoc';
     input.dispatchEvent(new Event('input', { bubbles: true }));
     expect(enter().disabled).toBe(false);
+  });
+
+  it('rolls a name into the field when NEW NAME is tapped', () => {
+    const { built } = mount(createOrigin, { params: { draft: draftFor() } });
+    const input = built.name.querySelector('input');
+    expect(input.value).toBe('');
+
+    buttons(built).get(t('create.nameRandom')).click();
+    const first = input.value;
+    expect(first).toBe(nameFor(SEED, 1));
+    expect(first.length).toBeLessThanOrEqual(NAME_LIMIT);
+
+    // A second tap is a second name, and the hold on the primary button lifts
+    // with the first one.
+    buttons(built).get(t('origins.pilgrim.name')).click();
+    expect(buttons(built).get(t('create.enter')).disabled).toBe(false);
+    buttons(built).get(t('create.nameRandom')).click();
+    expect(input.value).toBe(nameFor(SEED, 2));
   });
 
   it('starts the run with the finished hero', () => {

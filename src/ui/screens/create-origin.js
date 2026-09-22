@@ -21,6 +21,7 @@ import {
   createDraft,
   finish,
   newSeed,
+  rollHeroName,
   setName,
   whyNotReady,
 } from '../../systems/creation.js';
@@ -50,6 +51,7 @@ export const createOrigin = {
     const enterBox = el('div', { class: 'region keyslot' });
     const nameBox = el('div', { class: 'region block' });
 
+    const nameRow = el('div', { class: 'seedrow' });
     const input = textInput({
       ariaLabel: t('create.name'),
       value: draft.name,
@@ -121,9 +123,26 @@ export const createOrigin = {
       );
     };
 
+    // NEW NAME rolls one from `names.json` for a player who would rather start
+    // playing than think of one; the seed and the tap number decide what comes
+    // out (DECISIONS, 2026-09-22).
+    nameRow.replaceChildren(
+      input,
+      button({
+        label: t('create.nameRandom'),
+        ariaLabel: t('create.nameRandom'),
+        class: 'seedrow__key',
+        onTap: () => {
+          draft = rollHeroName(draft);
+          input.value = draft.name;
+          paintEnter();
+        },
+      }),
+    );
+
     nameBox.replaceChildren(
       el('span', { class: 'block__label', text: t('create.name') }),
-      el('div', { class: 'block__body' }, [input]),
+      el('div', { class: 'block__body' }, [nameRow]),
     );
 
     paintCards();

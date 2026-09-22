@@ -1,0 +1,20 @@
+{
+  "chances": { "middle": 0.3, "epithet": 0.35 },
+  "starts": [
+    "Al", "Ash", "Bal", "Bran", "Cad", "Cor", "Dain", "Dre", "Eld", "Fen",
+    "Gar", "Gwen", "Hal", "Har", "Ith", "Jor", "Kel", "Kor", "Lor", "Mal",
+    "Mor", "Nim", "Orl", "Per", "Quen", "Rand", "Ren", "Sel", "Syl", "Thal",
+    "Tor", "Ulf", "Van", "Wyn", "Yr", "Zan"
+  ],
+  "middles": ["a", "an", "ar", "el", "en", "im", "or", "un", "yr", "eth"],
+  "ends": [
+    "ric", "wyn", "dor", "ath", "mir", "gar", "dis", "nor", "wen", "thas",
+    "rik", "van", "dra", "ion", "grim", "fel", "mar", "sa", "ard", "noc",
+    "beth", "vek", "lyn", "ock"
+  ],
+  "epithets": [
+    "the Bold", "the Grim", "the Lost", "the Pale", "the Quick", "the Red",
+    "the Sly", "the Wary", "the Young", "the Cold", "the Lean", "the Mad",
+    "the Deep", "the Hale", "the Last"
+  ]
+}

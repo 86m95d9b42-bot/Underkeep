@@ -16,6 +16,7 @@ import { ELITE_TRAITS } from '../src/engine/elite-traits.js';
 import { HANDLERS, PENDING as SKILLS_PENDING } from '../src/engine/skill-hooks.js';
 import { HANDLERS as ITEM_HANDLERS, PENDING as ITEMS_PENDING } from '../src/engine/item-hooks.js';
 import { EVENTS } from '../src/engine/hooks.js';
+import { NAME_LIMIT } from '../src/systems/names.js';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -35,6 +36,41 @@ function checkStrings(json, path = 'strings') {
     } else {
       problems.push(`${here} is neither a string nor a group of strings`);
     }
+  }
+}
+
+/**
+ * names.json: the parts a rolled hero name is built from (DECISIONS,
+ * 2026-09-22). Every combination has to fit the sheet, so the check builds the
+ * longest one there is rather than trusting the lists.
+ */
+function checkNames(json, limit) {
+  const lists = ['starts', 'middles', 'ends', 'epithets'];
+  for (const key of lists) {
+    const list = json[key];
+    if (!Array.isArray(list) || list.length === 0) {
+      problems.push(`names.json has no ${key}`);
+      continue;
+    }
+    if (new Set(list).size !== list.length) problems.push(`names.json repeats a part in ${key}`);
+    for (const part of list) {
+      if (typeof part !== 'string' || part.trim() === '') {
+        problems.push(`names.json has an empty part in ${key}`);
+      }
+    }
+  }
+
+  for (const key of ['middle', 'epithet']) {
+    const chance = json.chances?.[key];
+    if (!(chance >= 0 && chance <= 1)) problems.push(`names.json chance "${key}" is not 0 to 1`);
+  }
+
+  // The epithet is dropped when it would not fit, but the given name itself is
+  // only cut, so the longest one must fit on its own.
+  const longest = (list) => Math.max(0, ...(list ?? []).map((part) => part.length));
+  const given = longest(json.starts) + longest(json.middles) + longest(json.ends);
+  if (given > limit) {
+    problems.push(`names.json can build a ${given}-letter name; the sheet fits ${limit}`);
   }
 }
 
@@ -1223,6 +1259,7 @@ const CHECKS = {
       loaded['monsters.json'],
     ),
   'locks.json': checkLocks,
+  'names.json': (json) => checkNames(json, NAME_LIMIT),
   // Checked against strings.json, so it is read first.
   'conditions.json': (json) =>
     checkConditions(json, loaded['strings.json'], loaded['combat.json']?.damage?.types ?? []),
